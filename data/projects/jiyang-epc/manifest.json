@@ -1,0 +1,20 @@
+{
+  "project": "济阳区实验高级中学项目工程总承包（EPC）",
+  "project_slug": "jiyang-epc",
+  "data_schema_version": "1.0",
+  "created_at": "2026-08-19",
+  "source_dir": "原始资料/实际测试工程文件/济阳区实验高级中学项目工程总承包（EPC） 2",
+  "bidders": [
+    {
+      "id": "sample-docx",
+      "name": "软件信息化样例标书（docx）",
+      "source": "原始资料/公司的临时样例文件仅作参考/ss投标/技术部分",
+      "note": "仅用于验证 S2 检索算法，非本次工程类真实标书；真实标书全部为 PDF，见 docs/issues.md P0"
+    }
+  ],
+  "artifacts": {
+    "sections_all": "sections_all.json",
+    "sections_dir": "sections",
+    "evidence_dir": "evidence"
+  }
+}

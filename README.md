@@ -494,6 +494,27 @@ DF=9 的「布置」（出现在「布置任务」之类的地方），放行了
 - `page`：**该块起始行所在的 PDF 页码，从 1 开始。** 页面⑤的「在原文中定位」靠它跳转（§5.3）。
   **T0 实现时必须一并输出**——切完再补要重跑 241 个 PDF。docx 路径无此字段，填 null。
 
+**章节块全量索引**（S1 合并产出，`data/projects/<slug>/sections_all.json`）
+
+S1 按投标人分别产出 `sections.json`，再用 `scripts/merge_sections.py` 合并成全量索引。
+顶层为对象，内部 `sections` 数组的每个元素在单家章节块基础上注入 `bidder` 字段：
+
+```json
+{"project": "济阳区实验高级中学项目工程总承包（EPC）",
+ "project_slug": "jiyang-epc",
+ "schema_version": "1.0",
+ "generated_at": "2026-08-19T17:28:00+0800",
+ "bidders": ["sample-docx"],
+ "sections": [{"bidder": "sample-docx", "id": "1#4", "file": "1",
+               "path": [...], "level": 4, "text": "...", "char_len": 652}],
+ "stats": {"total_sections": 2121, "total_chars": 1405322,
+           "by_bidder": {"sample-docx": {"sections": 2121, "chars": 1405322}}}}
+```
+
+- `bidder`：取值与 `manifest.json` 里的 `bidders[].id` 一致，真实场景为投标文件所在一级目录名。
+- `id` 在单家范围内唯一；跨投标人引用时以 `(bidder, id)` 为复合键，合并时不重写。
+- 这是 S1 -> S4 的汇总节点，S2 仍按单个 bidder 的 `sections.json` 独立跑。
+
 **评分表**（S0 产出，一个项目一份，人工确认过。设计）
 
 顶层是一个映射，不是裸列表：项目级规则（招标文件里那些「适用于所有评分项」的话）
@@ -1191,6 +1212,7 @@ S0 从招标文件 PDF 抽取任何结构化内容时都需内建处理，见 `d
 │   ├── 分工与排期.md             # 3 人分工、验收细则、落后了砍什么
 │   └── issues.md                # 未解决项清单，P0/P1/P2 分级
 ├── scripts/
+│   ├── merge_sections.py        # 合并多家 sections.json 为 sections_all.json
 │   ├── verify_scoring_table.py  # 核对脚本，复现 findings 里那张 19 行比对表
 │   └── probe_pdf_structure.py   # PDF 结构探针，复现 §3.7 的字号/编号统计
 ├── src/
@@ -1202,8 +1224,14 @@ S0 从招标文件 PDF 抽取任何结构化内容时都需内建处理，见 `d
 ├── tests/
 │   └── test_s2_regression.py    # 守住 §3.2 三条红线的回归测试
 ├── data/
-│   ├── interim/                 # 中间产物（章节树、证据包）
-│   └── out/                     # 报告
+│   ├── README.md                # data 目录结构与生成流程
+│   ├── projects/                # 按项目组织中间产物
+│   │   └── jiyang-epc/          # 项目 slug
+│   │       ├── manifest.json    # 项目元数据 + 投标人清单
+│   │       ├── sections_all.json # 全部投标人章节块合并索引
+│   │       ├── sections/        # S1 产出：按投标人存放章节块
+│   │       └── evidence/        # S2 产出：按投标人存放证据包
+│   └── out/                     # S4 产出：最终评审报告
 └── 原始资料/                    # 甲方与公司提供的原始文件，只读
     ├── 录音文档.md              # 2026-08-18 项目讨论会录音整理稿
     ├── 工程建设类项目辅助评审评审点.docx   # 评审点.md 的来源
@@ -1245,7 +1273,8 @@ python scripts/probe_pdf_structure.py
 **这批数据只能证明代码不崩，不能证明检索效果**，原因见 §9.4。
 
 ```bash
-python src/s1_ingest.py "原始资料/公司的临时样例文件仅作参考/ss投标/技术部分" data/interim/sections.json
+python src/s1_ingest.py "原始资料/公司的临时样例文件仅作参考/ss投标/技术部分" \
+  data/projects/jiyang-epc/sections/sample-docx/sections.json
 ```
 
 目录下的 `.docx` 与 `.doc` 都会处理。`.doc` 会先自动转成 `.docx` 缓存到该目录的
@@ -1253,11 +1282,21 @@ python src/s1_ingest.py "原始资料/公司的临时样例文件仅作参考/ss
 两者都没有时直接报错退出并提示怎么办——不静默跳过文件。
 
 ```bash
+python scripts/merge_sections.py data/projects/jiyang-epc
+```
+
+合并所有 bidder 的 `sections.json` 为 `sections_all.json`，作为全量章节索引；
+S2 仍按单个 bidder 独立跑。
+
+```bash
 python src/build_points.py 评审点.md config/review_points.yaml
 ```
 
 ```bash
-python src/s2_locate.py data/interim/sections.json config/review_points.yaml data/interim/located.json
+python src/s2_locate.py \
+  data/projects/jiyang-epc/sections/sample-docx/sections.json \
+  config/review_points.yaml \
+  data/projects/jiyang-epc/evidence/sample-docx/located.json
 ```
 
 预期输出：2121 个章节块 / 1,405,322 字；未命中 1 项（`①-2`，正确行为，见 §3.2 红线三）。
