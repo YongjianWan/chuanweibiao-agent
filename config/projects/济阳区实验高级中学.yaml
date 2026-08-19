@@ -1,0 +1,1022 @@
+project: 济阳区实验高级中学项目工程总承包（EPC）
+source: 招标文件.pdf 第 33~37 页（评标办法技术标部分）
+rules:
+- 内容不全酌情扣分
+- 若此条缺项不得分
+items:
+- id: T-01
+  guid: 75bd5598-9f76-4e3b-8a0a-d494380d4d9d
+  name: 设计任务书优化
+  max_score: 20.0
+  tiers:
+  - tier: 优
+    min: 17.0
+    max: 20.0
+  - tier: 良
+    min: 14.0
+    max: 17.0
+  - tier: 一般
+    min: 10.0
+    max: 14.0
+  factors:
+  - name: 设计需求深度解析与目标对齐
+    weight: 0.25
+    sub:
+    - name: 原始任务书理解准确性
+      weight: 0.333333
+    - name: 设计目标转化逻辑
+      weight: 0.333333
+    - name: 关键难点识别
+      weight: 0.333334
+  - name: 优化建议的具体性与可行性
+    weight: 0.25
+    sub:
+    - name: 优化措施针对性
+      weight: 0.333333
+    - name: 技术可行性论证
+      weight: 0.333333
+    - name: 实施路径清晰度
+      weight: 0.333334
+  - name: 工程设计要求满足度
+    weight: 0.25
+    sub:
+    - name: 规范标准符合性
+      weight: 0.333333
+    - name: 功能性能提升
+      weight: 0.333333
+    - name: 系统协调完整性
+      weight: 0.333334
+  - name: 设计质量保证措施
+    weight: 0.25
+    sub:
+    - name: 质量控制体系健全性
+      weight: 0.333333
+    - name: 关键节点管控手段
+      weight: 0.333333
+    - name: 持续改进与反馈机制
+      weight: 0.333334
+  synonyms: []
+- id: T-02
+  guid: 108d538f-85b8-4c7d-b32c-f6acdaa187b9
+  name: 进度管理方案
+  max_score: 4.0
+  tiers:
+  - tier: 优
+    min: 3.0
+    max: 4.0
+  - tier: 良
+    min: 2.0
+    max: 3.0
+  - tier: 一般
+    min: 1.0
+    max: 2.0
+  factors:
+  - name: 施工进度计划编制与关键路径分析
+    weight: 0.25
+    sub:
+    - name: 总体进度计划合理性
+      weight: 0.333333
+    - name: 关键路径与里程碑节点控制
+      weight: 0.333333
+    - name: 工序衔接与流水施工组织
+      weight: 0.333334
+  - name: 设计进度管理与协同机制
+    weight: 0.25
+    sub:
+    - name: 设计出图计划与节点控制
+      weight: 0.333333
+    - name: 设计施工协同与接口管理
+      weight: 0.333333
+    - name: 设计审批与确认流程时效
+      weight: 0.333334
+  - name: 进度保障措施与资源配置
+    weight: 0.25
+    sub:
+    - name: 人力资源与机械设备投入计划
+      weight: 0.333333
+    - name: 材料供应与后勤保障措施
+      weight: 0.333333
+    - name: 技术与组织保障体系
+      weight: 0.333334
+  - name: 进度监测、预警与纠偏机制
+    weight: 0.25
+    sub:
+    - name: 进度监测方法与数据采集
+      weight: 0.333333
+    - name: 偏差分析与预警机制
+      weight: 0.333333
+    - name: 纠偏措施与应急预案
+      weight: 0.333334
+  synonyms: []
+- id: T-03
+  guid: 9e60551f-c8b5-4b2b-81aa-ceb4b4a86d2d
+  name: 费用及资金管理方案
+  max_score: 3.0
+  tiers:
+  - tier: 优
+    min: 2.5
+    max: 3.0
+  - tier: 良
+    min: 1.7
+    max: 2.5
+  - tier: 一般
+    min: 1.2
+    max: 1.7
+  factors:
+  - name: 费用预算编制与成本控制体系
+    weight: 0.25
+    sub:
+    - name: 费用构成分析与预算合理性
+      weight: 0.333333
+    - name: 动态成本控制机制
+      weight: 0.333333
+    - name: 节约成本的具体措施
+      weight: 0.333334
+  - name: 资金筹措与使用计划
+    weight: 0.25
+    sub:
+    - name: 资金来源与保障能力
+      weight: 0.333333
+    - name: 资金使用进度计划
+      weight: 0.333333
+    - name: 专款专用管理制度
+      weight: 0.333334
+  - name: 财务风险防控与应急预案
+    weight: 0.25
+    sub:
+    - name: 财务风险识别与评估
+      weight: 0.333333
+    - name: 风险应对策略与措施
+      weight: 0.333333
+    - name: 资金断裂应急预案
+      weight: 0.333334
+  - name: 资金监管与审计配合机制
+    weight: 0.25
+    sub:
+    - name: 内部审计与监督流程
+      weight: 0.333333
+    - name: 财务报告与信息透明度
+      weight: 0.333333
+    - name: 外部审计配合承诺
+      weight: 0.333334
+  synonyms: []
+- id: T-04
+  guid: 255bb711-dc0e-4968-bf39-2a61b0abc8eb
+  name: 质量管理方案
+  max_score: 4.0
+  tiers:
+  - tier: 优
+    min: 3.0
+    max: 4.0
+  - tier: 良
+    min: 2.0
+    max: 3.0
+  - tier: 一般
+    min: 1.0
+    max: 2.0
+  factors:
+  - name: 工程整体质量管控体系
+    weight: 0.25
+    sub:
+    - name: 质量目标与组织架构
+      weight: 0.333333
+    - name: 全过程质量控制流程
+      weight: 0.333333
+    - name: 质量检验与验收制度
+      weight: 0.333334
+  - name: 进场材料设备质量标准管控
+    weight: 0.25
+    sub:
+    - name: 质量标准依据与规范
+      weight: 0.333333
+    - name: 进场检测与复试机制
+      weight: 0.333333
+    - name: 不合格品退场处理
+      weight: 0.333334
+  - name: 材料设备品牌档次管控措施
+    weight: 0.25
+    sub:
+    - name: 品牌推荐与短名单管理
+      weight: 0.333333
+    - name: 样品封样与确认流程
+      weight: 0.333333
+    - name: 供应商资质审查
+      weight: 0.333334
+  - name: 规格型号一致性管控
+    weight: 0.25
+    sub:
+    - name: 规格型号核对机制
+      weight: 0.333333
+    - name: 设计变更响应管理
+      weight: 0.333333
+    - name: 现场适配性验证
+      weight: 0.333334
+  synonyms: []
+- id: T-05
+  guid: acabee9d-b7e9-4461-9491-1ee7dacefac3
+  name: 安全、职业健康和环境管理方案
+  max_score: 4.0
+  tiers:
+  - tier: 优
+    min: 3.0
+    max: 4.0
+  - tier: 良
+    min: 2.0
+    max: 3.0
+  - tier: 一般
+    min: 1.0
+    max: 2.0
+  factors:
+  - name: 安全管理体系与组织架构
+    weight: 0.25
+    sub:
+    - name: 安全管理组织机构设置
+      weight: 0.333333
+    - name: 安全生产责任制落实
+      weight: 0.333333
+    - name: 安全管理制度体系
+      weight: 0.333334
+  - name: 安全风险管控与防护措施
+    weight: 0.25
+    sub:
+    - name: 危险源辨识与风险评估
+      weight: 0.333333
+    - name: 专项安全技术措施
+      weight: 0.333333
+    - name: 应急救援预案与演练
+      weight: 0.333334
+  - name: 职业健康管理方案
+    weight: 0.25
+    sub:
+    - name: 职业病危害因素控制
+      weight: 0.333333
+    - name: 劳动防护用品管理
+      weight: 0.333333
+    - name: 健康监护与医疗保障
+      weight: 0.333334
+  - name: 环境保护与文明施工措施
+    weight: 0.25
+    sub:
+    - name: 扬尘与噪声控制措施
+      weight: 0.333333
+    - name: 水污染与固体废弃物管理
+      weight: 0.333333
+    - name: 绿色施工与资源节约
+      weight: 0.333334
+  synonyms: []
+- id: T-06
+  guid: 8dc6e95d-ae6a-4422-8ff7-b7b2939ff724
+  name: 调试、试运行与移交管理方案
+  max_score: 4.0
+  tiers:
+  - tier: 优
+    min: 3.0
+    max: 4.0
+  - tier: 良
+    min: 2.0
+    max: 3.0
+  - tier: 一般
+    min: 1.0
+    max: 2.0
+  factors:
+  - name: 调试组织与实施策略
+    weight: 0.25
+    sub:
+    - name: 调试流程与标准规范
+      weight: 0.333333
+    - name: 调试资源配置计划
+      weight: 0.333333
+    - name: 调试前技术准备
+      weight: 0.333334
+  - name: 多方协调与配合机制
+    weight: 0.25
+    sub:
+    - name: 沟通协调组织架构
+      weight: 0.333333
+    - name: 交叉作业配合措施
+      weight: 0.333333
+    - name: 问题响应与处理机制
+      weight: 0.333334
+  - name: 试运行保障与应急预案
+    weight: 0.25
+    sub:
+    - name: 试运行监测方案
+      weight: 0.333333
+    - name: 安全保卫与后勤保障
+      weight: 0.333333
+    - name: 突发故障应急预案
+      weight: 0.333334
+  - name: 移交管理与资料归档
+    weight: 0.25
+    sub:
+    - name: 移交内容与清单管理
+      weight: 0.333333
+    - name: 竣工资料编制与归档
+      weight: 0.333333
+    - name: 用户培训与服务承诺
+      weight: 0.333334
+  synonyms: []
+- id: T-07
+  guid: 51f11a77-e946-4abd-ba0f-b5f47ceb9e04
+  name: 风险管理方案
+  max_score: 3.0
+  tiers:
+  - tier: 优
+    min: 2.5
+    max: 3.0
+  - tier: 良
+    min: 1.7
+    max: 2.5
+  - tier: 一般
+    min: 1.2
+    max: 1.7
+  factors:
+  - name: 风险识别与评估体系
+    weight: 0.25
+    sub:
+    - name: 风险识别全面性
+      weight: 0.333333
+    - name: 风险评估方法科学性
+      weight: 0.333333
+    - name: 风险清单规范性
+      weight: 0.333334
+  - name: 风险应对策略与措施
+    weight: 0.25
+    sub:
+    - name: 应对措施针对性
+      weight: 0.333333
+    - name: 策略组合合理性
+      weight: 0.333333
+    - name: 技术与管理措施融合
+      weight: 0.333334
+  - name: 应急响应与处置机制
+    weight: 0.25
+    sub:
+    - name: 应急预案完整性
+      weight: 0.333333
+    - name: 应急组织与职责
+      weight: 0.333333
+    - name: 处置流程清晰度
+      weight: 0.333334
+  - name: 风险监控与动态管理
+    weight: 0.25
+    sub:
+    - name: 监控指标与手段
+      weight: 0.333333
+    - name: 预警与报告机制
+      weight: 0.333333
+    - name: 动态调整与复盘
+      weight: 0.333334
+  synonyms: []
+- id: T-08
+  guid: 83e39679-fabf-4dd1-ba31-224dc2d2d51f
+  name: 沟通协调方案
+  max_score: 3.0
+  tiers:
+  - tier: 优
+    min: 2.5
+    max: 3.0
+  - tier: 良
+    min: 2.0
+    max: 2.5
+  - tier: 一般
+    min: 1.5
+    max: 2.0
+  factors:
+  - name: 行政审批协助与手续办理机制
+    weight: 0.25
+    sub:
+    - name: 手续办理清单与流程规划
+      weight: 0.333333
+    - name: 专人专责与协同工作机制
+      weight: 0.333333
+    - name: 办理时效承诺与应急预案
+      weight: 0.333334
+  - name: 职能部门沟通策略与承诺办法
+    weight: 0.25
+    sub:
+    - name: 职能部门对接矩阵与联络机制
+      weight: 0.333333
+    - name: 政策合规性分析与响应措施
+      weight: 0.333333
+    - name: 沟通协调承诺与服务态度
+      weight: 0.333334
+  - name: 外部关系协调与冲突解决机制
+    weight: 0.25
+    sub:
+    - name: 利益相关方识别与分析
+      weight: 0.5
+    - name: 矛盾预防与纠纷调解方案
+      weight: 0.5
+  - name: 信息反馈与闭环管理体系
+    weight: 0.25
+    sub:
+    - name: 沟通台账与档案管理
+      weight: 0.5
+    - name: 定期汇报与信息同步机制
+      weight: 0.5
+  synonyms: []
+- id: T-09
+  guid: 3a101949-3b00-4c83-a62a-fafe13ac376e
+  name: 合同管理与信息管理方案，有完善的信息管理系统
+  max_score: 3.0
+  tiers:
+  - tier: 优
+    min: 2.0
+    max: 3.0
+  - tier: 良
+    min: 1.0
+    max: 2.0
+  - tier: 一般
+    min: 0.5
+    max: 1.0
+  factors:
+  - name: 合同全生命周期管理体系
+    weight: 0.25
+    sub:
+    - name: 合同标准化与审批流程
+      weight: 0.333333
+    - name: 履约监控与变更管理
+      weight: 0.333333
+    - name: 合同纠纷处理与归档机制
+      weight: 0.333334
+  - name: 信息管理系统的功能完备性
+    weight: 0.25
+    sub:
+    - name: 核心业务模块覆盖度
+      weight: 0.333333
+    - name: 数据集成与接口能力
+      weight: 0.333333
+    - name: 移动端支持与实时交互
+      weight: 0.333334
+  - name: 信息安全与数据保障机制
+    weight: 0.25
+    sub:
+    - name: 权限管理与访问控制
+      weight: 0.333333
+    - name: 数据备份与灾难恢复
+      weight: 0.333333
+    - name: 日志审计与安全防护
+      weight: 0.333334
+  - name: 系统实施运维与培训服务
+    weight: 0.25
+    sub:
+    - name: 系统部署与初始化方案
+      weight: 0.333333
+    - name: 多层次用户培训计划
+      weight: 0.333333
+    - name: 运维响应与服务承诺
+      weight: 0.333334
+  synonyms: []
+- id: T-10
+  guid: ae93a6c8-1c01-4ab8-a43b-11f4cbc40a3c
+  name: 各专业施工图设计的安排、协调、时间保证措施
+  max_score: 2.0
+  tiers:
+  - tier: 优
+    min: 1.5
+    max: 2.0
+  - tier: 良
+    min: 0.7
+    max: 1.5
+  - tier: 一般
+    min: 0.2
+    max: 0.7
+  factors:
+  - name: 各专业施工图设计进度安排与计划管理
+    weight: 0.25
+    sub:
+    - name: 总体进度计划编制
+      weight: 0.333333
+    - name: 关键路径与节点控制
+      weight: 0.333333
+    - name: 人力资源与资源保障
+      weight: 0.333334
+  - name: 多专业协同设计与接口协调机制
+    weight: 0.25
+    sub:
+    - name: 专业间提资与反馈流程
+      weight: 0.333333
+    - name: 碰撞检查与冲突解决
+      weight: 0.333333
+    - name: 统一设计标准与界面划分
+      weight: 0.333334
+  - name: 设计进度延误预警与纠偏措施
+    weight: 0.25
+    sub:
+    - name: 风险识别与预警机制
+      weight: 0.333333
+    - name: 动态监控与偏差分析
+      weight: 0.333333
+    - name: 应急赶工与资源调配方案
+      weight: 0.333334
+  - name: 现场平面管理与设计配合方案
+    weight: 0.25
+    sub:
+    - name: 施工平面布置与设计契合度
+      weight: 0.333333
+    - name: 现场设计服务与响应机制
+      weight: 0.333333
+    - name: 设计交底与技术指导
+      weight: 0.333334
+  synonyms: []
+- id: T-11
+  guid: 123a9226-d66e-4ace-8dc4-65a76a8282fa
+  name: 施工方案及技术措施
+  max_score: 8.0
+  tiers:
+  - tier: 优
+    min: 6.0
+    max: 8.0
+  - tier: 良
+    min: 3.0
+    max: 6.0
+  - tier: 一般
+    min: 1.0
+    max: 3.0
+  factors:
+  - name: 总体施工部署与流程规划
+    weight: 0.2
+    sub:
+    - name: 施工阶段划分与流水组织
+      weight: 0.333333
+    - name: 关键线路与节点控制
+      weight: 0.333333
+    - name: 平面布置动态管理
+      weight: 0.333334
+  - name: 核心工程技术方案针对性
+    weight: 0.2
+    sub:
+    - name: 重难点专项技术方案
+      weight: 0.333333
+    - name: 新工艺新技术应用
+      weight: 0.333333
+    - name: 技术参数与标准符合性
+      weight: 0.333334
+  - name: 质量保证体系与控制措施
+    weight: 0.2
+    sub:
+    - name: 质量管理制度与职责
+      weight: 0.333333
+    - name: 过程质量控制点设置
+      weight: 0.333333
+    - name: 质量通病防治措施
+      weight: 0.333334
+  - name: 安全文明施工与环境保护
+    weight: 0.2
+    sub:
+    - name: 安全风险管控与应急
+      weight: 0.333333
+    - name: 文明施工标准化措施
+      weight: 0.333333
+    - name: 扬尘噪音污染防治
+      weight: 0.333334
+  - name: 资源配备与进度保障机制
+    weight: 0.2
+    sub:
+    - name: 主要资源配置计划
+      weight: 0.333333
+    - name: 进度偏差纠偏措施
+      weight: 0.333333
+    - name: 季节性施工保障
+      weight: 0.333334
+  synonyms: []
+- id: T-12
+  guid: c105b81a-3fca-42a1-a0fa-c55332f11e62
+  name: 安全施工、文明施工和绿色施工措施
+  max_score: 8.0
+  tiers:
+  - tier: 优
+    min: 6.0
+    max: 8.0
+  - tier: 良
+    min: 3.0
+    max: 6.0
+  - tier: 一般
+    min: 1.0
+    max: 3.0
+  factors:
+  - name: 安全施工管理体系与风险防控
+    weight: 0.333333
+    sub:
+    - name: 安全责任体系与制度落实
+      weight: 0.333333
+    - name: 重大危险源辨识与专项管控
+      weight: 0.333333
+    - name: 应急救援预案与演练计划
+      weight: 0.333334
+  - name: 文明施工标准化与现场环境管理
+    weight: 0.333333
+    sub:
+    - name: 现场封闭管理与场容场貌
+      weight: 0.333333
+    - name: 材料堆放与工完场清机制
+      weight: 0.333333
+    - name: 生活区卫生与职业健康保障
+      weight: 0.333334
+  - name: 绿色施工技术与资源节约措施
+    weight: 0.333334
+    sub:
+    - name: 扬尘治理与大气污染防控
+      weight: 0.333333
+    - name: 水资源节约与污水排放管理
+      weight: 0.333333
+    - name: 建筑垃圾减量化与资源利用
+      weight: 0.333334
+  synonyms: []
+- id: T-13
+  guid: 80d2c3d4-2628-4f0c-88ed-77fbc129aa4c
+  name: 环境保护及防尘施工措施
+  max_score: 4.0
+  tiers:
+  - tier: 优
+    min: 3.0
+    max: 4.0
+  - tier: 良
+    min: 2.0
+    max: 3.0
+  - tier: 一般
+    min: 1.0
+    max: 2.0
+  factors:
+  - name: 扬尘控制专项方案
+    weight: 0.25
+    sub:
+    - name: 源头抑制措施
+      weight: 0.333333
+    - name: 传播途径阻断
+      weight: 0.333333
+    - name: 监测与联动机制
+      weight: 0.333334
+  - name: 噪声与振动污染防治
+    weight: 0.25
+    sub:
+    - name: 设备选型与维护
+      weight: 0.333333
+    - name: 隔音屏障设置
+      weight: 0.333333
+    - name: 作业时段管理
+      weight: 0.333334
+  - name: 水污染与固体废弃物管理
+    weight: 0.25
+    sub:
+    - name: 排水系统设计
+      weight: 0.333333
+    - name: 固废分类处置
+      weight: 0.333333
+    - name: 危险废物管控
+      weight: 0.333334
+  - name: 管理体系与应急响应
+    weight: 0.25
+    sub:
+    - name: 组织架构与职责
+      weight: 0.333333
+    - name: 应急预案演练
+      weight: 0.333333
+    - name: 检查与培训制度
+      weight: 0.333334
+  synonyms: []
+- id: T-14
+  guid: fafc867a-6a90-4765-b0d0-6ebfd818d218
+  name: 施工总进度计划及保证措施
+  max_score: 8.0
+  tiers:
+  - tier: 优
+    min: 6.0
+    max: 8.0
+  - tier: 良
+    min: 3.0
+    max: 6.0
+  - tier: 一般
+    min: 1.0
+    max: 3.0
+  factors:
+  - name: 施工进度计划编制科学性
+    weight: 0.25
+    sub:
+    - name: 关键线路与节点控制
+      weight: 0.333333
+    - name: 工序衔接与流水施工
+      weight: 0.333333
+    - name: 资源负荷均衡性
+      weight: 0.333334
+  - name: 进度保证组织管理体系
+    weight: 0.25
+    sub:
+    - name: 组织机构与职责分工
+      weight: 0.333333
+    - name: 进度管理制度建设
+      weight: 0.333333
+    - name: 协调沟通机制
+      weight: 0.333334
+  - name: 技术与资源保障措施
+    weight: 0.25
+    sub:
+    - name: 施工技术优化方案
+      weight: 0.333333
+    - name: 劳动力与机械保障
+      weight: 0.333333
+    - name: 材料供应保障体系
+      weight: 0.333334
+  - name: 动态监控与纠偏机制
+    weight: 0.25
+    sub:
+    - name: 进度监测与信息反馈
+      weight: 0.333333
+    - name: 偏差分析与预警机制
+      weight: 0.333333
+    - name: 纠偏措施与应急预案
+      weight: 0.333334
+  synonyms: []
+- id: T-15
+  guid: 4c62f8e4-d847-4cb9-bca0-9b4f78d9573e
+  name: 施工现场总平面布置
+  max_score: 4.0
+  tiers:
+  - tier: 优
+    min: 3.0
+    max: 4.0
+  - tier: 良
+    min: 2.0
+    max: 3.0
+  - tier: 一般
+    min: 1.0
+    max: 2.0
+  factors:
+  - name: 功能分区与空间布局合理性
+    weight: 0.2
+    sub:
+    - name: 区域划分清晰度
+      weight: 0.333333
+    - name: 工艺流程匹配度
+      weight: 0.333333
+    - name: 空间利用紧凑性
+      weight: 0.333334
+  - name: 交通组织与物流动线规划
+    weight: 0.2
+    sub:
+    - name: 道路网络连通性
+      weight: 0.333333
+    - name: 人车分流措施
+      weight: 0.333333
+    - name: 出入口管理方案
+      weight: 0.333334
+  - name: 临时设施配置与标准化建设
+    weight: 0.2
+    sub:
+    - name: 设施选址安全性
+      weight: 0.333333
+    - name: 规模容量匹配度
+      weight: 0.333333
+    - name: 外观形象标准化
+      weight: 0.333334
+  - name: 水电管网与环保消防设施
+    weight: 0.2
+    sub:
+    - name: 管线布置规范性
+      weight: 0.333333
+    - name: 消防应急覆盖
+      weight: 0.333333
+    - name: 环保降尘措施
+      weight: 0.333334
+  - name: 动态调整与图示表达质量
+    weight: 0.2
+    sub:
+    - name: 阶段性演变逻辑
+      weight: 0.333333
+    - name: 图纸规范与清晰度
+      weight: 0.333333
+    - name: 说明文字完整性
+      weight: 0.333334
+  synonyms: []
+- id: T-16
+  guid: ffd783a2-78cf-4fd6-81ef-812298958298
+  name: 施工质量措施计划
+  max_score: 8.0
+  tiers:
+  - tier: 优
+    min: 6.0
+    max: 8.0
+  - tier: 良
+    min: 3.0
+    max: 6.0
+  - tier: 一般
+    min: 1.0
+    max: 3.0
+  factors:
+  - name: 质量管理体系与组织架构
+    weight: 0.2
+    sub:
+    - name: 质量管理制度完整性
+      weight: 0.333333
+    - name: 组织机构与人员配置
+      weight: 0.333333
+    - name: 质量目标分解与考核
+      weight: 0.333334
+  - name: 关键工序与质量控制点措施
+    weight: 0.2
+    sub:
+    - name: 关键工序识别与控制
+      weight: 0.333333
+    - name: 质量通病防治措施
+      weight: 0.333333
+    - name: 新技术新工艺应用保障
+      weight: 0.333334
+  - name: 材料设备进场检验与管理
+    weight: 0.2
+    sub:
+    - name: 进场验收流程规范性
+      weight: 0.333333
+    - name: 存储与保管措施
+      weight: 0.333333
+    - name: 溯源管理与台账建立
+      weight: 0.333334
+  - name: 质量检测与验收管理计划
+    weight: 0.2
+    sub:
+    - name: 检测计划与频次设置
+      weight: 0.333333
+    - name: 隐蔽工程验收管理
+      weight: 0.333333
+    - name: 成品保护措施
+      weight: 0.333334
+  - name: 质量持续改进与应急处理
+    weight: 0.2
+    sub:
+    - name: 质量事故应急预案
+      weight: 0.5
+    - name: 质量信息反馈与改进
+      weight: 0.5
+  synonyms: []
+- id: T-17
+  guid: c43a82b9-31a1-4f6b-acf5-a9af954b6816
+  name: 材料采购管理方案
+  max_score: 4.0
+  tiers:
+  - tier: 优
+    min: 2.0
+    max: 4.0
+  - tier: 良
+    min: 1.0
+    max: 2.0
+  - tier: 一般
+    min: 0.5
+    max: 1.0
+  factors:
+  - name: 采购组织架构与职责分工
+    weight: 0.2
+    sub:
+    - name: 组织机构健全性
+      weight: 0.333333
+    - name: 岗位职责明确度
+      weight: 0.333333
+    - name: 协同管理机制
+      weight: 0.333334
+  - name: 供应商管理与资源保障
+    weight: 0.2
+    sub:
+    - name: 供应商准入与评价
+      weight: 0.333333
+    - name: 合格供应商库规模
+      weight: 0.333333
+    - name: 应急保供预案
+      weight: 0.333334
+  - name: 采购流程控制与质量保证
+    weight: 0.2
+    sub:
+    - name: 采购计划科学性
+      weight: 0.333333
+    - name: 质量检验与控制
+      weight: 0.333333
+    - name: 不合格品处置
+      weight: 0.333334
+  - name: 成本控制与资金支付管理
+    weight: 0.2
+    sub:
+    - name: 价格管控措施
+      weight: 0.333333
+    - name: 合同条款严谨性
+      weight: 0.333333
+    - name: 支付履约保障
+      weight: 0.333334
+  - name: 仓储物流与现场管理
+    weight: 0.2
+    sub:
+    - name: 物流运输安排
+      weight: 0.333333
+    - name: 仓储保管条件
+      weight: 0.333333
+    - name: 信息化管理水平
+      weight: 0.333334
+  synonyms: []
+- id: T-18
+  guid: 6c230e96-2e06-4c28-a648-0181e132707f
+  name: 货物采购管理方案
+  max_score: 3.0
+  tiers:
+  - tier: 优
+    min: 2.0
+    max: 3.0
+  - tier: 良
+    min: 1.0
+    max: 2.0
+  - tier: 一般
+    min: 0.5
+    max: 1.0
+  factors:
+  - name: 采购组织架构与职责分工
+    weight: 0.2
+    sub:
+    - name: 组织机构设置合理性
+      weight: 0.333333
+    - name: 岗位职责明确性
+      weight: 0.333333
+    - name: 人员配置与资质
+      weight: 0.333334
+  - name: 采购流程与控制措施
+    weight: 0.2
+    sub:
+    - name: 采购计划编制科学性
+      weight: 0.333333
+    - name: 供应商遴选机制
+      weight: 0.333333
+    - name: 合同管理与履约监控
+      weight: 0.333334
+  - name: 质量控制与验收标准
+    weight: 0.2
+    sub:
+    - name: 源头质量控制
+      weight: 0.333333
+    - name: 进场验收程序
+      weight: 0.333333
+    - name: 不合格品处理机制
+      weight: 0.333334
+  - name: 仓储物流与供应保障
+    weight: 0.2
+    sub:
+    - name: 运输与配送方案
+      weight: 0.333333
+    - name: 现场仓储管理
+      weight: 0.333333
+    - name: 应急供应预案
+      weight: 0.333334
+  - name: 成本控制与档案管理
+    weight: 0.2
+    sub:
+    - name: 价格控制措施
+      weight: 0.5
+    - name: 档案完整性管理
+      weight: 0.5
+  synonyms: []
+- id: T-19
+  guid: e1c9c784-0683-45a4-a123-08a7f4084f86
+  name: 服务采购管理方案
+  max_score: 3.0
+  tiers:
+  - tier: 优
+    min: 2.0
+    max: 3.0
+  - tier: 良
+    min: 1.0
+    max: 2.0
+  - tier: 一般
+    min: 0.5
+    max: 1.0
+  factors:
+  - name: 采购策划与需求分析
+    weight: 0.25
+    sub:
+    - name: 需求分析与界定
+      weight: 0.333333
+    - name: 采购策略制定
+      weight: 0.333333
+    - name: 采购进度计划
+      weight: 0.333334
+  - name: 供应商管理与评价体系
+    weight: 0.25
+    sub:
+    - name: 供应商寻源与资格预审
+      weight: 0.333333
+    - name: 评标与定标机制
+      weight: 0.333333
+    - name: 履约评价与动态管理
+      weight: 0.333334
+  - name: 采购过程控制与合规管理
+    weight: 0.25
+    sub:
+    - name: 流程规范化控制
+      weight: 0.333333
+    - name: 风险识别与应对
+      weight: 0.333333
+    - name: 廉洁与合规保障
+      weight: 0.333334
+  - name: 合同管理与后续服务保障
+    weight: 0.25
+    sub:
+    - name: 合同条款策划
+      weight: 0.333333
+    - name: 合同履行监控
+      weight: 0.333333
+    - name: 变更与索赔管理
+      weight: 0.333334
+  synonyms: []
