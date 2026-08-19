@@ -172,7 +172,7 @@ S3 输出每个要素的得分率，加权后按 `score = tier.min + 得分率 �
  "bidder": "中冶建工集团有限公司8010856",
  "name": "进度管理方案",
  "candidates": 32, "units": 3, "fallback": false,
- "evidence_chars": 2860, "budget": 3000,
+ "evidence_chars": 2180, "budget": 2280,
  "picked": [{"section_id": "3#47",
              "file": "进度管理方案108D538F-85B8-4C7D-B32C-F6ACDAA187B9.pdf",
              "path": ["第二章 施工组织", "2.1 总体部署", "2.1.4 施工段划分"],
@@ -183,8 +183,9 @@ S3 输出每个要素的得分率，加权后按 `score = tier.min + 得分率 �
             ]}
 ```
 
-> 示例中 `picked` 只列出 1 条，实际应有 `units: 3` 个证据单元、合计 `evidence_chars: 2860` 字，
+> 示例中 `picked` 只列出 1 条，实际应有 `units: 3` 个证据单元、合计 `evidence_chars: 2180` 字，
 > 其余条目已省略。字数与条目数在真实输出里必须自洽。
+> `budget: 2280` 是 T-02（4 分项）按分值算出来的值，不是全局常数，见下方 `budget` 说明。
 
 字段说明：
 
