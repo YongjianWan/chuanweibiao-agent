@@ -4,18 +4,17 @@
   const TOTAL_REVIEWS = DATA.bidders.length * DATA.scoringTable.items.length;
   const LOW_CONFIDENCE_THRESHOLD = DATA.lowConfidenceThreshold || 0.85;
   const stageNames = ["PDF 入库", "证据定位", "逐项评审", "结果汇总"];
+  const STORAGE_KEY = "technical-review-demo-state-v1";
+  const LOG_BOTTOM_GAP = 16;
 
-  const state = {
-    run: createRunState(),
-    reviewOverrides: {},
-    activeSectionId: ""
-  };
+  const state = loadAppState();
 
   function createRunState() {
     return {
       eventIndex: 0,
       logs: [],
       started: false,
+      reviewStarted: false,
       paused: false,
       finished: false,
       completedReviews: 0,
@@ -26,7 +25,10 @@
       latencyTotal: 0,
       startedAt: null,
       finishedAt: null,
+      pausedAt: null,
+      pausedTotalMs: 0,
       lastEventAt: null,
+      waitUntil: null,
       currentLabel: "等待开始",
       stages: {
         "PDF 入库": "等待中",
@@ -43,6 +45,89 @@
       clearInterval(state.run.timer);
     }
     state.run = createRunState();
+    saveState();
+  }
+
+  function loadAppState() {
+    const initial = {
+      run: createRunState(),
+      reviewOverrides: {},
+      projectSummary: DATA.projectSummary,
+      activeSectionId: ""
+    };
+
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return initial;
+      const saved = JSON.parse(raw);
+      return {
+        run: hydrateRunState(saved.run),
+        reviewOverrides: saved.reviewOverrides && typeof saved.reviewOverrides === "object" ? saved.reviewOverrides : {},
+        projectSummary: typeof saved.projectSummary === "string" ? saved.projectSummary : DATA.projectSummary,
+        activeSectionId: ""
+      };
+    } catch (error) {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } catch (storageError) {
+        // 存储不可用时降级为内存状态，保证静态 Demo 仍可运行。
+      }
+      return initial;
+    }
+  }
+
+  function finiteNumber(value, fallback) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
+  function hydrateRunState(saved) {
+    const run = createRunState();
+    if (!saved || typeof saved !== "object") return run;
+
+    run.eventIndex = Math.min(Math.max(0, Math.floor(finiteNumber(saved.eventIndex, 0))), DATA.runEvents.length);
+    run.logs = Array.isArray(saved.logs) ? saved.logs.slice(-DATA.runEvents.length - 20) : [];
+    run.started = Boolean(saved.started);
+    run.reviewStarted = Boolean(saved.reviewStarted);
+    run.paused = Boolean(saved.paused);
+    run.finished = Boolean(saved.finished);
+    run.completedReviews = Math.max(0, Math.floor(finiteNumber(saved.completedReviews, 0)));
+    run.retries = Math.max(0, Math.floor(finiteNumber(saved.retries, 0)));
+    run.unrated = Math.max(0, Math.floor(finiteNumber(saved.unrated, 0)));
+    run.inTokens = Math.max(0, Math.floor(finiteNumber(saved.inTokens, 0)));
+    run.outTokens = Math.max(0, Math.floor(finiteNumber(saved.outTokens, 0)));
+    run.latencyTotal = Math.max(0, finiteNumber(saved.latencyTotal, 0));
+    run.startedAt = finiteNumber(saved.startedAt, 0) || null;
+    run.finishedAt = finiteNumber(saved.finishedAt, 0) || null;
+    run.pausedAt = finiteNumber(saved.pausedAt, 0) || null;
+    run.pausedTotalMs = Math.max(0, finiteNumber(saved.pausedTotalMs, 0));
+    run.lastEventAt = finiteNumber(saved.lastEventAt, 0) || null;
+    run.waitUntil = finiteNumber(saved.waitUntil, 0) || null;
+    run.currentLabel = typeof saved.currentLabel === "string" ? saved.currentLabel : run.currentLabel;
+    run.stages = { ...run.stages, ...(saved.stages && typeof saved.stages === "object" ? saved.stages : {}) };
+    run.timer = null;
+
+    if (run.finished) {
+      run.paused = false;
+      run.pausedAt = null;
+      run.waitUntil = null;
+    } else if (run.paused && !run.pausedAt) {
+      run.pausedAt = Date.now();
+    }
+    return run;
+  }
+
+  function saveState() {
+    const run = { ...state.run, timer: null };
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        run,
+        reviewOverrides: state.reviewOverrides,
+        projectSummary: state.projectSummary
+      }));
+    } catch (error) {
+      // 存储不可用时降级为内存状态，保证静态 Demo 仍可运行。
+    }
   }
 
   function html(value) {
@@ -187,7 +272,7 @@
         </section>
 
         <section class="summary-strip" aria-label="任务概览">
-          ${metric("评分规则", "已加载", "19 个评分项 / 总分 100 分")}
+          ${metric("评分规则", "已加载", DATA.scoringTable.items.length + " 个评分项 / 总分 " + totalScore().toFixed(1) + " 分")}
           ${metric("投标人", DATA.bidders.length + " 家", "每家 20 个技术标 PDF")}
           ${metric("逐项评审", TOTAL_REVIEWS + " 项", "12 家投标人 × 19 个评分项")}
           ${metric("语料体量", chars(totalChars), "Mock 占位统计")}
@@ -238,17 +323,18 @@
         <section class="panel" style="margin-top: 18px;">
           <div class="panel-header">
             <h3 class="panel-title">投标文件（技术部分）</h3>
-            <span class="badge neutral">共 ${DATA.bidders.length} 家</span>
+            <span class="badge neutral">${DATA.bidders.length}/${DATA.bidders.length} 已识别</span>
           </div>
           <div class="panel-body">
-            <div class="bidder-list">
+            <p class="panel-note">每家公司 20 个技术标 PDF，评分项文件按名称前缀自动绑定。</p>
+            <div class="bidder-compact-list">
               ${DATA.bidders.map((bidder) => `
-                <div class="bidder-row">
+                <div class="bidder-compact-item">
                   <div>
-                    <div class="bidder-name">${html(bidder.name)}</div>
-                    <div class="bidder-meta">${bidder.pdfCount} 个 PDF / ${chars(bidder.chars)} · 评分项文件按名称前缀自动绑定</div>
+                    <div class="bidder-name" title="${html(bidder.name)}">${html(bidder.name)}</div>
+                    <div class="bidder-meta">${bidder.pdfCount} 个 PDF / ${chars(bidder.chars)}</div>
                   </div>
-                  <span class="badge success">已识别</span>
+                  <span class="status-dot" title="已识别" aria-label="识别状态：已识别"></span>
                 </div>
               `).join("")}
             </div>
@@ -259,8 +345,18 @@
   }
 
   function renderConfirm() {
-    const mismatch = DATA.scoringTable.items.some((item) => item.bound_count < item.expected_bidders);
+    const route = getRoute();
+    const bindingIssueDemo = route.query.get("binding") === "issue";
+    const confirmItems = DATA.scoringTable.items.map((item) => (
+      bindingIssueDemo && item.id === "T-15"
+        ? { ...item, bound_count: item.expected_bidders - 1 }
+        : item
+    ));
+    const mismatchItem = confirmItems.find((item) => item.bound_count < item.expected_bidders);
+    const mismatch = Boolean(mismatchItem);
     const elapsed = runElapsedMs();
+    const scoringTotal = totalScore();
+    const scoringTotalNote = scoringTotal === 100 ? "来自招标文件" : "Mock 尚未完整替换";
     return `
       <main class="page">
         <section class="page-header">
@@ -270,22 +366,23 @@
           </div>
           <div class="toolbar">
             <a class="btn" href="#/create">上一步</a>
+            <a class="btn" href="${bindingIssueDemo ? "#/confirm" : "#/confirm?binding=issue"}">${bindingIssueDemo ? "恢复正常绑定" : "演示绑定异常"}</a>
             <button class="btn primary" data-start-run ${mismatch ? "disabled" : ""}>确认并开始评审</button>
           </div>
         </section>
 
         <section class="summary-strip">
           ${metric("评分项", DATA.scoringTable.items.length + " 项", "技术标评分项")}
-          ${metric("总分", totalScore().toFixed(1) + " 分", "来自招标文件")}
-          ${metric("投标文件绑定", mismatch ? "存在异常" : "全部匹配", mismatch ? "需处理后开始" : "19 项均为 12/12")}
-          ${metric("现场计时", state.run.startedAt ? formatDuration(elapsed) : "未开始", "页面①下一步起算")}
+          ${metric("总分", scoringTotal.toFixed(1) + " 分", scoringTotalNote)}
+          ${metric("投标文件绑定", mismatch ? "存在异常" : "全部匹配", mismatch ? mismatchItem.id + " 为 " + mismatchItem.bound_count + "/" + mismatchItem.expected_bidders : "19 项均为 12/12")}
+          ${metric("现场计时", `<span data-run-elapsed>${state.run.startedAt ? formatDuration(elapsed) : "未开始"}</span>`, "页面①下一步起算")}
           ${metric("人工介入", "本页一次", "确认后进入现场评审")}
         </section>
 
         <section class="layout-grid" style="margin-top: 18px;">
           <div class="panel">
             <div class="panel-header">
-              <h3 class="panel-title">解析结果（可核对）</h3>
+              <h3 class="panel-title">评分表核对（只读）</h3>
               <span class="badge ${mismatch ? "danger" : "success"}">${mismatch ? "存在缺项" : "可开始"}</span>
             </div>
             <div class="panel-body">
@@ -301,7 +398,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    ${DATA.scoringTable.items.map((item, index) => `
+                    ${confirmItems.map((item, index) => `
                       <tr>
                         <td>${index + 1}</td>
                         <td>${html(item.name)}</td>
@@ -329,7 +426,7 @@
               </ul>
               <div class="field" style="margin-top: 18px;">
                 <label for="projectSummary">项目特征摘要</label>
-                <textarea id="projectSummary" class="textarea">${html(DATA.projectSummary)}</textarea>
+                <textarea id="projectSummary" class="textarea">${html(state.projectSummary)}</textarea>
               </div>
             </div>
           </aside>
@@ -345,14 +442,14 @@
     const avgLatency = run.completedReviews ? Math.round(run.latencyTotal / run.completedReviews) : 0;
     const remainingReviews = Math.max(0, TOTAL_REVIEWS - run.completedReviews);
     const estimatedMs = run.completedReviews ? remainingReviews * Math.max(avgLatency, 2400) / DATA.reportData.perf.concurrency : 0;
-    const waitingMs = run.lastEventAt ? Date.now() - run.lastEventAt : 0;
+    const waitingMs = run.lastEventAt ? runTimestampNow(run) - run.lastEventAt : 0;
 
     return `
       <main class="page">
         <section class="page-header">
           <div>
             <h2 class="page-title">${run.finished ? "评审完成" : "评审进行中"}</h2>
-            <p class="page-desc">逐项评审进度单独统计，分母为 228 = 12 家投标人 × 19 个评分项；S1-S4 用阶段状态展示。</p>
+            <p class="page-desc">逐项评审进度单独统计，分母为 228 = 12 家投标人 × 19 个评分项；S1-S4 用步骤条展示。</p>
           </div>
           <div class="toolbar">
             <button class="btn" data-toggle-run>${run.paused ? "继续" : "暂停"}</button>
@@ -367,17 +464,8 @@
             <span class="badge ${run.finished ? "success" : "primary"}">${run.finished ? "报告数据已生成" : "现场运行中"}</span>
           </div>
           <div class="panel-body">
-            <div class="stage-list">
-              ${stageNames.map((name) => {
-                const status = run.stages[name];
-                const cls = status === "已完成" ? "done" : status === "进行中" ? "running" : "waiting";
-                return `
-                  <div class="stage ${cls}">
-                    <div class="stage-name">${name}</div>
-                    <div class="stage-state">${status}</div>
-                  </div>
-                `;
-              }).join("")}
+            <div class="stage-stepper" aria-label="S1-S4 运行阶段">
+              ${stageNames.map(renderStageStep).join(`<span class="stage-arrow" aria-hidden="true">→</span>`)}
             </div>
           </div>
         </section>
@@ -406,7 +494,7 @@
               </div>
 
               <div class="summary-strip" style="margin-top: 18px;">
-                ${metric("已用时间", formatDuration(elapsed), "预计剩余 " + formatDuration(estimatedMs))}
+                ${metric("已用时间", formatDuration(elapsed), "预计剩余 " + formatDuration(estimatedMs) + " · Mock估算")}
                 ${metric("当前处理状态", html(run.currentLabel), "已等待 " + formatDuration(waitingMs))}
                 ${metric("当前并发", DATA.reportData.perf.concurrency + " 路", "逐项评审并发")}
                 ${metric("GPU / 显存", "未采集", "不伪造硬件数据")}
@@ -438,12 +526,18 @@
 
         <section class="panel" style="margin-top: 18px;">
           <div class="panel-header">
-            <h3 class="panel-title">实时滚动</h3>
-            <span class="badge neutral">最新在上</span>
+            <h3 class="panel-title">运行记录</h3>
+            <span class="badge neutral">最新在下</span>
           </div>
           <div class="panel-body">
             <div class="run-log">
-              ${run.logs.length ? run.logs.slice(0, 80).map(renderLogRow).join("") : `<div class="empty">等待评审事件进入滚动区</div>`}
+              <div class="log-head">
+                <div>时间</div>
+                <div>对象</div>
+                <div>事件</div>
+                <div class="log-result">结果</div>
+              </div>
+              ${run.logs.length ? run.logs.map(renderLogRow).join("") : `<div class="empty">等待评审事件进入滚动区</div>`}
             </div>
           </div>
         </section>
@@ -454,21 +548,21 @@
   function renderResults() {
     const elapsed = reportElapsedMs();
     const rows = DATA.scoringTable.items.map((item) => {
-      const allZero = DATA.bidders.every((bidder) => resultBy(bidder.id, item.id).score === 0);
+      const allZero = DATA.bidders.every((bidder) => effectiveScoreFor(bidder.id, item.id) === 0);
       return `
         <tr class="${allZero ? "row-warning" : ""}">
-          <td class="sticky-item">
+          <td class="sticky-item" data-score-col="0">
             <strong>${html(item.name)}</strong>
             ${allZero ? `<div class="small muted">疑似检索配置问题</div>` : ""}
           </td>
-          <td class="sticky-max">${item.max_score.toFixed(1)}</td>
-          ${DATA.bidders.map((bidder) => renderScoreCell(bidder, item)).join("")}
+          <td class="sticky-max" data-score-col="1">${item.max_score.toFixed(1)}</td>
+          ${DATA.bidders.map((bidder, index) => renderScoreCell(bidder, item, index)).join("")}
         </tr>
       `;
     }).join("");
 
     return `
-      <main class="page">
+      <main class="page page-wide">
         <section class="page-header">
           <div>
             <h2 class="page-title">评审结果并排</h2>
@@ -493,23 +587,23 @@
             <span class="badge neutral">评分项列固定 · 12 家横向滚动</span>
           </div>
           <div class="panel-body">
-            <div class="table-wrap">
+            <div class="table-wrap matrix-wrap">
               <table class="score-matrix">
                 <thead>
                   <tr>
-                    <th class="sticky-item">评分项</th>
-                    <th class="sticky-max">满分</th>
-                    ${DATA.bidders.map((bidder) => `<th>${html(bidder.short)}</th>`).join("")}
+                    <th class="sticky-item" data-score-col="0">评分项</th>
+                    <th class="sticky-max" data-score-col="1">满分</th>
+                    ${DATA.bidders.map((bidder, index) => `<th data-score-col="${index + 2}">${html(bidder.short)}</th>`).join("")}
                   </tr>
                 </thead>
                 <tbody>
                   ${rows}
-                  <tr>
-                    <td class="sticky-item"><strong>合计（19 项）</strong></td>
-                    <td class="sticky-max"><strong>100.0</strong></td>
-                    ${DATA.bidders.map((bidder) => {
-                      const total = DATA.reportData.totals[bidder.name];
-                      return `<td><strong>${total.score.toFixed(1)}${total.unrated ? "*" : ""}</strong></td>`;
+                  <tr class="matrix-total-row">
+                    <td class="sticky-item" data-score-col="0"><strong>合计（19 项）</strong></td>
+                    <td class="sticky-max" data-score-col="1"><strong>${totalScore().toFixed(1)}</strong></td>
+                    ${DATA.bidders.map((bidder, index) => {
+                      const total = effectiveTotalForBidder(bidder);
+                      return `<td data-score-col="${index + 2}"><strong>${total.score.toFixed(1)}${total.unrated ? "*" : ""}</strong></td>`;
                     }).join("")}
                   </tr>
                 </tbody>
@@ -519,6 +613,7 @@
               <span>0 = 未命中，投标文件未写此项</span>
               <span>— = 未评定，系统未能给出判断，不计入合计</span>
               <span>复核 = confidence &lt; ${LOW_CONFIDENCE_THRESHOLD}，建议人工复核</span>
+              <span>改判 = 专家已手动覆盖该单元格分数</span>
               <span>* = 该家存在未评定项，合计不完整</span>
             </div>
           </div>
@@ -543,8 +638,10 @@
       `;
     }
 
-    const reviewKey = bidder.id + "__" + item.id;
+    const reviewKey = reviewKeyFor(bidder.id, item.id);
     const override = state.reviewOverrides[reviewKey];
+    const overrideScore = numericOverrideScore(override);
+    const effectiveScore = overrideScore !== null ? overrideScore : result.score;
     const activeSection = state.activeSectionId || (evidence.picked[0] ? evidence.picked[0].section_id : "");
     state.activeSectionId = activeSection;
     const titleStatus = result.status === "unrated"
@@ -552,14 +649,15 @@
       : result.score === 0
         ? "未命中"
         : "判分 " + result.tier;
-    const scoreText = result.score == null ? "—" : result.score.toFixed(1);
+    const scoreText = scoreLabel(result.score);
+    const effectiveScoreText = scoreLabel(effectiveScore);
 
     return `
       <main class="page">
         <section class="page-header">
           <div>
             <h2 class="page-title">${html(bidder.short)} · ${html(item.name)}</h2>
-            <p class="page-desc">${titleStatus} · ${scoreText} / ${item.max_score.toFixed(1)} 分</p>
+            <p class="page-desc">${titleStatus} · 系统 ${scoreText} / ${item.max_score.toFixed(1)} 分${overrideScore !== null ? "；人工改判 " + effectiveScoreText + " 分" : ""}</p>
           </div>
           <div class="toolbar">
             <a class="btn" href="#/results">返回结果并排</a>
@@ -579,7 +677,7 @@
               </div>
               <div class="panel-body">
                 <div class="summary-strip">
-                  ${metric("最终分数", scoreText, "满分 " + item.max_score.toFixed(1))}
+                  ${metric("最终分数", effectiveScoreText, overrideScore !== null ? "已按专家改判覆盖" : "满分 " + item.max_score.toFixed(1))}
                   ${metric("当前档位", result.tier || "无", result.score === 0 ? "按缺项不得分处理" : "来自评分区间")}
                   ${metric("置信度", result.confidence.toFixed(2), isLowConfidence(result) ? "建议人工复核" : "可追溯")}
                   ${metric("调用次数", result.attempts + " 次", result.attempts > 1 ? "曾重试" : "一次成功")}
@@ -602,6 +700,7 @@
                     </div>
                   `).join("")}
                 </div>
+                ${item.tier_quote ? `<blockquote class="tier-quote">${html(item.tier_quote)}</blockquote>` : ""}
               </div>
             </section>
 
@@ -639,7 +738,7 @@
               <div class="panel-body">
                 <div class="review-form">
                   <button class="btn" data-review-approve data-bidder="${html(bidder.id)}" data-item="${html(item.id)}">认可</button>
-                  <input id="overrideScore" class="input" placeholder="改判分数" value="${override && override.score ? html(override.score) : ""}">
+                  <input id="overrideScore" class="input" placeholder="改判分数" value="${override && override.score !== "" && override.score != null ? html(override.score) : ""}">
                   <input id="overrideNote" class="input" placeholder="备注" value="${override && override.note ? html(override.note) : ""}">
                   <button class="btn primary" data-review-save data-bidder="${html(bidder.id)}" data-item="${html(item.id)}">保存改判</button>
                 </div>
@@ -726,15 +825,22 @@
     `;
   }
 
-  function renderScoreCell(bidder, item) {
+  function renderScoreCell(bidder, item, bidderIndex) {
     const result = resultBy(bidder.id, item.id);
     const href = routeForDetail(bidder.id, item.id);
+    const override = overrideBy(bidder.id, item.id);
+    const overrideScore = numericOverrideScore(override);
+    const approved = override && override.type === "认可";
     const low = isLowConfidence(result);
     let cls = "score-cell";
     let label = "";
     let title = "点击查看判分依据";
 
-    if (result.status === "unrated") {
+    if (overrideScore !== null) {
+      cls += " override";
+      label = scoreLabel(overrideScore) + " 改判";
+      title = "已人工改判，点击查看原始判分和依据";
+    } else if (result.status === "unrated") {
       cls += " unrated";
       label = "—";
       title = "未评定，点击查看失败信息和证据";
@@ -747,8 +853,14 @@
       if (low) cls += " review";
     }
 
+    if (approved && overrideScore === null) {
+      cls += " approved";
+      label += " 认可";
+      title = "专家已认可，点击查看判分依据";
+    }
+
     return `
-      <td>
+      <td data-score-col="${bidderIndex + 2}">
         <a class="${cls}" href="${href}" title="${html(title)}">${html(label)}</a>
       </td>
     `;
@@ -761,6 +873,23 @@
         <div>${html(row.bidder || "系统")}</div>
         <div>${html(row.item || row.message)}</div>
         <div class="log-result">${html(row.result || "")}</div>
+      </div>
+    `;
+  }
+
+  function renderStageStep(name) {
+    const status = state.run.stages[name];
+    const cls = status === "已完成" ? "done" : status === "进行中" ? "running" : "waiting";
+    const mark = status === "已完成" ? "✓" : status === "进行中" ? "●" : "○";
+    const label = name === "PDF 入库" ? "PDF入库" : name;
+
+    return `
+      <div class="stage-step ${cls}" aria-label="${html(label + "：" + status)}">
+        <div class="stage-step-main">
+          <span>${html(label)}</span>
+          <span class="stage-step-mark" aria-hidden="true">${mark}</span>
+        </div>
+        <div class="stage-step-state">${html(status)}</div>
       </div>
     `;
   }
@@ -789,7 +918,12 @@
 
   function runElapsedMs() {
     if (!state.run.startedAt) return 0;
-    return (state.run.finishedAt || Date.now()) - state.run.startedAt;
+    const endAt = state.run.finishedAt || runTimestampNow(state.run);
+    return Math.max(0, endAt - state.run.startedAt - state.run.pausedTotalMs);
+  }
+
+  function runTimestampNow(run) {
+    return run.paused && run.pausedAt ? run.pausedAt : Date.now();
   }
 
   function reportElapsedMs() {
@@ -804,39 +938,164 @@
       run.lastEventAt = Date.now();
       run.currentLabel = message || "开始读取 12 家投标技术标 PDF";
       run.stages["PDF 入库"] = "进行中";
+      saveState();
     }
     if (!run.timer && !run.finished) {
       run.timer = setInterval(tickRun, 750);
     }
   }
 
+  function startReview() {
+    ensureRunStarted("确认完成，进入逐项评审");
+    const run = state.run;
+    if (run.paused) {
+      toggleRunPaused();
+    }
+    if (!run.reviewStarted) {
+      run.reviewStarted = true;
+      run.paused = false;
+      run.currentLabel = "确认完成，进入逐项评审";
+      run.logs.push({
+        time: clock(),
+        kind: "system",
+        message: "人工确认完成，逐项评审事件流已放行",
+        result: "开始评审"
+      });
+      saveState();
+    }
+  }
+
+  function isReviewPhaseEvent(event) {
+    if (!event) return false;
+    return event.type === "review" ||
+      event.type === "retry" ||
+      event.type === "wait" ||
+      (event.type === "stage" && (event.stage === "逐项评审" || event.stage === "结果汇总"));
+  }
+
+  function canConsumeEvent(event) {
+    return !isReviewPhaseEvent(event) || state.run.reviewStarted;
+  }
+
+  function markWaitingForReviewGate() {
+    const run = state.run;
+    if (!run.reviewStarted && run.currentLabel !== "等待人工确认开始逐项评审") {
+      run.currentLabel = "等待人工确认开始逐项评审";
+      saveState();
+    }
+  }
+
+  function completeRun() {
+    const run = state.run;
+    run.finished = true;
+    run.finishedAt = Date.now();
+    run.paused = false;
+    run.pausedAt = null;
+    run.waitUntil = null;
+    run.stages["PDF 入库"] = "已完成";
+    run.stages["证据定位"] = "已完成";
+    run.stages["逐项评审"] = "已完成";
+    run.stages["结果汇总"] = "已完成";
+    run.currentLabel = "报告数据已生成";
+    if (run.timer) {
+      clearInterval(run.timer);
+      run.timer = null;
+    }
+  }
+
   function tickRun() {
     const route = getRoute();
     const run = state.run;
+    let changed = false;
     if (!run.paused && !run.finished) {
-      const event = DATA.runEvents[run.eventIndex];
-      if (event) {
-        processRunEvent(event);
-        run.eventIndex += 1;
-      }
-      if (run.eventIndex >= DATA.runEvents.length) {
-        run.finished = true;
-        run.finishedAt = Date.now();
-        run.paused = false;
-        run.stages["PDF 入库"] = "已完成";
-        run.stages["证据定位"] = "已完成";
-        run.stages["逐项评审"] = "已完成";
-        run.stages["结果汇总"] = "已完成";
-        run.currentLabel = "报告数据已生成";
-        if (run.timer) {
-          clearInterval(run.timer);
-          run.timer = null;
+      const now = Date.now();
+      if (run.waitUntil && now < run.waitUntil) {
+        updateRuntimeFields(route.path);
+      } else {
+        if (run.waitUntil) {
+          run.waitUntil = null;
+          changed = true;
+        }
+        const event = DATA.runEvents[run.eventIndex];
+        if (event && canConsumeEvent(event)) {
+          processRunEvent(event);
+          run.eventIndex += 1;
+          changed = true;
+        } else if (event) {
+          markWaitingForReviewGate();
         }
       }
+      if (run.eventIndex >= DATA.runEvents.length) {
+        completeRun();
+        changed = true;
+      }
     }
-    if (route.path === "/confirm" || route.path === "/running" || route.path === "/results") {
+    if (changed) {
+      saveState();
+    }
+
+    if (route.path === "/confirm") {
+      updateRuntimeFields(route.path);
+      return;
+    }
+    if (route.path === "/running") {
+      renderPreservingRunLog();
+      return;
+    }
+    if (route.path === "/results") {
       render();
     }
+  }
+
+  function updateRuntimeFields(path) {
+    if (path !== "/confirm") return;
+    const elapsed = document.querySelector("[data-run-elapsed]");
+    if (elapsed) {
+      elapsed.textContent = state.run.startedAt ? formatDuration(runElapsedMs()) : "未开始";
+    }
+  }
+
+  function isRunLogPinned(log) {
+    return log.scrollHeight - log.scrollTop - log.clientHeight <= LOG_BOTTOM_GAP;
+  }
+
+  function renderPreservingRunLog() {
+    const log = document.querySelector(".run-log");
+    const shouldPin = log ? isRunLogPinned(log) : true;
+    const scrollTop = log ? log.scrollTop : 0;
+    render();
+    const nextLog = document.querySelector(".run-log");
+    if (!nextLog) return;
+    if (shouldPin) {
+      nextLog.scrollTop = nextLog.scrollHeight;
+    } else {
+      nextLog.scrollTop = scrollTop;
+    }
+  }
+
+  function scrollRunLogToBottom() {
+    const log = document.querySelector(".run-log");
+    if (log) {
+      log.scrollTop = log.scrollHeight;
+    }
+  }
+
+  function pushRunLog(row) {
+    state.run.logs.push(row);
+  }
+
+  function processWaitEvent(event, bidder, item) {
+    const run = state.run;
+    run.waitUntil = Date.now() + Math.max(0, event.duration_ms || 0);
+    run.stages["逐项评审"] = "进行中";
+    run.currentLabel = (bidder ? bidder.short : event.bidder_id) + " · " + (item ? item.name : event.item_id);
+    pushRunLog({
+      time: clock(),
+      kind: "system",
+      bidder: bidder ? bidder.short : event.bidder_id,
+      item: item ? item.name : event.item_id,
+      result: event.message || "等待模型返回"
+    });
   }
 
   function processRunEvent(event) {
@@ -849,7 +1108,7 @@
         run.stages["结果汇总"] = "等待中";
       }
       run.currentLabel = event.message;
-      run.logs.unshift({
+      pushRunLog({
         time: clock(),
         kind: "system",
         message: event.message,
@@ -860,12 +1119,18 @@
 
     const item = itemById(event.item_id);
     const bidder = bidderById(event.bidder_id);
+
+    if (event.type === "wait") {
+      processWaitEvent(event, bidder, item);
+      return;
+    }
+
     run.currentLabel = (bidder ? bidder.short : event.bidder_id) + " · " + (item ? item.name : event.item_id);
 
     if (event.type === "retry") {
       run.retries += 1;
       run.stages["逐项评审"] = "进行中";
-      run.logs.unshift({
+      pushRunLog({
         time: clock(),
         kind: "retry",
         bidder: bidder.short,
@@ -901,7 +1166,7 @@
         }
       }
 
-      run.logs.unshift({
+      pushRunLog({
         time: clock(),
         kind,
         bidder: bidder.short,
@@ -910,6 +1175,7 @@
       });
     }
   }
+
 
   function sourceDomId(sectionId) {
     return "source-" + String(sectionId).replace(/[^a-zA-Z0-9_-]/g, "_");
@@ -921,6 +1187,40 @@
       const target = document.getElementById(sourceDomId(state.activeSectionId));
       if (target) target.scrollIntoView({ block: "nearest" });
     }, 0);
+  }
+
+  function reviewKeyFor(bidderId, itemId) {
+    return bidderId + "__" + itemId;
+  }
+
+  function overrideBy(bidderId, itemId) {
+    return state.reviewOverrides[reviewKeyFor(bidderId, itemId)];
+  }
+
+  function numericOverrideScore(override) {
+    if (!override || override.type !== "人工改判") return null;
+    const score = Number(override.score);
+    return Number.isFinite(score) ? score : null;
+  }
+
+  function effectiveScoreFor(bidderId, itemId) {
+    const overrideScore = numericOverrideScore(overrideBy(bidderId, itemId));
+    if (overrideScore !== null) return overrideScore;
+    const result = resultBy(bidderId, itemId);
+    return result ? result.score : null;
+  }
+
+  function effectiveTotalForBidder(bidder) {
+    const rows = DATA.scoringTable.items.map((item) => ({
+      result: resultBy(bidder.id, item.id),
+      score: effectiveScoreFor(bidder.id, item.id)
+    }));
+    const score = rows.reduce((sum, row) => sum + (typeof row.score === "number" ? row.score : 0), 0);
+    const unrated = rows.filter((row) => row.result && row.result.status === "unrated" && typeof row.score !== "number").length;
+    return {
+      score: Math.round(score * 10) / 10,
+      unrated
+    };
   }
 
   function scoreLabel(value) {
@@ -938,17 +1238,30 @@
         <td>${item.max_score.toFixed(1)}</td>
         ${DATA.bidders.map((bidder) => {
           const result = resultBy(bidder.id, item.id);
-          const label = scoreLabel(result.score) + (isLowConfidence(result) ? " 复核" : "");
-          return `<td class="${isLowConfidence(result) ? "low" : result.status === "unrated" ? "unrated" : result.score === 0 ? "zero" : ""}">${html(label)}</td>`;
+          const override = overrideBy(bidder.id, item.id);
+          const overrideScore = numericOverrideScore(override);
+          const effectiveScore = effectiveScoreFor(bidder.id, item.id);
+          const label = scoreLabel(effectiveScore) +
+            (overrideScore !== null ? " 改判" : isLowConfidence(result) ? " 复核" : override && override.type === "认可" ? " 认可" : "");
+          const cls = overrideScore !== null
+            ? "override"
+            : isLowConfidence(result)
+              ? "low"
+              : result.status === "unrated"
+                ? "unrated"
+                : result.score === 0
+                  ? "zero"
+                  : "";
+          return `<td class="${cls}">${html(label)}</td>`;
         }).join("")}
       </tr>
     `).join("");
     const totalRow = `
       <tr class="total">
         <td>合计（19 项）</td>
-        <td>100.0</td>
+        <td>${totalScore().toFixed(1)}</td>
         ${DATA.bidders.map((bidder) => {
-          const total = DATA.reportData.totals[bidder.name];
+          const total = effectiveTotalForBidder(bidder);
           return `<td>${total.score.toFixed(1)}${total.unrated ? "*" : ""}</td>`;
         }).join("")}
       </tr>
@@ -991,6 +1304,7 @@
     th { background: #f3f6fa; white-space: nowrap; }
     .total td { background: #f8fafc; font-weight: 700; }
     .low { color: #a45f0a; font-weight: 700; }
+    .override { color: #0b6b52; font-weight: 700; }
     .unrated { color: #b42318; font-weight: 700; }
     .zero { color: #667085; }
     .single-column { min-width: 0; }
@@ -1018,7 +1332,7 @@
       </tbody>
     </table>
   </div>
-  <p class="note">0 = 未命中；— = 未评定；复核 = confidence &lt; ${LOW_CONFIDENCE_THRESHOLD}；* = 该家存在未评定项。</p>
+  <p class="note">0 = 未命中；— = 未评定；复核 = confidence &lt; ${LOW_CONFIDENCE_THRESHOLD}；改判 = 专家手动覆盖；* = 该家存在未评定项。</p>
 
   <h2>未评定单列</h2>
   <table class="single-column">
@@ -1071,7 +1385,7 @@
 
     const start = event.target.closest("[data-start-run]");
     if (start) {
-      ensureRunStarted("确认完成，进入逐项评审");
+      startReview();
       setRoute("#/running");
       return;
     }
@@ -1084,13 +1398,17 @@
 
     const toggle = event.target.closest("[data-toggle-run]");
     if (toggle) {
-      state.run.paused = !state.run.paused;
+      toggleRunPaused();
+      saveState();
       render();
       return;
     }
 
     const reset = event.target.closest("[data-reset-run]");
     if (reset) {
+      if (!window.confirm("确定重置演示运行进度和计时器吗？此操作会让现场运行状态归零。")) {
+        return;
+      }
       resetRunState();
       render();
       return;
@@ -1105,30 +1423,116 @@
 
     const approve = event.target.closest("[data-review-approve]");
     if (approve) {
-      const key = approve.getAttribute("data-bidder") + "__" + approve.getAttribute("data-item");
+      const key = reviewKeyFor(approve.getAttribute("data-bidder"), approve.getAttribute("data-item"));
       state.reviewOverrides[key] = { type: "认可", score: "", note: "" };
+      saveState();
       render();
       return;
     }
 
     const save = event.target.closest("[data-review-save]");
     if (save) {
-      const key = save.getAttribute("data-bidder") + "__" + save.getAttribute("data-item");
-      const score = document.getElementById("overrideScore")?.value.trim() || "";
+      const bidderId = save.getAttribute("data-bidder");
+      const itemId = save.getAttribute("data-item");
+      const item = itemById(itemId);
+      const key = reviewKeyFor(bidderId, itemId);
+      const scoreRaw = document.getElementById("overrideScore")?.value.trim() || "";
+      const score = Number(scoreRaw);
       const note = document.getElementById("overrideNote")?.value.trim() || "";
-      state.reviewOverrides[key] = { type: "人工改判", score, note };
+      if (!scoreRaw || !Number.isFinite(score) || score < 0 || (item && score > item.max_score)) {
+        window.alert("改判分数必须是 0 到 " + (item ? item.max_score.toFixed(1) : "满分") + " 之间的数字。");
+        return;
+      }
+      state.reviewOverrides[key] = { type: "人工改判", score: Math.round(score * 10) / 10, note };
+      saveState();
       render();
+    }
+  });
+
+  function toggleRunPaused() {
+    const run = state.run;
+    if (run.finished) return;
+    if (run.paused) {
+      const now = Date.now();
+      const pausedMs = run.pausedAt ? Math.max(0, now - run.pausedAt) : 0;
+      run.pausedTotalMs += pausedMs;
+      if (run.waitUntil) {
+        run.waitUntil += pausedMs;
+      }
+      if (run.lastEventAt) {
+        run.lastEventAt += pausedMs;
+      }
+      run.paused = false;
+      run.pausedAt = null;
+      return;
+    }
+    run.paused = true;
+    run.pausedAt = Date.now();
+  }
+
+  function clearMatrixHover(matrix) {
+    matrix.querySelectorAll(".matrix-row-hover").forEach((row) => {
+      row.classList.remove("matrix-row-hover");
+    });
+    matrix.querySelectorAll(".matrix-col-hover").forEach((cell) => {
+      cell.classList.remove("matrix-col-hover");
+    });
+  }
+
+  function setMatrixHover(cell) {
+    const matrix = cell.closest(".score-matrix");
+    const row = cell.closest("tr");
+    if (!matrix || !row) return;
+
+    clearMatrixHover(matrix);
+    row.classList.add("matrix-row-hover");
+    Array.from(matrix.rows).forEach((matrixRow) => {
+      const columnCell = matrixRow.cells[cell.cellIndex];
+      if (columnCell) {
+        columnCell.classList.add("matrix-col-hover");
+      }
+    });
+  }
+
+  document.addEventListener("pointerover", (event) => {
+    if (!event.target || !event.target.closest) return;
+    const cell = event.target.closest(".score-matrix th, .score-matrix td");
+    if (cell) {
+      setMatrixHover(cell);
+    }
+  });
+
+  document.addEventListener("pointerout", (event) => {
+    if (!event.target || !event.target.closest) return;
+    const matrix = event.target.closest(".score-matrix");
+    const related = event.relatedTarget;
+    if (!matrix || (related && related.nodeType && matrix.contains(related))) return;
+    clearMatrixHover(matrix);
+  });
+
+  document.addEventListener("input", (event) => {
+    if (event.target && event.target.id === "projectSummary") {
+      state.projectSummary = event.target.value;
+      saveState();
     }
   });
 
   window.addEventListener("hashchange", () => {
     state.activeSectionId = "";
     render();
+    if (getRoute().path === "/running") {
+      setTimeout(scrollRunLogToBottom, 0);
+    }
   });
 
   if (!location.hash) {
     location.hash = "#/create";
-  } else {
-    render();
+  }
+  render();
+  if (getRoute().path === "/running") {
+    setTimeout(scrollRunLogToBottom, 0);
+  }
+  if (state.run.started && !state.run.finished) {
+    ensureRunStarted();
   }
 })();

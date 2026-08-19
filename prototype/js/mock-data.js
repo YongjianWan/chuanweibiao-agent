@@ -1,16 +1,16 @@
 (function () {
   const bidders = [
-    { id: "zhongye", name: "中冶建工集团有限公司8010856", short: "中冶建工", pdfCount: 20, chars: 567000 },
-    { id: "zhongjian1", name: "中国建筑一局（集团）有限公司8004216", short: "中建一局", pdfCount: 20, chars: 781000 },
-    { id: "jinan1", name: "济南一建集团有限公司8008754", short: "济南一建", pdfCount: 20, chars: 429000 },
-    { id: "zhongjian2", name: "中国建筑第二工程局有限公司8001968", short: "中建二局", pdfCount: 20, chars: 906000 },
-    { id: "zhongjian5", name: "中国建筑第五工程局有限公司8002423", short: "中建五局", pdfCount: 20, chars: 632000 },
-    { id: "zhongtie", name: "中铁建工集团有限公司8010219", short: "中铁建工", pdfCount: 20, chars: 1126000 },
-    { id: "shandong3", name: "山东三箭建设工程股份有限公司8003180", short: "山东三箭", pdfCount: 20, chars: 728000 },
-    { id: "qingjian", name: "青建集团股份公司8006620", short: "青建集团", pdfCount: 20, chars: 854000 },
+    { id: "zhongye", name: "中冶建工集团有限公司8010856", short: "中冶建工", pdfCount: 20, chars: 535000 },
+    { id: "zhongjian1", name: "中国建筑一局（集团）有限公司8004216", short: "中建一局", pdfCount: 20, chars: 742000 },
+    { id: "jinan1", name: "济南一建集团有限公司8008754", short: "济南一建", pdfCount: 20, chars: 412000 },
+    { id: "zhongjian2", name: "中国建筑第二工程局有限公司8001968", short: "中建二局", pdfCount: 20, chars: 861000 },
+    { id: "zhongjian5", name: "中国建筑第五工程局有限公司8002423", short: "中建五局", pdfCount: 20, chars: 602000 },
+    { id: "zhongtie", name: "中铁建工集团有限公司8010219", short: "中铁建工", pdfCount: 20, chars: 1072000 },
+    { id: "shandong3", name: "山东三箭建设工程股份有限公司8003180", short: "山东三箭", pdfCount: 20, chars: 692000 },
+    { id: "qingjian", name: "青建集团股份公司8006620", short: "青建集团", pdfCount: 20, chars: 812000 },
     { id: "tianqi", name: "天齐置业集团股份有限公司8007234", short: "天齐集团", pdfCount: 20, chars: 295000 },
-    { id: "zhongqing", name: "中青建安建设集团有限公司8005591", short: "中青建安", pdfCount: 20, chars: 1004000 },
-    { id: "dezhou", name: "德州建设集团有限公司8007782", short: "德州建设", pdfCount: 20, chars: 1580000 },
+    { id: "zhongqing", name: "中青建安建设集团有限公司8005591", short: "中青建安", pdfCount: 20, chars: 954000 },
+    { id: "dezhou", name: "德州建设集团有限公司8007782", short: "德州建设", pdfCount: 20, chars: 1233000 },
     { id: "shandongluqiao", name: "山东路桥集团有限公司8009083", short: "山东路桥", pdfCount: 20, chars: 2260000 }
   ];
 
@@ -51,7 +51,26 @@
     ["T-12", "材料设备采购计划", 4],
     ["T-13", "BIM 技术应用方案", 4],
     ["T-14", "EPC 总承包管理方案", 4],
-    ["T-15", "各专业施工图设计安排协调时间保证措施", 4],
+    ["T-15", "各专业施工图设计的安排、协调、时间保证措施", 2, [
+      {
+        tier: "优",
+        min: 1.5,
+        max: 2,
+        desc: "安排完整，协调机制清楚，时间保证措施针对性强。"
+      },
+      {
+        tier: "良",
+        min: 0.7,
+        max: 1.5,
+        desc: "安排和协调措施基本完整，时间保证措施仍有细化空间。"
+      },
+      {
+        tier: "一般",
+        min: 0.2,
+        max: 0.7,
+        desc: "覆盖基本要求，但安排、协调和时间保证措施较概括。"
+      }
+    ]],
     ["T-16", "工程重点难点分析", 4],
     ["T-17", "应急处置预案", 4],
     ["T-18", "成品保护及移交方案", 3],
@@ -64,6 +83,10 @@
 
   function round2(value) {
     return Math.round(value * 100) / 100;
+  }
+
+  function round3(value) {
+    return Math.round(value * 1000) / 1000;
   }
 
   const LOW_CONFIDENCE_THRESHOLD = 0.85;
@@ -79,7 +102,7 @@
     });
   }
 
-  function makeTiers(maxScore) {
+  function makeDefaultMockTiers(maxScore) {
     return [
       {
         tier: "优",
@@ -100,6 +123,22 @@
         desc: "覆盖基本要求，但内容较概括，细化程度不足。"
       }
     ];
+  }
+
+  function scoreText(value) {
+    return Number.isInteger(value) ? String(value) : value.toFixed(1);
+  }
+
+  function buildTierQuote(tiers) {
+    const general = tiers.find((tier) => tier.tier === "一般");
+    const good = tiers.find((tier) => tier.tier === "良");
+    const excellent = tiers.find((tier) => tier.tier === "优");
+    if (!general || !good || !excellent) return "";
+    return "评委根据投标文件情况分为一般、良、优，分别酌情得 " +
+      scoreText(general.min) + "-" + scoreText(general.max) + " 分、" +
+      scoreText(good.min) + "-" + scoreText(good.max) + " 分、" +
+      scoreText(excellent.min) + "-" + scoreText(excellent.max) +
+      " 分，内容不全酌情扣分，若此条缺项不得分。";
   }
 
   function makeFactors(name, idx) {
@@ -174,18 +213,22 @@
     return normalizeFactors(factors);
   }
 
-  const items = itemDefs.map(([id, name, maxScore], index) => ({
-    id,
-    guid: guids[index],
-    name,
-    max_score: maxScore,
-    source: "招标文件.pdf 第 33~37 页",
-    bound_count: 12,
-    expected_bidders: 12,
-    tiers: makeTiers(maxScore),
-    factors: makeFactors(name, index),
-    synonyms: name === "进度管理方案" ? ["香蕉曲线", "S 曲线", "关键线路"] : []
-  }));
+  const items = itemDefs.map(([id, name, maxScore, explicitTiers], index) => {
+    const tiers = explicitTiers || makeDefaultMockTiers(maxScore);
+    return {
+      id,
+      guid: guids[index],
+      name,
+      max_score: maxScore,
+      source: "招标文件.pdf 第 33~37 页",
+      bound_count: 12,
+      expected_bidders: 12,
+      tiers,
+      tier_quote: buildTierQuote(tiers),
+      factors: makeFactors(name, index),
+      synonyms: name === "进度管理方案" ? ["香蕉曲线", "S 曲线", "关键线路"] : []
+    };
+  });
 
   const scoringTable = {
     project: "济阳区实验高级中学项目工程总承包（EPC）",
@@ -205,8 +248,12 @@
     return item.tiers.find((tier) => tier.tier === tierName);
   }
 
-  function mockCompletionRate(bidderIndex, itemIndex) {
-    return round2(0.46 + ((bidderIndex * 11 + itemIndex * 7) % 35) / 100);
+  function mockCompletionRate(bidderIndex, itemIndex, tierName) {
+    const variance = ((bidderIndex * 11 + itemIndex * 7) % 18) / 100;
+    if (tierName === "优") return round2(0.72 + variance);
+    if (tierName === "良") return round2(0.44 + variance);
+    if (tierName === "一般") return round2(0.18 + variance);
+    return 0;
   }
 
   function factorScores(item, bidderIndex, itemIndex, targetRate) {
@@ -232,7 +279,50 @@
     return score;
   }
 
+  function isTierRateConflict(item, tier, rate) {
+    if (!tier) return false;
+    const topTier = item.tiers[0];
+    const bottomTier = item.tiers[item.tiers.length - 1];
+    return (tier.tier === topTier.tier && rate < 0.3) ||
+      (tier.tier === bottomTier.tier && rate > 0.7);
+  }
+
+  function confidenceFromFactors({ fallback, truncated, retried, conflict }) {
+    let confidence = 1;
+    const factors = [];
+    if (fallback) {
+      confidence *= 0.7;
+      factors.push("降级");
+    }
+    if (truncated) {
+      confidence *= 0.9;
+      factors.push("截断");
+    }
+    if (retried) {
+      confidence *= 0.9;
+      factors.push("重试");
+    }
+    if (conflict) {
+      confidence *= 0.7;
+      factors.push("打架");
+    }
+    return {
+      confidence: round3(confidence),
+      factors
+    };
+  }
+
+  function confidenceWhy(factors) {
+    return factors && factors.length ? "置信度减分：" + factors.join(" + ") : "无减分因素";
+  }
+
   const sectionBlocks = [];
+
+  function mockSectionId(bidderIndex, itemIndex, offset) {
+    const fileOrdinal = itemIndex + 1;
+    const blockOrdinal = bidderIndex * 100 + itemIndex * 2 + offset + 47;
+    return fileOrdinal + "#" + blockOrdinal;
+  }
 
   function makeEvidencePackage(bidder, item, bidderIndex, itemIndex, resultStatus, score) {
     const fileStem = item.name.length > 14 ? item.name.slice(0, 14) : item.name;
@@ -240,7 +330,7 @@
     const noEvidence = score === 0;
     const picked = noEvidence ? [] : [
       {
-        section_id: (itemIndex + 1) + "#2.1",
+        section_id: mockSectionId(bidderIndex, itemIndex, 0),
         file,
         item_id: item.id,
         item_guid: item.guid,
@@ -257,7 +347,7 @@
         text: "本工程按教学区、配套用房及室外工程分区组织施工，结合现场移交条件设置流水作业段，并对关键节点、材料进场和专业穿插进行动态控制。"
       },
       {
-        section_id: (itemIndex + 1) + "#2.2",
+        section_id: mockSectionId(bidderIndex, itemIndex, 1),
         file,
         item_id: item.id,
         item_guid: item.guid,
@@ -315,39 +405,47 @@
       const key = bidder.id + "__" + item.id;
       let status = "rated";
       let tier = mockModelTier(item, bidderIndex, itemIndex);
-      let rate = mockCompletionRate(bidderIndex, itemIndex);
+      let rate = mockCompletionRate(bidderIndex, itemIndex, tier ? tier.tier : null);
       let factors = tier ? factorScores(item, bidderIndex, itemIndex, rate) : null;
-      let score = scoreInTier(tier, weightedRate(factors, rate));
       let attempts = 1;
-      let confidence = round2(0.78 + ((bidderIndex + itemIndex) % 5) * 0.04);
       let last_error = "";
 
       if (bidder.id === "zhongjian1" && item.id === "T-05") {
         status = "unrated";
         tier = null;
         factors = null;
-        score = null;
         attempts = 3;
-        confidence = 0;
         last_error = "JSON 解析失败";
       }
 
-      if (bidder.id === "jinan1" && item.id === "T-02") {
+      if (status === "rated" && bidder.id === "jinan1" && item.id === "T-02") {
         tier = item.tiers.find((row) => row.tier === "良");
-        factors = factorScores(item, bidderIndex, itemIndex, 0.1);
-        score = scoreInTier(tier, weightedRate(factors, 0.1));
-        confidence = 0.63;
+        rate = 0.1;
+        factors = factorScores(item, bidderIndex, itemIndex, rate);
         attempts = 2;
       }
 
-      if (bidder.id === "zhongjian2" && item.id === "T-06") {
-        attempts = 2;
-        confidence = 0.81;
+      if (status === "rated" && bidder.id === "dezhou" && item.id === "T-16") {
+        tier = item.tiers.find((row) => row.tier === "优");
+        rate = 0.18;
+        factors = factorScores(item, bidderIndex, itemIndex, rate);
       }
 
-      if (item.id === "T-19") {
-        confidence = 0.91;
+      if (status === "rated" && bidder.id === "zhongjian2" && item.id === "T-06") {
+        attempts = 2;
       }
+
+      const scoringRate = weightedRate(factors, rate);
+      const score = status === "unrated" ? null : scoreInTier(tier, scoringRate);
+      const evidencePackage = makeEvidencePackage(bidder, item, bidderIndex, itemIndex, status, score);
+      const confidenceState = status === "unrated"
+        ? { confidence: 0, factors: ["未评定"] }
+        : confidenceFromFactors({
+          fallback: evidencePackage.fallback,
+          truncated: evidencePackage.picked.some((row) => row.truncated),
+          retried: attempts > 1,
+          conflict: isTierRateConflict(item, tier, scoringRate)
+        });
 
       const result = {
         item_id: item.id,
@@ -361,7 +459,8 @@
         reason: score === 0
           ? "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。"
           : "投标文件覆盖了主要评审要求，能够说明组织安排、节点控制和保障措施；部分内容仍偏概括，与本项目 EPC 协同和现场条件结合不够充分。",
-        confidence,
+        confidence: confidenceState.confidence,
+        confidence_factors: confidenceState.factors,
         attempts,
         last_error,
         perf: {
@@ -376,7 +475,7 @@
       }
 
       reviewResults.push(result);
-      evidencePackages[key] = makeEvidencePackage(bidder, item, bidderIndex, itemIndex, status, score);
+      evidencePackages[key] = evidencePackage;
     });
   });
 
@@ -427,7 +526,7 @@
         bidder: row.bidder,
         item_id: row.item_id,
         confidence: row.confidence,
-        why: row.attempts > 1 ? "fallback 证据或重试后成功" : "证据置信度偏低"
+        why: confidenceWhy(row.confidence_factors)
       })),
     perf: {
       wall_clock_sec: 582,
@@ -446,12 +545,40 @@
     { type: "stage", stage: "PDF 入库", status: "running", message: "开始读取 12 家投标技术标 PDF" },
     { type: "stage", stage: "PDF 入库", status: "done", message: "完成 240 个技术标 PDF 入库，封面文件不参与评分" },
     { type: "stage", stage: "证据定位", status: "running", message: "按评分项绑定关系进入单 PDF 内部定位证据" },
-    { type: "stage", stage: "证据定位", status: "done", message: "证据包已生成，逐项评审开始" },
-    { type: "retry", bidder_id: "zhongjian2", item_id: "T-06", attempt: 1, max_attempts: 3, message: "模型返回格式不完整，准备重试" },
-    { type: "retry", bidder_id: "jinan1", item_id: "T-02", attempt: 1, max_attempts: 3, message: "引用编号校验失败，准备重试" }
+    { type: "stage", stage: "证据定位", status: "done", message: "证据包已生成，等待人工确认开始逐项评审" },
+    { type: "stage", stage: "逐项评审", status: "running", message: "确认完成，逐项评审开始" }
   ];
 
+  function retryMessage(result) {
+    if (result.bidder_id === "jinan1" && result.item_id === "T-02") {
+      return "引用编号校验失败，准备重试";
+    }
+    if (result.bidder_id === "zhongjian2" && result.item_id === "T-06") {
+      return "模型返回格式不完整，准备重试";
+    }
+    return "模型返回格式不完整，准备重试";
+  }
+
   reviewResults.forEach((result) => {
+    if (result.bidder_id === "zhongye" && result.item_id === "T-06") {
+      runEvents.push({
+        type: "wait",
+        bidder_id: result.bidder_id,
+        item_id: result.item_id,
+        duration_ms: 40000,
+        message: "等待模型端点返回，保留当前处理项"
+      });
+    }
+    for (let attempt = 1; attempt < result.attempts; attempt += 1) {
+      runEvents.push({
+        type: "retry",
+        bidder_id: result.bidder_id,
+        item_id: result.item_id,
+        attempt,
+        max_attempts: result.attempts,
+        message: retryMessage(result)
+      });
+    }
     runEvents.push({
       type: "review",
       bidder_id: result.bidder_id,
