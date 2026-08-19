@@ -1,9 +1,15 @@
 """T0 验收核对：验证 S1 产出的 sections.json 是否符合 README §4 章节块契约。
 
 用法（PowerShell）：
-    $env:PYTHONIOENCODING="utf-8"; python scripts/verify_t0.py
+    $env:PYTHONIOENCODING="utf-8"; python scripts/verify_t0.py <sections.json 路径>
 
-逐条核对：文件覆盖、字段齐全、GUID 合法、页码、id 唯一、char_len 一致、块字数中位数。
+例（目录约定见 data/README.md）：
+    python scripts/verify_t0.py data/projects/jiyang-epc/sections/中冶建工集团有限公司8010856/sections.json
+
+**只核对一家投标人的产出。** README §4 已定 `id` 只在单家范围内唯一，
+跨投标人引用走 `(bidder, id)` 复合键，所以「id 唯一」这条检查的范围就是一家。
+
+逐条核对：字段齐全、GUID 合法、页码、单家内 id 唯一、char_len 一致、level 取值、块字数中位数。
 全部通过打印 OK，任一失败打印 FAIL 并以非零码退出。
 """
 import json
@@ -12,27 +18,30 @@ import statistics
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-SECTIONS = ROOT / "data" / "interim" / "sections.json"
 GUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 )
 REQUIRED = {"id", "file", "item_guid", "path", "level", "page", "text", "char_len"}
 
 
-def main():
-    if not SECTIONS.exists():
-        print(f"找不到 {SECTIONS}，请先运行 S1 入库命令生成它。")
+def main(argv):
+    if len(argv) != 2:
+        print(__doc__)
         return 1
 
-    sections = json.loads(SECTIONS.read_text(encoding="utf-8"))
+    sections_path = Path(argv[1])
+    if not sections_path.exists():
+        print(f"找不到 {sections_path}，请先运行 S1 入库命令生成它。")
+        return 1
+
+    sections = json.loads(sections_path.read_text(encoding="utf-8"))
     checks = []
 
     def check(name, ok, detail=""):
         checks.append(ok)
         print(f"  [{'✓' if ok else '✗'}] {name}  {detail}")
 
-    print(f"读取 {SECTIONS.name}：{len(sections):,} 个章节块\n")
+    print(f"读取 {sections_path}：{len(sections):,} 个章节块\n")
 
     check("字段齐全（8 个字段）",
           all(set(x) == REQUIRED for x in sections))
@@ -47,7 +56,7 @@ def main():
     check("char_len == len(text)",
           all(x["char_len"] == len(x["text"]) for x in sections))
 
-    check("id 全局唯一",
+    check("id 在本家范围内唯一（README §4：不要求全局唯一）",
           len({x["id"] for x in sections}) == len(sections),
           f"({len(sections):,} 个，去重后 {len({x['id'] for x in sections}):,})")
 
@@ -67,4 +76,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv))
