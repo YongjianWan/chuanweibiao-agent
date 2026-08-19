@@ -192,7 +192,7 @@ def test_证据字数不超过budget(corpus, cats):
 
 # ── 真实标书冒烟测试（缺文件则跳过）────────────────────────────────────
 
-REAL = Path(__file__).resolve().parents[1] / "data/projects/jiyang-epc/evidence/sample-docx/located.json"
+REAL = Path(__file__).resolve().parents[1] / "data/projects/_sample-docx/evidence/sample-docx/located.json"
 
 
 @pytest.mark.skipif(not REAL.exists(), reason="需先按 README §10 跑完前三条命令")

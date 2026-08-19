@@ -509,13 +509,18 @@ S1 按投标人分别产出 `sections.json`，再用 `scripts/merge_sections.py`
 {"project": "济阳区实验高级中学项目工程总承包（EPC）",
  "project_slug": "jiyang-epc",
  "schema_version": "1.0",
- "generated_at": "2026-08-19T17:28:00+0800",
- "bidders": ["sample-docx"],
- "sections": [{"bidder": "sample-docx", "id": "1#4", "file": "1",
-               "path": [...], "level": 4, "text": "...", "char_len": 652}],
- "stats": {"total_sections": 2121, "total_chars": 1405322,
-           "by_bidder": {"sample-docx": {"sections": 2121, "chars": 1405322}}}}
+ "bidders": ["中冶建工集团有限公司8010856", "…（共 12 家）"],
+ "sections": [{"bidder": "中冶建工集团有限公司8010856", "id": "1#4",
+               "file": "进度管理方案108D538F-….pdf",
+               "item_guid": "108d538f-85b8-4c7d-b32c-f6acdaa187b9",
+               "path": [...], "level": 4, "page": 12, "text": "...", "char_len": 652}],
+ "stats": {"total_sections": 32129, "total_chars": 9819249,
+           "by_bidder": {"中冶建工集团有限公司8010856": {"sections": 1785, "chars": 531565}}}}
 ```
+
+**顶层不含 `generated_at` 或任何时间戳**：内容没变却产生 diff，会让每次重跑都在 git 里
+留一个几十 MB 的新 blob。产出必须是确定性的——输入不变，重跑后 `git diff` 无输出，
+由 `tests/test_merge_sections.py::test_重跑零diff` 守着。
 
 - `bidder`：取值与 `manifest.json` 里的 `bidders[].id` 一致，真实场景为投标文件所在一级目录名。
 - `id` 在单家范围内唯一；跨投标人引用时以 `(bidder, id)` 为复合键，合并时不重写。
@@ -1236,7 +1241,8 @@ S0 从招标文件 PDF 抽取任何结构化内容时都需内建处理，见 `d
 ├── data/
 │   ├── README.md                # data 目录结构与生成流程
 │   ├── projects/                # 按项目组织中间产物
-│   │   └── jiyang-epc/          # 项目 slug
+│   │   ├── _sample-docx/       # 软件类样例数据（下划线前缀 = 非真实项目，见 §9.4）
+│   │   └── jiyang-epc/          # 真实项目 slug。产物不入 git，按 §10.1 重建
 │   │       ├── manifest.json    # 项目元数据 + 投标人清单
 │   │       ├── sections_all.json # 全部投标人章节块合并索引
 │   │       ├── sections/        # S1 产出：按投标人存放章节块
@@ -1259,18 +1265,34 @@ pip install -r requirements.txt
 
 **S1 入库（PDF 切块）能跑，S2 之后的链路仍跑不通**（S2 尚未适配多投标人，见 §7 的 T8）。
 
-S1 把 12 家投标人的 240 个 PDF 切成章节块：
+S1 把 12 家投标人的 240 个 PDF 切成章节块。**必须按家分别入库**——12 家共用同一套
+20 个文件名、连文件名尾部的 GUID 都相同，混在一个数组里 `file` / `item_guid` / `id`
+三者都区分不了投标人（§4）。`--project` 模式会自动按家分目录产出：
 
 ```bash
-python src/s1_ingest.py "原始资料/实际测试工程文件/济阳区实验高级中学项目工程总承包（EPC） 2" data/projects/jiyang-epc/sections_all.json
+python src/s1_ingest.py --project "原始资料/实际测试工程文件/济阳区实验高级中学项目工程总承包（EPC） 2" data/projects/jiyang-epc
 ```
 
-预期输出 `合计 32,129 章节 / 9,819,249 字`，块字数中位数 179，39.4 秒，无报错。
-验收核对脚本（需传入生成的 sections.json 路径）：
+产出 `data/projects/jiyang-epc/sections/<bidder>/sections.json`，每家一份，
+各自的文件序号都从 1 开始。预期 `合计 32,129 章节 / 9,819,249 字`，约 40 秒，无报错。
+
+**`sections_all.json` 只能由 merge 产出**，S1 不会也不该直接写它：
 
 ```bash
-python scripts/verify_t0.py data/projects/jiyang-epc/sections_all.json
+python scripts/merge_sections.py data/projects/jiyang-epc
 ```
+
+预期 `合并 12 家投标人 / 32,129 章节 / 9,819,249 字`。产出是确定性的——
+重跑一次 `git diff` 无输出。
+
+验收核对脚本，**传单家的 sections.json**（它会拒绝 `sections_all.json`）：
+
+```bash
+python scripts/verify_t0.py "data/projects/jiyang-epc/sections/中冶建工集团有限公司8010856/sections.json"
+```
+
+预期 8 项全绿。注意真实数据的产物不入 git（见 `.gitignore` 与 `data/README.md`），
+换机器需按上面两条命令重建。
 
 核对招标文件与评分表（19 行比对表）：
 
@@ -1297,7 +1319,7 @@ python scripts/probe_pdf_structure.py
 
 ```bash
 python src/s1_ingest.py "原始资料/公司的临时样例文件仅作参考/ss投标/技术部分" \
-  data/projects/jiyang-epc/sections/sample-docx/sections.json
+  data/projects/_sample-docx/sections/sample-docx/sections.json
 ```
 
 目录下的 `.docx` 与 `.doc` 都会处理。`.doc` 会先自动转成 `.docx` 缓存到该目录的
@@ -1305,7 +1327,7 @@ python src/s1_ingest.py "原始资料/公司的临时样例文件仅作参考/ss
 两者都没有时直接报错退出并提示怎么办——不静默跳过文件。
 
 ```bash
-python scripts/merge_sections.py data/projects/jiyang-epc
+python scripts/merge_sections.py data/projects/_sample-docx
 ```
 
 合并所有 bidder 的 `sections.json` 为 `sections_all.json`，作为全量章节索引；
@@ -1317,9 +1339,9 @@ python src/build_points.py 评审点.md config/review_points.yaml
 
 ```bash
 python src/s2_locate.py \
-  data/projects/jiyang-epc/sections/sample-docx/sections.json \
+  data/projects/_sample-docx/sections/sample-docx/sections.json \
   config/review_points.yaml \
-  data/projects/jiyang-epc/evidence/sample-docx/located.json
+  data/projects/_sample-docx/evidence/sample-docx/located.json
 ```
 
 预期输出：2121 个章节块 / 1,403,178 字；未命中 1 项（`①-2`，正确行为，见 §3.2 红线三）。
