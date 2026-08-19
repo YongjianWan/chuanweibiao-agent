@@ -3,8 +3,17 @@
 PDF 路径按真实工程标书的结构信号切块：行首编号确定层级，
 再用当前 PDF 自己的满行宽 P90 过滤正文中的伪编号。Word 路径保留原有标题层级逻辑。
 
-输入: 一个文件或目录。目录可递归发现 PDF；Word 文件仍兼容原有目录用法。
-输出: [{id, file, item_guid, path, level, page, text, char_len, ...}, ...]
+用法两种：
+    python src/s1_ingest.py <投标人目录|单文件> <out/sections.json>
+        单家入库。文件序号从 1 开始，产出 README §4「章节块」数组。
+    python src/s1_ingest.py --project <项目根目录> <data/projects/(slug)>
+        批量入库，按家产出 (slug)/sections/<bidder>/sections.json，
+        每家的文件序号各自从 1 开始。
+
+**本脚本只产出单家的 sections.json，永远不产出 sections_all.json**——
+那是 scripts/merge_sections.py 的活（README §4「章节块全量索引」）。
+理由：12 家共用同一套 20 个文件名、连文件名尾部的 GUID 都相同，
+把 12 家混在一个数组里，file / item_guid / id 三者都区分不了投标人。
 """
 import json
 import re
@@ -28,7 +37,7 @@ _GUID = re.compile(
 
 # 顺序很重要：长的点号编号必须先于 N.N，避免 2.6.1 被识别成 2.6。
 _PDF_NUMBERING = (
-    (1, re.compile(r"^\s*第[一二三四五六七八九十百\d]+[章节篇部分]")),
+    (1, re.compile(r"^\s*第[一二三四五六七八九十百\d]+(?:章|节|篇|部分)")),
     (2, re.compile(r"^\s*[一二三四五六七八九十百]{1,3}、")),
     (4, re.compile(r"^\s*\d+\.\d+\.\d+(?!\d)")),
     (4, re.compile(r"^\s*\d+\.\d+(?!\d)")),
@@ -298,13 +307,35 @@ def _discover_files(src: Path):
     )
 
 
-def main(src_dir: str, out_path: str):
-    src = Path(src_dir)
-    if not src.exists():
-        sys.exit(f"输入路径不存在: {src}")
+NEWLINE = chr(10)
+
+
+def _bidder_dirs(root):
+    """项目根目录下的投标人目录 = 一级子目录里含投标 PDF 的那些。
+
+    bidder 取值 = 一级目录名原样照抄，含尾部投标编号
+    （例 `中冶建工集团有限公司8010856`，定义见 README §2 术语表）。
+    """
+    if not root.is_dir():
+        return []
+    out = []
+    for d in sorted(p for p in root.iterdir() if p.is_dir()):
+        if d.name.startswith(("_", ".")):
+            continue
+        if any("招标文件" not in p.name for p in d.rglob("*.pdf")):
+            out.append(d)
+    return out
+
+
+def ingest_one(src: Path, out_path: Path):
+    """把一家投标人切成章节块并落盘，返回章节块列表。
+
+    文件序号从 1 开始——这是 README §4 的约定：`id` 只在单家范围内唯一，
+    跨投标人引用走 `(bidder, id)` 复合键。因此每家必须单独调一次本函数。
+    """
     files = _discover_files(src)
     if not files:
-        sys.exit(f"没有找到 PDF/doc/docx: {src}")
+        sys.exit("没有找到 PDF/doc/docx: %s" % src)
 
     all_sections = []
     zero_block_files = 0
@@ -317,31 +348,98 @@ def main(src_dir: str, out_path: str):
             secs = parse_docx(ensure_docx(f, cache_dir), key)
             pages = None
         all_sections.extend(secs)
-        chars = sum(s["char_len"] for s in secs)
         if not secs:
             zero_block_files += 1
-            print(f"⚠ 警告：{f.name} 切出 0 个章节块，可能是扫描件或空文件，将整项缺失")
+            print("[警告] %s 切出 0 个章节块，可能是扫描件或空文件，将整项缺失" % f.name)
             continue
-        page_info = f" 页 {pages}" if pages is not None else ""
-        print(f"{f.name[:34]:36s} 章节 {len(secs):5d}  字数 {chars:8,d}{page_info}")
+        chars = sum(s["char_len"] for s in secs)
+        page_info = " 页 %d" % pages if pages is not None else ""
+        print("%-36s 章节 %5d  字数 %8s%s" % (f.name[:34], len(secs), format(chars, ","), page_info))
 
-    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    Path(out_path).write_text(
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(
         json.dumps(all_sections, ensure_ascii=False, indent=1), encoding="utf-8"
     )
 
     total = sum(s["char_len"] for s in all_sections)
     lens = sorted(s["char_len"] for s in all_sections)
-    print(f"\n合计 {len(all_sections):,} 章节 / {total:,} 字")
+    print()
+    print("合计 %s 章节 / %s 字" % (format(len(all_sections), ","), format(total, ",")))
     if lens:
-        print(
-            f"章节字数 中位数 {lens[len(lens)//2]:,}  "
-            f"P90 {lens[min(int(len(lens)*.9), len(lens)-1)]:,}  最大 {lens[-1]:,}"
-        )
+        print("章节字数 中位数 %s  P90 %s  最大 %s" % (
+            format(lens[len(lens) // 2], ","),
+            format(lens[min(int(len(lens) * .9), len(lens) - 1)], ","),
+            format(lens[-1], ",")))
     if zero_block_files:
-        print(f"⚠ 0 块文件数：{zero_block_files}")
-    print(f"-> {out_path}")
+        print("[警告] 0 块文件数：%d" % zero_block_files)
+    print("-> %s" % out_path)
+    return all_sections
+
+
+def ingest_project(root: Path, data_dir: Path):
+    """按家分别入库：<data_dir>/sections/<bidder>/sections.json，每家各跑一次 S1。"""
+    bidders = _bidder_dirs(root)
+    if not bidders:
+        sys.exit(
+            "%s 下没有找到投标人目录（一级子目录里含投标 PDF 的那些）。%s"
+            "若要入库单家，去掉 --project：python src/s1_ingest.py <投标人目录> <out.json>"
+            % (root, NEWLINE))
+
+    summary = []
+    for bidder_dir in bidders:
+        bidder = bidder_dir.name
+        out_path = data_dir / "sections" / bidder / "sections.json"
+        print()
+        print("===== %s =====" % bidder)
+        secs = ingest_one(bidder_dir, out_path)
+        summary.append((bidder, len(secs), sum(s["char_len"] for s in secs)))
+
+    print()
+    print("=" * 60)
+    print("共 %d 家投标人" % len(summary))
+    for bidder, n, chars in summary:
+        print("  %-32s %6s 章  %10s 字" % (bidder[:30], format(n, ","), format(chars, ",")))
+    print("  %-32s %6s 章  %10s 字" % (
+        "合计", format(sum(x[1] for x in summary), ","),
+        format(sum(x[2] for x in summary), ",")))
+    print()
+    print("下一步生成全量索引（sections_all.json 只能由它产出）：")
+    print("  python scripts/merge_sections.py %s" % data_dir)
+
+
+def main(argv):
+    if argv and argv[0] == "--project":
+        if len(argv) != 3:
+            sys.exit("用法: python src/s1_ingest.py --project <项目根目录> <data/projects/(slug)>")
+        root = Path(argv[1])
+        if not root.exists():
+            sys.exit("输入路径不存在: %s" % root)
+        return ingest_project(root, Path(argv[2]))
+
+    if len(argv) != 2:
+        sys.exit(__doc__)
+
+    src, out_path = Path(argv[0]), Path(argv[1])
+    if not src.exists():
+        sys.exit("输入路径不存在: %s" % src)
+
+    # 闸门：不允许把多家混在一次运行里。README §4 —— 12 家共用同一套 20 个文件名、
+    # 连文件名尾部的 GUID 都相同，混跑出来的 file / item_guid / id 三者都区分不了投标人。
+    subdirs = _bidder_dirs(src)
+    if len(subdirs) >= 2:
+        sys.exit(NEWLINE.join([
+            "%s 下有 %d 个投标人目录（%s…），不能混在一次运行里入库。" % (
+                src, len(subdirs), "、".join(d.name for d in subdirs[:3])),
+            "README §4：`id` 只在单家范围内唯一，跨投标人引用走 `(bidder, id)` 复合键，",
+            "按家分别跑 S1，每家的文件序号都从 1 重新开始。",
+            "",
+            "批量入库请用：",
+            '  python src/s1_ingest.py --project "%s" data/projects/(slug)' % src,
+            "单家入库请把路径指到某一家的目录。",
+        ]))
+
+    ingest_one(src, out_path)
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1:])

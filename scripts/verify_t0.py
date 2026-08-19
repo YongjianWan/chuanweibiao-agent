@@ -35,6 +35,18 @@ def main(argv):
         return 1
 
     sections = json.loads(sections_path.read_text(encoding="utf-8"))
+
+    # 闸门一：sections_all.json 是对象，不是单家的 sections.json，别拿它当单家核对
+    if isinstance(sections, dict):
+        print("FAIL: %s 顶层是对象，看起来是 sections_all.json（README §4「章节块全量索引」）。"
+              % sections_path)
+        print("本脚本核对的是**单家**的 sections.json，路径形如")
+        print("  data/projects/<slug>/sections/<bidder>/sections.json")
+        return 1
+    if not isinstance(sections, list):
+        print("FAIL: %s 顶层必须是数组" % sections_path)
+        return 1
+
     checks = []
 
     def check(name, ok, detail=""):
@@ -59,6 +71,17 @@ def main(argv):
     check("id 在本家范围内唯一（README §4：不要求全局唯一）",
           len({x["id"] for x in sections}) == len(sections),
           f"({len(sections):,} 个，去重后 {len({x['id'] for x in sections}):,})")
+
+    # 闸门二：文件序号种类 > 20 说明是多家混跑的产物。README §2.1——每家固定 20 个 PDF，
+    # §4——按家分别跑 S1，每家的文件序号都从 1 重新开始。混跑时「单家内 id 唯一」
+    # 会因为跨家连号而必然通过，这条检查就成了假绿灯。
+    file_keys = {x["id"].split("#")[0] for x in sections}
+    check("文件序号种类 <= 20（单家产物，README §2.1 每家固定 20 个 PDF）",
+          len(file_keys) <= 20,
+          "(实际 %d 种%s)" % (
+              len(file_keys),
+              "，疑似多家混合输入，S1 应按家分别运行：python src/s1_ingest.py --project ..."
+              if len(file_keys) > 20 else ""))
 
     check("level 取值 0~5",
           all(x["level"] in (0, 1, 2, 3, 4, 5) for x in sections))

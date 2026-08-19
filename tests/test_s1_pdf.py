@@ -183,3 +183,47 @@ def test_重复运行结果一致():
         (1, _long_body()), (2, _long_body()), (2, _long_body()),
     ]
     assert S._chunk_lines(lines, "1") == S._chunk_lines(lines, "1")
+
+
+# ────────── 多家混跑闸门（issue #2 第 8、9 条）──────────
+
+def _fake_bidder(root, name, files=("施工方案.pdf",)):
+    d = root / name
+    d.mkdir(parents=True)
+    for f in files:
+        (d / f).write_bytes(b"%PDF-1.4 fake")
+    return d
+
+
+def test_识别投标人目录(tmp_path):
+    _fake_bidder(tmp_path, "甲公司1001")
+    _fake_bidder(tmp_path, "乙公司1002")
+    (tmp_path / "_converted").mkdir()
+    names = [d.name for d in S._bidder_dirs(tmp_path)]
+    assert names == sorted(["甲公司1001", "乙公司1002"])  # 码位序，不是拼音序
+    assert "_converted" not in names
+
+
+def test_招标文件目录不算投标人(tmp_path):
+    d = tmp_path / "招标文件目录"
+    d.mkdir()
+    (d / "招标文件正文.pdf").write_bytes(b"%PDF-1.4 fake")
+    assert S._bidder_dirs(tmp_path) == []
+
+
+def test_多家混跑被闸门拦下(tmp_path):
+    """README §4：按家分别跑 S1，混跑会让 id 跨家连号、bidder 无从区分。"""
+    _fake_bidder(tmp_path, "甲公司1001")
+    _fake_bidder(tmp_path, "乙公司1002")
+    with pytest.raises(SystemExit) as e:
+        S.main([str(tmp_path), str(tmp_path / "out.json")])
+    msg = str(e.value)
+    assert "2 个投标人目录" in msg and "--project" in msg
+    assert not (tmp_path / "out.json").exists()
+
+
+def test_单家不被闸门误伤(tmp_path):
+    """只有一家时正常放行——闸门只拦 >= 2 家。"""
+    b = _fake_bidder(tmp_path, "甲公司1001")
+    assert len(S._bidder_dirs(tmp_path)) == 1
+    assert S._bidder_dirs(b) == []
