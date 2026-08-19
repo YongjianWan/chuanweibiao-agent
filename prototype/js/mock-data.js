@@ -317,6 +317,7 @@
   }
 
   const sectionBlocks = [];
+  const LOCATED_SEED = Array.isArray(window.LOCATED_SEED) ? window.LOCATED_SEED : [];
 
   function mockSectionId(bidderIndex, itemIndex, offset) {
     const fileOrdinal = itemIndex + 1;
@@ -324,11 +325,15 @@
     return fileOrdinal + "#" + blockOrdinal;
   }
 
-  function makeEvidencePackage(bidder, item, bidderIndex, itemIndex, resultStatus, score) {
+  function seedForItem(itemIndex) {
+    if (!LOCATED_SEED.length) return null;
+    return LOCATED_SEED[itemIndex % LOCATED_SEED.length];
+  }
+
+  function fallbackPickedRows(bidder, item, bidderIndex, itemIndex) {
     const fileStem = item.name.length > 14 ? item.name.slice(0, 14) : item.name;
     const file = fileStem + item.guid.toUpperCase() + ".pdf";
-    const noEvidence = score === 0;
-    const picked = noEvidence ? [] : [
+    return [
       {
         section_id: mockSectionId(bidderIndex, itemIndex, 0),
         file,
@@ -365,6 +370,36 @@
         text: "设计、采购、施工各阶段设置里程碑节点，项目部按周检查完成情况。对可能影响工期的审批、材料供应和专业交叉问题建立预警纠偏机制。"
       }
     ];
+  }
+
+  function seedPickedRows(seed, bidder, item) {
+    if (!seed || !Array.isArray(seed.picked) || !seed.picked.length) return null;
+    return seed.picked.slice(0, 4).map((row) => ({
+      section_id: row.section_id,
+      file: row.file,
+      item_id: item.id,
+      item_guid: item.guid,
+      bidder: bidder.name,
+      bidder_id: bidder.id,
+      page: row.page || null,
+      level: row.level || (Array.isArray(row.path) ? row.path.length : 1),
+      path: Array.isArray(row.path) && row.path.length ? row.path : ["未命名章节"],
+      unit: Array.isArray(row.unit) && row.unit.length
+        ? row.unit
+        : Array.isArray(row.path) && row.path.length ? row.path : ["未命名章节"],
+      match_score: typeof row.match_score === "number" ? row.match_score : 0,
+      hit: Array.isArray(row.hit) ? row.hit : [],
+      chars: typeof row.chars === "number" ? row.chars : String(row.text || "").length,
+      truncated: Boolean(row.truncated),
+      parse_hint: row.truncated ? "解析提示：该证据来自 located.json 截断片段，建议人工复核。" : "",
+      text: row.text || "原始章节文本未在 sections.json 中找到。"
+    }));
+  }
+
+  function makeEvidencePackage(bidder, item, bidderIndex, itemIndex, resultStatus, score) {
+    const noEvidence = score === 0;
+    const seed = seedForItem(itemIndex);
+    const picked = noEvidence ? [] : (seedPickedRows(seed, bidder, item) || fallbackPickedRows(bidder, item, bidderIndex, itemIndex));
 
     picked.forEach((row) => {
       sectionBlocks.push({
@@ -388,9 +423,11 @@
       bidder: bidder.name,
       bidder_id: bidder.id,
       name: item.name,
-      candidates: noEvidence ? 0 : 18 + ((bidderIndex + itemIndex) % 15),
+      source_point_id: seed ? seed.point_id : null,
+      source_name: seed ? seed.name : null,
+      candidates: noEvidence ? 0 : seed && typeof seed.candidates === "number" ? seed.candidates : 18 + ((bidderIndex + itemIndex) % 15),
       units: noEvidence ? 0 : picked.length,
-      fallback: item.id === "T-02" && bidder.id === "jinan1",
+      fallback: (item.id === "T-02" && bidder.id === "jinan1") || Boolean(seed && seed.fallback),
       evidence_chars: noEvidence ? 0 : picked.reduce((sum, row) => sum + row.chars, 0),
       budget: 3000,
       picked
@@ -455,8 +492,10 @@
         status,
         tier: tier ? tier.tier : null,
         score,
-        cite: score === 0 ? [] : [0, 1],
-        reason: score === 0
+        cite: status === "unrated" || score === 0 ? [] : evidencePackage.picked.slice(0, 2).map((_, index) => index),
+        reason: status === "unrated"
+          ? "模型连续返回无效结果，系统按未评定处理。"
+          : score === 0
           ? "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。"
           : "投标文件覆盖了主要评审要求，能够说明组织安排、节点控制和保障措施；部分内容仍偏概括，与本项目 EPC 协同和现场条件结合不够充分。",
         confidence: confidenceState.confidence,

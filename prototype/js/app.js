@@ -197,6 +197,21 @@
     return DATA.evidencePackages[bidderId + "__" + itemId];
   }
 
+  function citedEvidenceEntries(result, evidence) {
+    if (!result || result.status === "unrated" || !evidence || !Array.isArray(evidence.picked)) {
+      return [];
+    }
+    const cite = Array.isArray(result.cite) ? result.cite : [];
+    return cite
+      .map((index) => Number(index))
+      .filter((index) => Number.isInteger(index) && index >= 0 && index < evidence.picked.length)
+      .map((index) => ({ index, row: evidence.picked[index] }));
+  }
+
+  function pageLabel(row) {
+    return row.page ? "第 " + row.page + " 页" : "页码未采集";
+  }
+
   function shortBidder(id) {
     const bidder = bidderById(id);
     return bidder ? bidder.short : id;
@@ -642,7 +657,8 @@
     const override = state.reviewOverrides[reviewKey];
     const overrideScore = numericOverrideScore(override);
     const effectiveScore = overrideScore !== null ? overrideScore : result.score;
-    const activeSection = state.activeSectionId || (evidence.picked[0] ? evidence.picked[0].section_id : "");
+    const citedEntries = citedEvidenceEntries(result, evidence);
+    const activeSection = state.activeSectionId || (citedEntries[0] ? citedEntries[0].row.section_id : "");
     state.activeSectionId = activeSection;
     const titleStatus = result.status === "unrated"
       ? "未评定"
@@ -678,8 +694,8 @@
               <div class="panel-body">
                 <div class="summary-strip">
                   ${metric("最终分数", effectiveScoreText, overrideScore !== null ? "已按专家改判覆盖" : "满分 " + item.max_score.toFixed(1))}
-                  ${metric("当前档位", result.tier || "无", result.score === 0 ? "按缺项不得分处理" : "来自评分区间")}
-                  ${metric("置信度", result.confidence.toFixed(2), isLowConfidence(result) ? "建议人工复核" : "可追溯")}
+                  ${metric("当前档位", result.tier || "无", result.status === "unrated" ? "重试耗尽未进入判分" : result.score === 0 ? "按缺项不得分处理" : "来自评分区间")}
+                  ${metric("置信度", result.confidence.toFixed(2), result.status === "unrated" ? "未产生有效判分" : isLowConfidence(result) ? "建议人工复核" : "可追溯")}
                   ${metric("调用次数", result.attempts + " 次", result.attempts > 1 ? "曾重试" : "一次成功")}
                 </div>
               </div>
@@ -708,25 +724,23 @@
 
             <section class="panel" style="margin-top: 18px;">
               <div class="panel-header">
-                <h3 class="panel-title">判分理由</h3>
-                ${isLowConfidence(result) ? `<span class="badge warning">建议人工复核</span>` : `<span class="badge success">证据可追溯</span>`}
+                <h3 class="panel-title">${result.status === "unrated" ? "未评定原因" : "判分理由"}</h3>
+                ${result.status === "unrated"
+                  ? `<span class="badge danger">无有效判分</span>`
+                  : isLowConfidence(result) ? `<span class="badge warning">建议人工复核</span>` : `<span class="badge success">证据可追溯</span>`}
               </div>
               <div class="panel-body">
-                <p class="reason-text">${html(result.reason)}</p>
+                <p class="reason-text">${html(result.status === "unrated" ? unratedReason(result) : result.reason)}</p>
               </div>
             </section>
 
             <section class="panel" style="margin-top: 18px;">
               <div class="panel-header">
                 <h3 class="panel-title">引用的证据</h3>
-                <span class="badge neutral">引用编号 ${result.cite.length ? result.cite.join("、") : "无"}</span>
+                <span class="badge neutral">${citationBadge(result, citedEntries)}</span>
               </div>
               <div class="panel-body">
-                ${evidence.picked.length ? `
-                  <div class="evidence-list">
-                    ${evidence.picked.map((row, index) => renderEvidence(row, index, activeSection)).join("")}
-                  </div>
-                ` : `<div class="empty">未检索到合格证据。按招标文件规则“若此条缺项不得分”处理。</div>`}
+                ${renderCitationBody(result, citedEntries, activeSection)}
               </div>
             </section>
 
@@ -753,11 +767,39 @@
               <span class="badge primary">PDF 页定位模拟</span>
             </div>
             <div class="panel-body">
-              ${renderSourceViewer(evidence, activeSection)}
+              ${renderSourceViewer(citedEntries, activeSection)}
             </div>
           </aside>
         </section>
       </main>
+    `;
+  }
+
+  function unratedReason(result) {
+    return "模型调用 " + result.attempts + " 次后仍未返回有效判分结果；最后错误：" + (result.last_error || "无") + "。该项按未评定处理，score 保持为 null，不参与合计。";
+  }
+
+  function citationBadge(result, citedEntries) {
+    if (result.status === "unrated") return "无有效引用";
+    const cite = Array.isArray(result.cite) ? result.cite : [];
+    if (!cite.length) return "引用编号 无";
+    if (!citedEntries.length) return "引用编号越界";
+    return "引用编号 " + citedEntries.map((entry) => entry.index).join("、");
+  }
+
+  function renderCitationBody(result, citedEntries, activeSection) {
+    if (result.status === "unrated") {
+      return `<div class="empty">该项未产生有效判分结果，暂无可展示的引用证据。</div>`;
+    }
+    if (!citedEntries.length) {
+      return result.score === 0
+        ? `<div class="empty">未检索到合格证据。按招标文件规则“若此条缺项不得分”处理。</div>`
+        : `<div class="empty">未找到合法引用编号，真实调用中应触发重试。</div>`;
+    }
+    return `
+                  <div class="evidence-list">
+                    ${citedEntries.map((entry) => renderEvidence(entry.row, entry.index, activeSection)).join("")}
+                  </div>
     `;
   }
 
@@ -798,7 +840,7 @@
         <div class="evidence-head">
           <div>
             <div class="evidence-title">[${index}] ${html(row.file)}</div>
-            <div class="evidence-path">${html(row.path.join(" › "))} · 第 ${row.page} 页</div>
+            <div class="evidence-path">${html(row.path.join(" › "))} · ${pageLabel(row)}</div>
           </div>
           <button class="btn link" data-locate-section="${html(row.section_id)}">在原文中定位</button>
         </div>
@@ -809,15 +851,15 @@
     `;
   }
 
-  function renderSourceViewer(evidence, activeSection) {
-    if (!evidence.picked.length) {
+  function renderSourceViewer(citedEntries, activeSection) {
+    if (!citedEntries.length) {
       return `<div class="source-page"><div class="empty">没有可定位的原文片段</div></div>`;
     }
     return `
       <div class="source-page">
-        ${evidence.picked.map((row, index) => `
+        ${citedEntries.map(({ row, index }) => `
           <section id="${sourceDomId(row.section_id)}" class="source-block ${row.section_id === activeSection ? "active" : ""}">
-            <h4>[${index}] 第 ${row.page} 页 · ${html(row.path[row.path.length - 1])}</h4>
+            <h4>[${index}] ${pageLabel(row)} · ${html(row.path[row.path.length - 1])}</h4>
             <p>${html(row.text)}</p>
           </section>
         `).join("")}
@@ -1039,11 +1081,15 @@
       return;
     }
     if (route.path === "/running") {
-      renderPreservingRunLog();
+      if (changed || (!run.paused && !run.finished)) {
+        renderPreservingRunLog();
+      }
       return;
     }
     if (route.path === "/results") {
-      render();
+      if (changed && run.finished) {
+        renderPreservingMatrixScroll();
+      }
     }
   }
 
@@ -1070,6 +1116,18 @@
       nextLog.scrollTop = nextLog.scrollHeight;
     } else {
       nextLog.scrollTop = scrollTop;
+    }
+  }
+
+  function renderPreservingMatrixScroll() {
+    const matrix = document.querySelector(".matrix-wrap");
+    const scrollLeft = matrix ? matrix.scrollLeft : 0;
+    const scrollTop = matrix ? matrix.scrollTop : 0;
+    render();
+    const nextMatrix = document.querySelector(".matrix-wrap");
+    if (nextMatrix) {
+      nextMatrix.scrollLeft = scrollLeft;
+      nextMatrix.scrollTop = scrollTop;
     }
   }
 

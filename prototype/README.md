@@ -25,15 +25,15 @@ prototype/index.html
 
 ## 数据说明
 
-Mock 数据统一放在 `prototype/js/mock-data.js`，通过全局对象 `window.PROTOTYPE_DATA` 提供。
+Mock 数据统一放在 `prototype/js/mock-data.js`，通过全局对象 `window.PROTOTYPE_DATA` 提供；证据种子由 `prototype/js/located-seed.js` 提供。
 
 数据字段尽量贴近 README §4 的数据契约，保留了 `item_guid`、`section_id`、`page`、`match_score`、`hit`、`tier`、`factor_scores` 等后续对接字段；界面默认不向用户暴露这些内部技术字段。
 
-当前原型按既定实施约束不修改 `data/`，因此 S3 Mock 结果没有另写到 `data/interim/mock/review_results.json`。若后续确认以 `docs/分工与排期.md` 为准，再把同一份 Mock 结构落盘到该位置。
+`prototype/js/located-seed.js` 与 `data/interim/mock/review_results.json` 由 `scripts/build-prototype-mock.js` 从 `data/interim/located.json`、`data/interim/sections.json` 生成。当前 `located.json` 是早期软件标样例，缺少真实多投标人的 `bidder` / `item_id` / `item_guid` / PDF 页码，因此原型只取其 `section_id`、证据文件名、章节路径、命中词、截断状态和章节文本作为打底证据；`bidder`、`item_id`、`item_guid` 仍由当前 19 项评分表 Mock 映射补齐。T8 产出真实证据包后，应重新运行脚本生成。
 
 低置信度阈值统一为 `confidence < 0.85`。Mock 评分逻辑按 README §4：先由模型侧判定 `tier`，再用 `score = tier.min + 得分率 × (tier.max - tier.min)` 生成档内连续分；`confidence` 从 1.0 起按降级、截断、重试、打架四个因素相乘，不再使用随机低基线。
 
-`sectionBlocks` 提供章节块层级 Mock 数据，每个章节块都带 `page`，页面⑤的证据定位从证据包 `picked[].page` 透传展示。`section_id` 按 README §4 使用 `文件序号#块顺序号`，`#` 后保持纯整数。
+`sectionBlocks` 提供章节块层级 Mock 数据。早期软件标样例没有 PDF 页码，页面⑤会显示“页码未采集”；T0/T8 真实 PDF 链路产出 `picked[].page` 后会透传展示。`section_id` 按 README §4 使用 `文件序号#块顺序号`，`#` 后保持纯整数。
 
 当前仓库尚无 `config/projects/济阳区实验高级中学.yaml`，因此评分表仍是原型用 Mock 数据；已按 `docs/findings-招标文件核对.md` 修正确定有误的 T-15 名称、满分和三档区间。等 T1 产出项目 YAML 后，应整体替换 `mock-data.js` 内的评分表定义。
 
