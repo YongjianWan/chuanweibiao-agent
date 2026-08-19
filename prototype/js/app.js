@@ -45,7 +45,35 @@
       clearInterval(state.run.timer);
     }
     state.run = createRunState();
+    state.reviewOverrides = {};
+    state.activeSectionId = "";
     saveState();
+  }
+
+  function hasDemoState() {
+    const run = state.run;
+    return Boolean(
+      run.timer ||
+      run.started ||
+      run.reviewStarted ||
+      run.paused ||
+      run.finished ||
+      run.completedReviews ||
+      run.retries ||
+      run.unrated ||
+      run.inTokens ||
+      run.outTokens ||
+      run.latencyTotal ||
+      run.startedAt ||
+      run.finishedAt ||
+      run.pausedAt ||
+      run.pausedTotalMs ||
+      run.lastEventAt ||
+      run.waitUntil ||
+      run.logs.length ||
+      Object.keys(state.reviewOverrides || {}).length ||
+      state.activeSectionId
+    );
   }
 
   function loadAppState() {
@@ -248,6 +276,9 @@
   function render() {
     const route = getRoute();
     if (route.path === "/create") {
+      if (hasDemoState()) {
+        resetRunState();
+      }
       app.innerHTML = shell(route.path, renderCreate());
       return;
     }
@@ -693,7 +724,7 @@
               </div>
               <div class="panel-body">
                 <div class="summary-strip">
-                  ${metric("最终分数", effectiveScoreText, overrideScore !== null ? "已按专家改判覆盖" : "满分 " + item.max_score.toFixed(1))}
+                  ${metric("最终分数", effectiveScoreText, result.status === "unrated" ? "score 保持为 null" : overrideScore !== null ? "已按专家改判覆盖" : "满分 " + item.max_score.toFixed(1))}
                   ${metric("当前档位", result.tier || "无", result.status === "unrated" ? "重试耗尽未进入判分" : result.score === 0 ? "按缺项不得分处理" : "来自评分区间")}
                   ${metric("置信度", result.confidence.toFixed(2), result.status === "unrated" ? "未产生有效判分" : isLowConfidence(result) ? "建议人工复核" : "可追溯")}
                   ${metric("调用次数", result.attempts + " 次", result.attempts > 1 ? "曾重试" : "一次成功")}
@@ -722,27 +753,27 @@
 
             ${result.factor_scores && result.factor_scores.length ? renderFactorPanel(result, item) : ""}
 
-            <section class="panel" style="margin-top: 18px;">
-              <div class="panel-header">
-                <h3 class="panel-title">${result.status === "unrated" ? "未评定原因" : "判分理由"}</h3>
-                ${result.status === "unrated"
-                  ? `<span class="badge danger">无有效判分</span>`
-                  : isLowConfidence(result) ? `<span class="badge warning">建议人工复核</span>` : `<span class="badge success">证据可追溯</span>`}
-              </div>
-              <div class="panel-body">
-                <p class="reason-text">${html(result.status === "unrated" ? unratedReason(result) : result.reason)}</p>
-              </div>
-            </section>
+            ${result.status === "unrated" ? renderUnratedPanel(result) : `
+              <section class="panel" style="margin-top: 18px;">
+                <div class="panel-header">
+                  <h3 class="panel-title">判分理由</h3>
+                  ${isLowConfidence(result) ? `<span class="badge warning">建议人工复核</span>` : `<span class="badge success">证据可追溯</span>`}
+                </div>
+                <div class="panel-body">
+                  <p class="reason-text">${html(result.reason)}</p>
+                </div>
+              </section>
 
-            <section class="panel" style="margin-top: 18px;">
-              <div class="panel-header">
-                <h3 class="panel-title">引用的证据</h3>
-                <span class="badge neutral">${citationBadge(result, citedEntries)}</span>
-              </div>
-              <div class="panel-body">
-                ${renderCitationBody(result, citedEntries, activeSection)}
-              </div>
-            </section>
+              <section class="panel" style="margin-top: 18px;">
+                <div class="panel-header">
+                  <h3 class="panel-title">引用的证据</h3>
+                  <span class="badge neutral">${citationBadge(result, citedEntries)}</span>
+                </div>
+                <div class="panel-body">
+                  ${renderCitationBody(result, citedEntries, activeSection)}
+                </div>
+              </section>
+            `}
 
             <section class="panel" style="margin-top: 18px;">
               <div class="panel-header">
@@ -761,15 +792,17 @@
             </section>
           </div>
 
-          <aside class="panel source-viewer">
-            <div class="panel-header">
-              <h3 class="panel-title">原文定位</h3>
-              <span class="badge primary">PDF 页定位模拟</span>
-            </div>
-            <div class="panel-body">
-              ${renderSourceViewer(citedEntries, activeSection)}
-            </div>
-          </aside>
+          ${result.status === "unrated" ? renderUnratedAside(result) : `
+            <aside class="panel source-viewer">
+              <div class="panel-header">
+                <h3 class="panel-title">原文定位</h3>
+                <span class="badge primary">PDF 页定位模拟</span>
+              </div>
+              <div class="panel-body">
+                ${renderSourceViewer(citedEntries, activeSection)}
+              </div>
+            </aside>
+          `}
         </section>
       </main>
     `;
@@ -777,6 +810,39 @@
 
   function unratedReason(result) {
     return "模型调用 " + result.attempts + " 次后仍未返回有效判分结果；最后错误：" + (result.last_error || "无") + "。该项按未评定处理，score 保持为 null，不参与合计。";
+  }
+
+  function renderUnratedPanel(result) {
+    return `
+      <section class="panel" style="margin-top: 18px;">
+        <div class="panel-header">
+          <h3 class="panel-title">未评定失败信息</h3>
+          <span class="badge danger">无有效判分</span>
+        </div>
+        <div class="panel-body">
+          <div class="info-box">
+            <strong>调用 ${result.attempts} 次 · 最后错误：${html(result.last_error || "无")}</strong>
+            <span class="muted">${html(unratedReason(result))}</span>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderUnratedAside(result) {
+    return `
+      <aside class="panel source-viewer">
+        <div class="panel-header">
+          <h3 class="panel-title">调用状态</h3>
+          <span class="badge danger">未进入判分</span>
+        </div>
+        <div class="panel-body">
+          <div class="source-page">
+            <div class="empty">调用 ${result.attempts} 次后仍未产生有效判分，最后错误：${html(result.last_error || "无")}。</div>
+          </div>
+        </div>
+      </aside>
+    `;
   }
 
   function citationBadge(result, citedEntries) {
@@ -885,7 +951,7 @@
     } else if (result.status === "unrated") {
       cls += " unrated";
       label = "—";
-      title = "未评定，点击查看失败信息和证据";
+      title = "未评定，点击查看失败信息";
     } else if (result.score === 0) {
       cls += " zero";
       label = "0";

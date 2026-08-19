@@ -74,7 +74,7 @@
     ["T-16", "工程重点难点分析", 4],
     ["T-17", "应急处置预案", 4],
     ["T-18", "成品保护及移交方案", 3],
-    ["T-19", "绿色建造与扬尘治理措施", 4]
+    ["T-19", "绿色建造与扬尘治理措施", 6]
   ];
 
   function round1(value) {
@@ -397,7 +397,7 @@
   }
 
   function makeEvidencePackage(bidder, item, bidderIndex, itemIndex, resultStatus, score) {
-    const noEvidence = score === 0;
+    const noEvidence = resultStatus === "unrated" || score === 0;
     const seed = seedForItem(itemIndex);
     const picked = noEvidence ? [] : (seedPickedRows(seed, bidder, item) || fallbackPickedRows(bidder, item, bidderIndex, itemIndex));
 
