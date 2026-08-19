@@ -131,13 +131,20 @@ def test_阈值随文档行长自适应():
 
 # ────────── 真实数据冒烟 ──────────
 
+# 真实标书不入 git（体积 + 开标评标期间不宜进仓库），所以干净 clone 里下面两条会 skip。
+# 要让它们真正跑起来：把甲方给的 EPC 包解压到 REAL_BIDDER_ROOT 指向的路径。
+REAL_SKIP_REASON = (
+    "需 原始资料/实际测试工程文件/济阳区实验高级中学项目工程总承包（EPC） 2/ 下的 "
+    "12 家真实标书；该目录不入 git，见 .gitignore 与 README §10.1"
+)
+
 REAL_BIDDER_ROOT = (
     Path(__file__).resolve().parents[1]
     / "原始资料" / "实际测试工程文件" / "济阳区实验高级中学项目工程总承包（EPC） 2"
 )
 
 
-@pytest.mark.skipif(not REAL_BIDDER_ROOT.exists(), reason="真实资料不在本机")
+@pytest.mark.skipif(not REAL_BIDDER_ROOT.exists(), reason=REAL_SKIP_REASON)
 def test_一家20个PDF字段齐全且ID唯一():
     bidders = [d for d in REAL_BIDDER_ROOT.iterdir() if d.is_dir()]
     assert len(bidders) == 12, f"投标人应 12 家，实际 {len(bidders)}"
@@ -160,7 +167,7 @@ def test_一家20个PDF字段齐全且ID唯一():
     assert len(ids) == len(set(ids)), "id 必须全局唯一"
 
 
-@pytest.mark.skipif(not REAL_BIDDER_ROOT.exists(), reason="真实资料不在本机")
+@pytest.mark.skipif(not REAL_BIDDER_ROOT.exists(), reason=REAL_SKIP_REASON)
 def test_全量240个PDF不报错且字段齐全():
     pdfs = sorted(
         p for p in REAL_BIDDER_ROOT.rglob("*.pdf")
