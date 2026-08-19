@@ -1,11 +1,16 @@
 (function () {
   const DATA = window.PROTOTYPE_DATA;
+  const DEMO_MODE = false;
   const app = document.getElementById("app");
   const TOTAL_REVIEWS = DATA.bidders.length * DATA.scoringTable.items.length;
   const LOW_CONFIDENCE_THRESHOLD = DATA.lowConfidenceThreshold || 0.85;
   const stageNames = ["PDF 入库", "证据定位", "逐项评审", "结果汇总"];
-  const STORAGE_KEY = "technical-review-demo-state-v1";
+  const STORAGE_KEY = "technical-review-state-v2";
   const LOG_BOTTOM_GAP = 16;
+  const BIDDER_RECOGNITION_MS = 420;
+  const REVIEW_EVENT_KEYS = DATA.runEvents
+    .filter((event) => event.type === "review")
+    .map((event) => reviewKeyFor(event.bidder_id, event.item_id));
 
   const state = loadAppState();
 
@@ -40,65 +45,76 @@
     };
   }
 
-  function resetRunState() {
-    if (state.run.timer) {
-      clearInterval(state.run.timer);
-    }
-    state.run = createRunState();
-    state.reviewOverrides = {};
-    state.activeSectionId = "";
-    saveState();
+  function createUploadState() {
+    return {
+      selected: false,
+      parsed: false,
+      recognizedCount: 0,
+      totalFiles: 0,
+      sourceLabel: "",
+      startedAt: null,
+      finishedAt: null,
+      timer: null
+    };
   }
 
-  function hasDemoState() {
-    const run = state.run;
-    return Boolean(
-      run.timer ||
-      run.started ||
-      run.reviewStarted ||
-      run.paused ||
-      run.finished ||
-      run.completedReviews ||
-      run.retries ||
-      run.unrated ||
-      run.inTokens ||
-      run.outTokens ||
-      run.latencyTotal ||
-      run.startedAt ||
-      run.finishedAt ||
-      run.pausedAt ||
-      run.pausedTotalMs ||
-      run.lastEventAt ||
-      run.waitUntil ||
-      run.logs.length ||
-      Object.keys(state.reviewOverrides || {}).length ||
-      state.activeSectionId
-    );
+  function totalBidderPdfCount() {
+    return DATA.bidders.reduce((sum, bidder) => sum + bidder.pdfCount, 0);
+  }
+
+  function clearRunTimer() {
+    if (state.run.timer) {
+      clearInterval(state.run.timer);
+      state.run.timer = null;
+    }
+  }
+
+  function clearUploadRecognitionTimer() {
+    if (state.upload && state.upload.timer) {
+      clearInterval(state.upload.timer);
+      state.upload.timer = null;
+    }
+  }
+
+  function resetWorkflowState() {
+    clearRunTimer();
+    clearUploadRecognitionTimer();
+    state.run = createRunState();
+    state.upload = createUploadState();
+    state.reviewOverrides = {};
+    state.activeSectionId = "";
+    state.showScoringReference = false;
+    saveState();
   }
 
   function loadAppState() {
     const initial = {
       run: createRunState(),
+      upload: createUploadState(),
       reviewOverrides: {},
       projectSummary: DATA.projectSummary,
-      activeSectionId: ""
+      activeSectionId: "",
+      showScoringReference: false
     };
 
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (!raw) return initial;
       const saved = JSON.parse(raw);
+      const run = hydrateRunState(saved.run);
       return {
-        run: hydrateRunState(saved.run),
+        run,
+        upload: hydrateUploadState(saved.upload, run),
         reviewOverrides: saved.reviewOverrides && typeof saved.reviewOverrides === "object" ? saved.reviewOverrides : {},
         projectSummary: typeof saved.projectSummary === "string" ? saved.projectSummary : DATA.projectSummary,
-        activeSectionId: ""
+        activeSectionId: "",
+        showScoringReference: false
       };
     } catch (error) {
       try {
         window.localStorage.removeItem(STORAGE_KEY);
       } catch (storageError) {
-        // 存储不可用时降级为内存状态，保证静态 Demo 仍可运行。
+        // 存储不可用时降级为内存状态，保证页面仍可运行。
       }
       return initial;
     }
@@ -145,16 +161,54 @@
     return run;
   }
 
+  function hydrateUploadState(saved, run) {
+    const upload = createUploadState();
+    if (saved && typeof saved === "object") {
+      upload.selected = Boolean(saved.selected);
+      upload.parsed = Boolean(saved.parsed);
+      upload.recognizedCount = Math.min(
+        DATA.bidders.length,
+        Math.max(0, Math.floor(finiteNumber(saved.recognizedCount, 0)))
+      );
+      upload.totalFiles = Math.max(0, Math.floor(finiteNumber(saved.totalFiles, 0)));
+      upload.sourceLabel = typeof saved.sourceLabel === "string" ? saved.sourceLabel : "";
+      upload.startedAt = finiteNumber(saved.startedAt, 0) || null;
+      upload.finishedAt = finiteNumber(saved.finishedAt, 0) || null;
+    } else if (run && (run.started || run.reviewStarted || run.finished || run.completedReviews)) {
+      upload.selected = true;
+      upload.parsed = true;
+      upload.recognizedCount = DATA.bidders.length;
+      upload.totalFiles = totalBidderPdfCount();
+      upload.sourceLabel = "已选择投标文件";
+      upload.startedAt = run.startedAt;
+      upload.finishedAt = run.startedAt;
+    }
+    if (upload.parsed) {
+      upload.selected = true;
+      upload.recognizedCount = DATA.bidders.length;
+      upload.totalFiles = upload.totalFiles || totalBidderPdfCount();
+      upload.sourceLabel = upload.sourceLabel || "已选择投标文件";
+    }
+    if (upload.recognizedCount >= DATA.bidders.length) {
+      upload.parsed = true;
+      upload.finishedAt = upload.finishedAt || Date.now();
+    }
+    upload.timer = null;
+    return upload;
+  }
+
   function saveState() {
     const run = { ...state.run, timer: null };
+    const upload = { ...state.upload, timer: null };
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
         run,
+        upload,
         reviewOverrides: state.reviewOverrides,
         projectSummary: state.projectSummary
       }));
     } catch (error) {
-      // 存储不可用时降级为内存状态，保证静态 Demo 仍可运行。
+      // 存储不可用时降级为内存状态，保证页面仍可运行。
     }
   }
 
@@ -249,23 +303,72 @@
     return "#/detail?bidder=" + encodeURIComponent(bidderId) + "&item=" + encodeURIComponent(itemId);
   }
 
+  function modeText(regularText, demoText) {
+    return DEMO_MODE ? demoText : regularText;
+  }
+
+  function isUploadParsed() {
+    return Boolean(state.upload && state.upload.parsed);
+  }
+
+  function isReviewAccessible() {
+    return Boolean(state.run.reviewStarted || state.run.finished);
+  }
+
+  function completedReviewKeySet() {
+    const count = state.run.finished
+      ? REVIEW_EVENT_KEYS.length
+      : Math.min(state.run.completedReviews, REVIEW_EVENT_KEYS.length);
+    return new Set(REVIEW_EVENT_KEYS.slice(0, count));
+  }
+
+  function isReviewCompleted(bidderId, itemId, completedKeys = completedReviewKeySet()) {
+    return completedKeys.has(reviewKeyFor(bidderId, itemId));
+  }
+
+  function completedReviewResults() {
+    const completedKeys = completedReviewKeySet();
+    return DATA.reviewResults.filter((row) => completedKeys.has(reviewKeyFor(row.bidder_id, row.item_id)));
+  }
+
+  function fallbackRouteHash() {
+    if (!isUploadParsed()) return "#/create";
+    if (!isReviewAccessible()) return "#/confirm";
+    return "#/running";
+  }
+
+  function blockedRouteHash(route) {
+    if (route.path === "/create") return "";
+    if (route.path === "/confirm") return isUploadParsed() ? "" : "#/create";
+    if (route.path === "/running" || route.path === "/results") return isReviewAccessible() ? "" : fallbackRouteHash();
+    if (route.path === "/detail") {
+      if (!isReviewAccessible()) return fallbackRouteHash();
+      const bidderId = route.query.get("bidder") || DATA.bidders[0].id;
+      const itemId = route.query.get("item") || "T-02";
+      return isReviewCompleted(bidderId, itemId) ? "" : "#/results";
+    }
+    return "#/create";
+  }
+
   function shell(activePath, body) {
     const links = [
-      ["/create", "新建评审"],
-      ["/confirm", "确认招标信息"],
-      ["/running", "运行监视"],
-      ["/results", "结果并排"]
+      { path: "/create", label: "新建评审", enabled: true },
+      { path: "/confirm", label: "确认招标信息", enabled: isUploadParsed() },
+      { path: "/running", label: "运行监视", enabled: isReviewAccessible() },
+      { path: "/results", label: "结果并排", enabled: isReviewAccessible() }
     ];
 
     return `
       <header class="topbar">
         <div class="brand">
           <h1 class="brand-title">工程建设类技术标辅助评审系统</h1>
-          <div class="brand-subtitle">静态 Demo 原型 · Mock 数据 · 不连接后端</div>
+          <div class="brand-subtitle">${html(modeText("技术标辅助评审流程", "静态 Demo 原型 · Mock 数据 · 不连接后端"))}</div>
         </div>
         <nav class="nav" aria-label="页面导航">
-          ${links.map(([path, label]) => `
-            <a class="${activePath === path ? "active" : ""}" href="#${path}">${label}</a>
+          ${links.map((link) => link.enabled ? `
+            <a class="${activePath === link.path ? "active" : ""}" href="#${link.path}">${link.label}</a>
+          ` : `
+            <span class="nav-disabled" aria-disabled="true" title="请先完成前置步骤">${link.label}</span>
           `).join("")}
         </nav>
       </header>
@@ -275,10 +378,12 @@
 
   function render() {
     const route = getRoute();
+    const blockedHash = blockedRouteHash(route);
+    if (blockedHash) {
+      setRoute(blockedHash);
+      return;
+    }
     if (route.path === "/create") {
-      if (hasDemoState()) {
-        resetRunState();
-      }
       app.innerHTML = shell(route.path, renderCreate());
       return;
     }
@@ -287,7 +392,6 @@
       return;
     }
     if (route.path === "/running") {
-      ensureRunStarted();
       app.innerHTML = shell(route.path, renderRunning());
       return;
     }
@@ -304,31 +408,41 @@
   }
 
   function renderCreate() {
-    const totalChars = DATA.bidders.reduce((sum, bidder) => sum + bidder.chars, 0);
+    const upload = state.upload;
+    const recognizedBidders = DATA.bidders.slice(0, upload.recognizedCount);
+    const recognizedChars = recognizedBidders.reduce((sum, bidder) => sum + bidder.chars, 0);
+    const expectedFiles = totalBidderPdfCount();
+    const shownFiles = upload.selected ? (upload.totalFiles || expectedFiles) : 0;
+    const uploadStatus = !upload.selected ? "等待选择" : upload.parsed ? "解析完成" : "解析中";
+    const uploadBadge = !upload.selected ? "neutral" : upload.parsed ? "success" : "primary";
+    const nextClass = upload.parsed ? "btn primary" : "btn primary disabled";
+    const nextAttrs = upload.parsed ? `href="#/confirm"` : `href="#/create" aria-disabled="true"`;
     return `
       <main class="page">
         <section class="page-header">
           <div>
             <h2 class="page-title">新建评审任务</h2>
-            <p class="page-desc">选择招标文件与各投标人的技术标 PDF。评分规则已完成离线准备，本页只展示业务状态和文件识别结果。</p>
+            <p class="page-desc">选择招标文件与各投标人的技术标 PDF。上传后先完成文件入库、文本解析与评分项绑定，再进入人工核对。</p>
           </div>
           <div class="toolbar">
-            <a class="btn primary" href="#/confirm" data-start-parse>下一步：解析</a>
+            <label class="btn primary" for="bidFileInput">选择投标文件</label>
+            <input id="bidFileInput" class="file-input" type="file" accept="application/pdf,.pdf" multiple data-file-input>
+            <a class="${nextClass}" ${nextAttrs} data-start-parse>下一步：核对</a>
           </div>
         </section>
 
         <section class="summary-strip" aria-label="任务概览">
           ${metric("评分规则", "已加载", DATA.scoringTable.items.length + " 个评分项 / 总分 " + totalScore().toFixed(1) + " 分")}
-          ${metric("投标人", DATA.bidders.length + " 家", "每家 20 个技术标 PDF")}
+          ${metric("投标人", recognizedBidders.length + " / " + DATA.bidders.length + " 家", uploadStatus)}
           ${metric("逐项评审", TOTAL_REVIEWS + " 项", "12 家投标人 × 19 个评分项")}
-          ${metric("语料体量", chars(totalChars), "Mock 占位统计")}
+          ${metric("语料体量", recognizedBidders.length ? chars(recognizedChars) : "待解析", shownFiles ? shownFiles + " 个 PDF" : "等待文件选择")}
         </section>
 
         <section class="layout-grid" style="margin-top: 18px;">
           <div class="panel">
             <div class="panel-header">
               <h3 class="panel-title">基础信息</h3>
-              <span class="badge success">评分规则已准备</span>
+              <span class="badge ${uploadBadge}">${uploadStatus}</span>
             </div>
             <div class="panel-body">
               <div class="field-grid">
@@ -338,15 +452,15 @@
                 </div>
                 <div class="field">
                   <label>招标文件</label>
-                  <div class="select-like">招标文件.pdf · 已选择</div>
+                  <div class="select-like">招标文件.pdf · 已加载</div>
                 </div>
                 <div class="field">
                   <label>评分规则状态</label>
                   <div class="select-like">已加载 · ${DATA.scoringTable.items.length} 个评分项 · 总分 ${totalScore().toFixed(1)} 分</div>
                 </div>
                 <div class="field">
-                  <label>评审范围</label>
-                  <div class="select-like">仅技术部分 · 不包含商务标</div>
+                  <label>投标文件</label>
+                  <div class="select-like">${upload.selected ? html(upload.sourceLabel || "已选择投标文件") : "未选择"}</div>
                 </div>
               </div>
             </div>
@@ -369,21 +483,25 @@
         <section class="panel" style="margin-top: 18px;">
           <div class="panel-header">
             <h3 class="panel-title">投标文件（技术部分）</h3>
-            <span class="badge neutral">${DATA.bidders.length}/${DATA.bidders.length} 已识别</span>
+            <span class="badge ${uploadBadge}">${recognizedBidders.length}/${DATA.bidders.length} 已识别</span>
           </div>
           <div class="panel-body">
-            <p class="panel-note">每家公司 20 个技术标 PDF，评分项文件按名称前缀自动绑定。</p>
-            <div class="bidder-compact-list">
-              ${DATA.bidders.map((bidder) => `
-                <div class="bidder-compact-item">
-                  <div>
-                    <div class="bidder-name" title="${html(bidder.name)}">${html(bidder.name)}</div>
-                    <div class="bidder-meta">${bidder.pdfCount} 个 PDF / ${chars(bidder.chars)}</div>
+            <p class="panel-note">文件选择后逐家识别技术标 PDF，并回显文件数与字数；全部完成后才能进入招标信息核对。</p>
+            ${recognizedBidders.length ? `
+              <div class="bidder-compact-list">
+                ${recognizedBidders.map((bidder) => `
+                  <div class="bidder-compact-item">
+                    <div>
+                      <div class="bidder-name" title="${html(bidder.name)}">${html(bidder.name)}</div>
+                      <div class="bidder-meta">${bidder.pdfCount} 个 PDF / ${chars(bidder.chars)}</div>
+                    </div>
+                    <span class="status-dot" title="已识别" aria-label="识别状态：已识别"></span>
                   </div>
-                  <span class="status-dot" title="已识别" aria-label="识别状态：已识别"></span>
-                </div>
-              `).join("")}
-            </div>
+                `).join("")}
+              </div>
+            ` : `
+              <div class="empty">请选择投标文件，解析结果会逐家进入列表。</div>
+            `}
           </div>
         </section>
       </main>
@@ -392,7 +510,7 @@
 
   function renderConfirm() {
     const route = getRoute();
-    const bindingIssueDemo = route.query.get("binding") === "issue";
+    const bindingIssueDemo = DEMO_MODE && route.query.get("binding") === "issue";
     const confirmItems = DATA.scoringTable.items.map((item) => (
       bindingIssueDemo && item.id === "T-15"
         ? { ...item, bound_count: item.expected_bidders - 1 }
@@ -402,7 +520,7 @@
     const mismatch = Boolean(mismatchItem);
     const elapsed = runElapsedMs();
     const scoringTotal = totalScore();
-    const scoringTotalNote = scoringTotal === 100 ? "来自招标文件" : "Mock 尚未完整替换";
+    const scoringTotalNote = scoringTotal === 100 ? "来自招标文件" : modeText("待评分规则确认", "Mock 尚未完整替换");
     return `
       <main class="page">
         <section class="page-header">
@@ -412,7 +530,8 @@
           </div>
           <div class="toolbar">
             <a class="btn" href="#/create">上一步</a>
-            <a class="btn" href="${bindingIssueDemo ? "#/confirm" : "#/confirm?binding=issue"}">${bindingIssueDemo ? "恢复正常绑定" : "演示绑定异常"}</a>
+            <button class="btn" data-toggle-reference>${state.showScoringReference ? "收起对照" : "打开对照"}</button>
+            ${DEMO_MODE ? `<a class="btn" href="${bindingIssueDemo ? "#/confirm" : "#/confirm?binding=issue"}">${bindingIssueDemo ? "恢复正常绑定" : "演示绑定异常"}</a>` : ""}
             <button class="btn primary" data-start-run ${mismatch ? "disabled" : ""}>确认并开始评审</button>
           </div>
         </section>
@@ -424,6 +543,8 @@
           ${metric("现场计时", `<span data-run-elapsed>${state.run.startedAt ? formatDuration(elapsed) : "未开始"}</span>`, "页面①下一步起算")}
           ${metric("人工介入", "本页一次", "确认后进入现场评审")}
         </section>
+
+        ${state.showScoringReference ? renderScoringReference(confirmItems) : ""}
 
         <section class="layout-grid" style="margin-top: 18px;">
           <div class="panel">
@@ -481,6 +602,44 @@
     `;
   }
 
+  function renderScoringReference(items) {
+    return `
+      <section class="panel reference-panel" aria-label="招标文件评标办法对照">
+        <div class="panel-header">
+          <h3 class="panel-title">招标文件评标办法对照</h3>
+          <span class="badge primary">第 33~37 页</span>
+        </div>
+        <div class="panel-body reference-grid">
+          <aside class="reference-page">
+            <div class="reference-page-title">技术标评审办法摘录</div>
+            <p>评委根据投标文件对各评分项的响应情况，在一般、良、优三个区间内酌情定分；内容不全酌情扣分，若对应评分项缺项不得分。</p>
+            <p>本页用于人工核对评分项名称、满分、三档区间与投标文件绑定状态，确认后才进入逐项评审。</p>
+          </aside>
+          <div class="table-wrap">
+            <table class="table-compact">
+              <thead>
+                <tr>
+                  <th>评分项</th>
+                  <th>满分</th>
+                  <th>招标文件区间</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${items.map((item) => `
+                  <tr>
+                    <td><strong>${html(item.name)}</strong></td>
+                    <td>${item.max_score.toFixed(1)}</td>
+                    <td>${html(item.tier_quote || tierSummary(item))}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
   function renderRunning() {
     const run = state.run;
     const elapsed = runElapsedMs();
@@ -499,7 +658,7 @@
           </div>
           <div class="toolbar">
             <button class="btn" data-toggle-run>${run.paused ? "继续" : "暂停"}</button>
-            <button class="btn" data-reset-run>重置演示</button>
+            <button class="btn" data-reset-run>${html(modeText("重置流程", "重置演示"))}</button>
             <a class="btn primary" href="#/results">查看已完成结果</a>
           </div>
         </section>
@@ -540,12 +699,12 @@
               </div>
 
               <div class="summary-strip" style="margin-top: 18px;">
-                ${metric("已用时间", formatDuration(elapsed), "预计剩余 " + formatDuration(estimatedMs) + " · Mock估算")}
+                ${metric("已用时间", formatDuration(elapsed), "预计剩余 " + formatDuration(estimatedMs) + " · 按当前吞吐估算")}
                 ${metric("当前处理状态", html(run.currentLabel), "已等待 " + formatDuration(waitingMs))}
                 ${metric("当前并发", DATA.reportData.perf.concurrency + " 路", "逐项评审并发")}
                 ${metric("GPU / 显存", "未采集", "不伪造硬件数据")}
-                ${metric("累计输入", number(run.inTokens) + " tokens", "Mock 实时累加")}
-                ${metric("累计输出", number(run.outTokens) + " tokens", "Mock 实时累加")}
+                ${metric("累计输入", number(run.inTokens) + " tokens", "实时累加")}
+                ${metric("累计输出", number(run.outTokens) + " tokens", "实时累加")}
                 ${metric("重试", run.retries + " 次", "失败先重试")}
                 ${metric("未评定", run.unrated + " 项", "不计入合计")}
               </div>
@@ -555,7 +714,7 @@
           <aside class="panel">
             <div class="panel-header">
               <h3 class="panel-title">运行说明</h3>
-              <span class="badge neutral">Mock 演示</span>
+              <span class="badge neutral">流程约束</span>
             </div>
             <div class="panel-body">
               <div class="info-box">
@@ -593,8 +752,14 @@
 
   function renderResults() {
     const elapsed = reportElapsedMs();
+    const completedKeys = completedReviewKeySet();
+    const completedCount = Math.min(state.run.finished ? TOTAL_REVIEWS : state.run.completedReviews, TOTAL_REVIEWS);
+    const pendingCount = Math.max(0, TOTAL_REVIEWS - completedCount);
+    const visibleReviewFlags = completedReviewResults()
+      .filter((row) => row.status === "rated" && row.score !== 0 && row.confidence < LOW_CONFIDENCE_THRESHOLD);
     const rows = DATA.scoringTable.items.map((item) => {
-      const allZero = DATA.bidders.every((bidder) => effectiveScoreFor(bidder.id, item.id) === 0);
+      const allCompletedForItem = DATA.bidders.every((bidder) => isReviewCompleted(bidder.id, item.id, completedKeys));
+      const allZero = allCompletedForItem && DATA.bidders.every((bidder) => effectiveScoreFor(bidder.id, item.id) === 0);
       return `
         <tr class="${allZero ? "row-warning" : ""}">
           <td class="sticky-item" data-score-col="0">
@@ -602,7 +767,7 @@
             ${allZero ? `<div class="small muted">疑似检索配置问题</div>` : ""}
           </td>
           <td class="sticky-max" data-score-col="1">${item.max_score.toFixed(1)}</td>
-          ${DATA.bidders.map((bidder, index) => renderScoreCell(bidder, item, index)).join("")}
+          ${DATA.bidders.map((bidder, index) => renderScoreCell(bidder, item, index, completedKeys)).join("")}
         </tr>
       `;
     }).join("");
@@ -622,9 +787,9 @@
 
         <section class="summary-strip">
           ${metric("投标人", DATA.bidders.length + " 家", "横向滚动展示")}
-          ${metric("评分项", DATA.scoringTable.items.length + " 项", "评分项列固定")}
-          ${metric("用时", formatDuration(elapsed), state.run.startedAt ? "从页面①下一步起算" : "Mock 占位")}
-          ${metric("建议复核", DATA.reportData.review_flags.length + " 项", "confidence < " + LOW_CONFIDENCE_THRESHOLD)}
+          ${metric("已完成", completedCount + " / " + TOTAL_REVIEWS, pendingCount ? pendingCount + " 项评审中" : "全部完成")}
+          ${metric("用时", formatDuration(elapsed), state.run.startedAt ? "从页面①文件选择起算" : "尚未开始")}
+          ${metric("建议复核", visibleReviewFlags.length + " 项", "confidence < " + LOW_CONFIDENCE_THRESHOLD)}
         </section>
 
         <section class="panel" style="margin-top: 18px;">
@@ -648,8 +813,8 @@
                     <td class="sticky-item" data-score-col="0"><strong>合计（19 项）</strong></td>
                     <td class="sticky-max" data-score-col="1"><strong>${totalScore().toFixed(1)}</strong></td>
                     ${DATA.bidders.map((bidder, index) => {
-                      const total = effectiveTotalForBidder(bidder);
-                      return `<td data-score-col="${index + 2}"><strong>${total.score.toFixed(1)}${total.unrated ? "*" : ""}</strong></td>`;
+                      const total = effectiveTotalForBidder(bidder, completedKeys);
+                      return `<td data-score-col="${index + 2}" title="当前合计，不含评审中项"><strong>${total.score.toFixed(1)}${total.unrated ? "*" : ""}</strong></td>`;
                     }).join("")}
                   </tr>
                 </tbody>
@@ -658,6 +823,7 @@
             <div class="legend">
               <span>0 = 未命中，投标文件未写此项</span>
               <span>— = 未评定，系统未能给出判断，不计入合计</span>
+              <span>评审中 = 结果尚未到达，暂不计入当前合计</span>
               <span>复核 = confidence &lt; ${LOW_CONFIDENCE_THRESHOLD}，建议人工复核</span>
               <span>改判 = 专家已手动覆盖该单元格分数</span>
               <span>* = 该家存在未评定项，合计不完整</span>
@@ -778,7 +944,7 @@
             <section class="panel" style="margin-top: 18px;">
               <div class="panel-header">
                 <h3 class="panel-title">专家复核</h3>
-                <span class="badge neutral">原型本地状态</span>
+                <span class="badge neutral">${html(modeText("本地复核记录", "原型本地状态"))}</span>
               </div>
               <div class="panel-body">
                 <div class="review-form">
@@ -933,8 +1099,23 @@
     `;
   }
 
-  function renderScoreCell(bidder, item, bidderIndex) {
+  function renderScoreCell(bidder, item, bidderIndex, completedKeys = completedReviewKeySet()) {
+    if (!isReviewCompleted(bidder.id, item.id, completedKeys)) {
+      return `
+        <td data-score-col="${bidderIndex + 2}">
+          <span class="score-cell pending" title="该评分项仍在评审中">评审中</span>
+        </td>
+      `;
+    }
+
     const result = resultBy(bidder.id, item.id);
+    if (!result) {
+      return `
+        <td data-score-col="${bidderIndex + 2}">
+          <span class="score-cell pending" title="等待结果写入">评审中</span>
+        </td>
+      `;
+    }
     const href = routeForDetail(bidder.id, item.id);
     const override = overrideBy(bidder.id, item.id);
     const overrideScore = numericOverrideScore(override);
@@ -1111,6 +1292,46 @@
     }
   }
 
+  function beginUploadRecognition(fileCount) {
+    clearRunTimer();
+    clearUploadRecognitionTimer();
+    state.run = createRunState();
+    state.upload = createUploadState();
+    state.reviewOverrides = {};
+    state.activeSectionId = "";
+    state.showScoringReference = false;
+    state.upload.selected = true;
+    state.upload.totalFiles = fileCount || totalBidderPdfCount();
+    state.upload.sourceLabel = state.upload.totalFiles + " 个文件已选择";
+    state.upload.startedAt = Date.now();
+    ensureRunStarted("投标文件上传完成，开始 PDF 入库和解析计时");
+    startUploadRecognitionTimer();
+    saveState();
+    render();
+  }
+
+  function startUploadRecognitionTimer() {
+    clearUploadRecognitionTimer();
+    const upload = state.upload;
+    if (!upload || !upload.selected || upload.parsed) return;
+    upload.timer = setInterval(() => {
+      if (!upload.selected || upload.parsed) {
+        clearUploadRecognitionTimer();
+        return;
+      }
+      upload.recognizedCount = Math.min(DATA.bidders.length, upload.recognizedCount + 1);
+      if (upload.recognizedCount >= DATA.bidders.length) {
+        upload.parsed = true;
+        upload.finishedAt = Date.now();
+        clearUploadRecognitionTimer();
+      }
+      saveState();
+      if (getRoute().path === "/create") {
+        render();
+      }
+    }, BIDDER_RECOGNITION_MS);
+  }
+
   function tickRun() {
     const route = getRoute();
     const run = state.run;
@@ -1153,7 +1374,7 @@
       return;
     }
     if (route.path === "/results") {
-      if (changed && run.finished) {
+      if (changed) {
         renderPreservingMatrixScroll();
       }
     }
@@ -1334,11 +1555,13 @@
     return result ? result.score : null;
   }
 
-  function effectiveTotalForBidder(bidder) {
-    const rows = DATA.scoringTable.items.map((item) => ({
-      result: resultBy(bidder.id, item.id),
-      score: effectiveScoreFor(bidder.id, item.id)
-    }));
+  function effectiveTotalForBidder(bidder, completedKeys = completedReviewKeySet()) {
+    const rows = DATA.scoringTable.items
+      .filter((item) => isReviewCompleted(bidder.id, item.id, completedKeys))
+      .map((item) => ({
+        result: resultBy(bidder.id, item.id),
+        score: effectiveScoreFor(bidder.id, item.id)
+      }));
     const score = rows.reduce((sum, row) => sum + (typeof row.score === "number" ? row.score : 0), 0);
     const unrated = rows.filter((row) => row.result && row.result.status === "unrated" && typeof row.score !== "number").length;
     return {
@@ -1356,11 +1579,15 @@
   function buildReportHtml() {
     const generatedAt = new Date().toLocaleString("zh-CN", { hour12: false });
     const perf = DATA.reportData.perf;
+    const completedKeys = completedReviewKeySet();
     const matrixRows = DATA.scoringTable.items.map((item) => `
       <tr>
         <td>${html(item.name)}</td>
         <td>${item.max_score.toFixed(1)}</td>
         ${DATA.bidders.map((bidder) => {
+          if (!isReviewCompleted(bidder.id, item.id, completedKeys)) {
+            return `<td class="pending">评审中</td>`;
+          }
           const result = resultBy(bidder.id, item.id);
           const override = overrideBy(bidder.id, item.id);
           const overrideScore = numericOverrideScore(override);
@@ -1385,13 +1612,21 @@
         <td>合计（19 项）</td>
         <td>${totalScore().toFixed(1)}</td>
         ${DATA.bidders.map((bidder) => {
-          const total = effectiveTotalForBidder(bidder);
+          const total = effectiveTotalForBidder(bidder, completedKeys);
           return `<td>${total.score.toFixed(1)}${total.unrated ? "*" : ""}</td>`;
         }).join("")}
       </tr>
     `;
-    const unratedRows = DATA.reportData.unrated.length
-      ? DATA.reportData.unrated.map((row) => {
+    const unrated = DATA.reportData.unrated.filter((row) => {
+      const bidder = DATA.bidders.find((item) => item.name === row.bidder);
+      return bidder && isReviewCompleted(bidder.id, row.item_id, completedKeys);
+    });
+    const reviewFlags = DATA.reportData.review_flags.filter((row) => {
+      const bidder = DATA.bidders.find((item) => item.name === row.bidder);
+      return bidder && isReviewCompleted(bidder.id, row.item_id, completedKeys);
+    });
+    const unratedRows = unrated.length
+      ? unrated.map((row) => {
         const item = itemById(row.item_id);
         return `
           <tr>
@@ -1404,8 +1639,8 @@
         `;
       }).join("")
       : `<tr><td>无未评定项</td></tr>`;
-    const reviewRows = DATA.reportData.review_flags.length
-      ? DATA.reportData.review_flags.map((row) => {
+    const reviewRows = reviewFlags.length
+      ? reviewFlags.map((row) => {
         const item = itemById(row.item_id);
         return `<li>${html(row.bidder)} · ${html(row.item_id)} ${html(item ? item.name : "")} · confidence ${row.confidence.toFixed(2)} · ${html(row.why)}</li>`;
       }).join("")
@@ -1431,6 +1666,7 @@
     .override { color: #0b6b52; font-weight: 700; }
     .unrated { color: #b42318; font-weight: 700; }
     .zero { color: #667085; }
+    .pending { color: #667085; font-weight: 700; }
     .single-column { min-width: 0; }
     .perf { max-width: 720px; min-width: 0; }
     ul { padding-left: 18px; }
@@ -1501,16 +1737,32 @@
     const parse = event.target.closest("[data-start-parse]");
     if (parse) {
       event.preventDefault();
-      resetRunState();
-      ensureRunStarted("投标文件上传完成，开始 PDF 入库和解析计时");
+      if (!isUploadParsed()) {
+        window.alert("请先选择投标文件，并等待解析完成。");
+        return;
+      }
+      if (!state.run.started) {
+        ensureRunStarted("投标文件上传完成，开始 PDF 入库和解析计时");
+      }
       setRoute("#/confirm");
       return;
     }
 
     const start = event.target.closest("[data-start-run]");
     if (start) {
+      if (!isUploadParsed()) {
+        window.alert("请先完成投标文件解析。");
+        return;
+      }
       startReview();
       setRoute("#/running");
+      return;
+    }
+
+    const toggleReference = event.target.closest("[data-toggle-reference]");
+    if (toggleReference) {
+      state.showScoringReference = !state.showScoringReference;
+      render();
       return;
     }
 
@@ -1530,10 +1782,10 @@
 
     const reset = event.target.closest("[data-reset-run]");
     if (reset) {
-      if (!window.confirm("确定重置演示运行进度和计时器吗？此操作会让现场运行状态归零。")) {
+      if (!window.confirm(modeText("确定重置当前流程、运行进度和计时器吗？此操作会让现场运行状态归零。", "确定重置演示运行进度和计时器吗？此操作会让现场运行状态归零。"))) {
         return;
       }
-      resetRunState();
+      resetWorkflowState();
       render();
       return;
     }
@@ -1571,6 +1823,14 @@
       saveState();
       render();
     }
+  });
+
+  document.addEventListener("change", (event) => {
+    const input = event.target && event.target.closest ? event.target.closest("[data-file-input]") : null;
+    if (!input) return;
+    if (input.files && input.files.length === 0) return;
+    const fileCount = input.files && input.files.length ? input.files.length : totalBidderPdfCount();
+    beginUploadRecognition(fileCount);
   });
 
   function toggleRunPaused() {
@@ -1655,6 +1915,9 @@
   render();
   if (getRoute().path === "/running") {
     setTimeout(scrollRunLogToBottom, 0);
+  }
+  if (state.upload.selected && !state.upload.parsed) {
+    startUploadRecognitionTimer();
   }
   if (state.run.started && !state.run.finished) {
     ensureRunStarted();

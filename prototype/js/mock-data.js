@@ -239,7 +239,7 @@
     items
   };
 
-  const projectSummary = "本项目为济阳区实验高级中学工程总承包（EPC）静态原型示例，建设内容包含设计、施工及相关总承包管理工作。评审重点关注投标文件是否围绕房建工程特点、工期组织、质量安全、资源保障、专业协同与可追溯证据展开。该摘要为 Mock 占位文本，用于展示页面结构，不代表实际 S0 抽取结果。";
+  const projectSummary = "本项目为济阳区实验高级中学工程总承包（EPC），建设内容包含设计、施工及相关总承包管理工作。评审重点关注投标文件是否围绕房建工程特点、工期组织、质量安全、资源保障、专业协同与可追溯证据展开。该摘要用于评审上下文展示，接入后由 S0 抽取结果替换。";
 
   function mockModelTier(item, bidderIndex, itemIndex) {
     if (itemIndex === 18) return null;
@@ -576,7 +576,7 @@
       out_tokens: reviewResults.reduce((sum, row) => sum + row.perf.out_tokens, 0),
       gpu: "未采集",
       vram_peak_gb: null,
-      gpu_note: "模型为远程托管端点时，我方进程内无法采集显存；此处为 Mock 占位展示。"
+      gpu_note: "模型为远程托管端点时，我方进程内无法采集显存；此处显示为未采集。"
     }
   };
 

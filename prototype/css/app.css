@@ -96,7 +96,8 @@ button:disabled {
   gap: 6px;
 }
 
-.nav a {
+.nav a,
+.nav-disabled {
   display: inline-flex;
   align-items: center;
   min-height: 34px;
@@ -106,6 +107,11 @@ button:disabled {
   color: var(--muted);
   text-decoration: none;
   white-space: nowrap;
+}
+
+.nav-disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 .nav a.active {
@@ -304,6 +310,22 @@ button:disabled {
   color: var(--primary);
 }
 
+.btn.disabled,
+.btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -470,6 +492,39 @@ tr:last-child td {
   line-height: 18px;
   text-align: center;
   flex: 0 0 auto;
+}
+
+.reference-panel {
+  margin-top: 18px;
+}
+
+.reference-grid {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.reference-page {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  color: #344054;
+}
+
+.reference-page-title {
+  margin-bottom: 8px;
+  color: #121a2a;
+  font-weight: 700;
+}
+
+.reference-page p {
+  margin: 0 0 10px;
+}
+
+.reference-page p:last-child {
+  margin-bottom: 0;
 }
 
 .stage-stepper {
@@ -751,6 +806,12 @@ tr:last-child td {
   text-decoration: none;
 }
 
+.score-cell.pending {
+  color: #667085;
+  font-size: 12px;
+  text-decoration: none;
+}
+
 .score-cell.review {
   color: var(--warning);
 }
@@ -1001,7 +1062,8 @@ tr:last-child td {
 
   .layout-grid,
   .layout-grid.equal,
-  .detail-grid {
+  .detail-grid,
+  .reference-grid {
     grid-template-columns: 1fr;
   }
 
