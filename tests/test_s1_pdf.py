@@ -131,8 +131,9 @@ def test_阈值随文档行长自适应():
 
 # ────────── 真实数据冒烟 ──────────
 
-REAL_BIDDER_ROOT = Path(
-    r"D:/Decktop/测试项目/济阳区实验高级中学项目工程总承包（EPC） 2"
+REAL_BIDDER_ROOT = (
+    Path(__file__).resolve().parents[1]
+    / "原始资料" / "实际测试工程文件" / "济阳区实验高级中学项目工程总承包（EPC） 2"
 )
 
 
@@ -145,7 +146,7 @@ def test_一家20个PDF字段齐全且ID唯一():
     assert len(pdfs) == 20
     all_blocks = []
     for i, p in enumerate(pdfs, start=1):
-        blocks = S.parse_pdf(p, str(i))
+        blocks, _ = S.parse_pdf(p, str(i))
         all_blocks.extend(blocks)
         for b in blocks:
             assert b["page"] >= 1 and isinstance(b["page"], int)
@@ -167,7 +168,7 @@ def test_全量240个PDF不报错且字段齐全():
     )
     assert len(pdfs) == 240, f"应 240 个投标 PDF，实际 {len(pdfs)}"
     for i, p in enumerate(pdfs, start=1):
-        blocks = S.parse_pdf(p, str(i))
+        blocks, _ = S.parse_pdf(p, str(i))
         assert blocks, f"{p.name} 切出 0 块"
         for b in blocks:
             assert b["char_len"] == len(b["text"])

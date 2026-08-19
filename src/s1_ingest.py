@@ -158,7 +158,7 @@ def _p90(values):
 
 
 def _pdf_lines(path: Path):
-    """按视觉行提取 (页码, 文本)，页码从 1 开始。"""
+    """按视觉行提取 (页码, 文本) 列表与总页数，页码从 1 开始。"""
     doc = fitz.open(str(path))
     try:
         lines = []
@@ -170,7 +170,7 @@ def _pdf_lines(path: Path):
                     text = "".join(span.get("text", "") for span in spans).strip()
                     if text:
                         lines.append((page_number, text))
-        return lines
+        return lines, doc.page_count
     finally:
         doc.close()
 
@@ -210,9 +210,9 @@ def _chunk_lines(lines, file_key, item_guid=None, file_name=None):
 
 
 def parse_pdf(path: Path, file_key: str):
-    """按编号+相对行长规则切一份 PDF，保留每块起始页码和文件 GUID。"""
-    lines = _pdf_lines(path)
-    return _chunk_lines(lines, file_key, _pdf_item_guid(path), path.name)
+    """按编号+相对行长规则切一份 PDF，返回 (章节块列表, 页数)。"""
+    lines, page_count = _pdf_lines(path)
+    return _chunk_lines(lines, file_key, _pdf_item_guid(path), path.name), page_count
 
 
 # ---- .doc 支持 ----------------------------------------------------------
@@ -288,9 +288,13 @@ def _discover_files(src: Path):
     )
     if pdfs:
         return pdfs
+    # docx/doc 递归查找时排除 _converted 缓存目录，避免第二次运行重复解析
     return sorted(
         p for p in src.rglob("*")
-        if p.is_file() and p.suffix.lower() in (".docx", ".doc") and not p.name.startswith("~$")
+        if p.is_file()
+        and p.suffix.lower() in (".docx", ".doc")
+        and not p.name.startswith("~$")
+        and "_converted" not in p.parts
     )
 
 
@@ -303,17 +307,21 @@ def main(src_dir: str, out_path: str):
         sys.exit(f"没有找到 PDF/doc/docx: {src}")
 
     all_sections = []
+    zero_block_files = 0
     for file_index, f in enumerate(files, start=1):
         key = str(file_index)
         if f.suffix.lower() == ".pdf":
-            secs = parse_pdf(f, key)
-            pages = fitz.open(str(f)).page_count
+            secs, pages = parse_pdf(f, key)
         else:
             cache_dir = f.parent / "_converted"
             secs = parse_docx(ensure_docx(f, cache_dir), key)
             pages = None
         all_sections.extend(secs)
         chars = sum(s["char_len"] for s in secs)
+        if not secs:
+            zero_block_files += 1
+            print(f"⚠ 警告：{f.name} 切出 0 个章节块，可能是扫描件或空文件，将整项缺失")
+            continue
         page_info = f" 页 {pages}" if pages is not None else ""
         print(f"{f.name[:34]:36s} 章节 {len(secs):5d}  字数 {chars:8,d}{page_info}")
 
@@ -330,6 +338,8 @@ def main(src_dir: str, out_path: str):
             f"章节字数 中位数 {lens[len(lens)//2]:,}  "
             f"P90 {lens[min(int(len(lens)*.9), len(lens)-1)]:,}  最大 {lens[-1]:,}"
         )
+    if zero_block_files:
+        print(f"⚠ 0 块文件数：{zero_block_files}")
     print(f"-> {out_path}")
 
 
