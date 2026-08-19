@@ -1,0 +1,19 @@
+#!/bin/sh
+# 禁止非快进推送：如果远程有本地没有的提交，必须 fetch/merge/rebase 后才能 push
+
+while read local_ref local_sha remote_ref remote_sha
+do
+    # 如果是新建分支（remote_sha 全 0），跳过检查
+    if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+        continue
+    fi
+
+    # 检查 remote_sha 是否是 local_sha 的祖先
+    if ! git merge-base --is-ancestor "$remote_sha" "$local_sha"; then
+        echo "Error: $remote_ref 上存在本地没有的提交，不允许直接 push。" >&2
+        echo "请先执行：git fetch origin && git merge origin/$local_ref 或 git rebase origin/$local_ref" >&2
+        exit 1
+    fi
+done
+
+exit 0

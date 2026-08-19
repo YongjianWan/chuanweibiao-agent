@@ -1287,3 +1287,11 @@ Windows 下若终端输出中文乱码，在命令前加 `PYTHONIOENCODING=utf-8
 7. T1（**从招标文件抽评分表**，离线产出，见 §1.1）前置已具备，可立即开工；T5/T6 静态原型同理。
 8. T0 完成后，用真实素材跑 S1→S2，验证 §6 阶段一判定标准里的三条 S2 效果指标。
 9. 然后按 §7 走两条关键路径：数据线 T0 → T8，模型线 B2 → T9 → T2。分工见 `docs/分工与排期.md`。
+
+---
+
+## 12. 协作规范
+
+- `main` 分支已开启保护，**禁止 force push**。
+- 推送到 `main` 前必须先 `git fetch origin` 并 `git merge origin/main`（或 `git rebase`），否则会被拒绝。
+- 首次克隆后请执行 `git config core.hooksPath .githooks`，启用本地 pre-push 钩子作为二次保护。
