@@ -1,0 +1,8 @@
+python-docx
+pyyaml
+jieba
+pymupdf
+
+# 仅 Windows：把老的二进制 .doc 转成 .docx（src/s1_ingest.py 的 ensure_docx）。
+# 装了 Word 或 WPS 才有用。没有它就退回 LibreOffice 的 soffice 命令行。
+pywin32; sys_platform == "win32"
