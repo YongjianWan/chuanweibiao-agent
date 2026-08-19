@@ -17,11 +17,12 @@ prototype/index.html
 使用单个 `index.html` 和 Hash 路由：
 
 - `#/create`
-- `#/confirm`
-- `#/confirm?binding=issue`（演示投标文件绑定异常，开始按钮会禁用）
-- `#/running`
-- `#/results`
-- `#/detail?bidder=...&item=T-02`
+- `#/confirm`（需先在页面①点击“下一步：解析”，计时从该按钮起算）
+- `#/running`（页面①解析后即可查看，包含 S1/S2/S3/S4 事件流）
+- `#/results`（逐项评审产生结果后可查看）
+- `#/detail?bidder=...&item=T-02`（对应单元格评审完成后可查看）
+
+`#/confirm?binding=issue` 是开发演示绑定异常的旧入口；当前正式原型 `DEMO_MODE = false`，默认不暴露该入口。
 
 ## 数据说明
 
@@ -37,6 +38,6 @@ Mock 数据统一放在 `prototype/js/mock-data.js`，通过全局对象 `window
 
 当前仓库尚无 `config/projects/济阳区实验高级中学.yaml`，因此评分表仍是原型用 Mock 数据；已按 `docs/findings-招标文件核对.md` 修正确定有误的 T-15 名称、满分和三档区间。等 T1 产出项目 YAML 后，应整体替换 `mock-data.js` 内的评分表定义。
 
-页面④的“导出报告”会在浏览器本地生成静态 HTML，内容包含并排表、未评定单列、建议人工复核清单和性能数据。
+页面④的“导出报告”会在浏览器本地生成静态 HTML，内容包含并排表、未评定单列、建议人工复核清单和性能数据。评审未完成时页面④仅作为运行快照查看，导出按钮禁用，避免生成半成品报告。
 
 所有分数、耗时、token、显存相关内容均为 Mock / 占位示例，不代表真实评审结果或真实硬件配置；12 家字数合计按 README §1 的实测口径校准为 1047.0 万字。

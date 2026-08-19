@@ -5,7 +5,7 @@
   const TOTAL_REVIEWS = DATA.bidders.length * DATA.scoringTable.items.length;
   const LOW_CONFIDENCE_THRESHOLD = DATA.lowConfidenceThreshold || 0.85;
   const stageNames = ["PDF 入库", "证据定位", "逐项评审", "结果汇总"];
-  const STORAGE_KEY = "technical-review-state-v2";
+  const STORAGE_KEY = "technical-review-state-v3";
   const LOG_BOTTOM_GAP = 16;
   const BIDDER_RECOGNITION_MS = 420;
   const REVIEW_EVENT_KEYS = DATA.runEvents
@@ -311,8 +311,12 @@
     return Boolean(state.upload && state.upload.parsed);
   }
 
-  function isReviewAccessible() {
-    return Boolean(state.run.reviewStarted || state.run.finished);
+  function isRunAccessible() {
+    return Boolean(state.run.started || state.run.reviewStarted || state.run.finished);
+  }
+
+  function isResultsAccessible() {
+    return Boolean(state.run.completedReviews || state.run.finished);
   }
 
   function completedReviewKeySet() {
@@ -333,16 +337,17 @@
 
   function fallbackRouteHash() {
     if (!isUploadParsed()) return "#/create";
-    if (!isReviewAccessible()) return "#/confirm";
+    if (!isRunAccessible()) return "#/create";
     return "#/running";
   }
 
   function blockedRouteHash(route) {
     if (route.path === "/create") return "";
-    if (route.path === "/confirm") return isUploadParsed() ? "" : "#/create";
-    if (route.path === "/running" || route.path === "/results") return isReviewAccessible() ? "" : fallbackRouteHash();
+    if (route.path === "/confirm") return isUploadParsed() && isRunAccessible() ? "" : "#/create";
+    if (route.path === "/running") return isRunAccessible() ? "" : fallbackRouteHash();
+    if (route.path === "/results") return isResultsAccessible() ? "" : fallbackRouteHash();
     if (route.path === "/detail") {
-      if (!isReviewAccessible()) return fallbackRouteHash();
+      if (!isResultsAccessible()) return fallbackRouteHash();
       const bidderId = route.query.get("bidder") || DATA.bidders[0].id;
       const itemId = route.query.get("item") || "T-02";
       return isReviewCompleted(bidderId, itemId) ? "" : "#/results";
@@ -353,9 +358,9 @@
   function shell(activePath, body) {
     const links = [
       { path: "/create", label: "新建评审", enabled: true },
-      { path: "/confirm", label: "确认招标信息", enabled: isUploadParsed() },
-      { path: "/running", label: "运行监视", enabled: isReviewAccessible() },
-      { path: "/results", label: "结果并排", enabled: isReviewAccessible() }
+      { path: "/confirm", label: "确认招标信息", enabled: isUploadParsed() && isRunAccessible() },
+      { path: "/running", label: "运行监视", enabled: isRunAccessible() },
+      { path: "/results", label: "结果并排", enabled: isResultsAccessible() }
     ];
 
     return `
@@ -413,7 +418,7 @@
     const recognizedChars = recognizedBidders.reduce((sum, bidder) => sum + bidder.chars, 0);
     const expectedFiles = totalBidderPdfCount();
     const shownFiles = upload.selected ? (upload.totalFiles || expectedFiles) : 0;
-    const uploadStatus = !upload.selected ? "等待选择" : upload.parsed ? "解析完成" : "解析中";
+    const uploadStatus = !upload.selected ? "等待选择" : upload.parsed ? "识别完成" : "识别中";
     const uploadBadge = !upload.selected ? "neutral" : upload.parsed ? "success" : "primary";
     const nextClass = upload.parsed ? "btn primary" : "btn primary disabled";
     const nextAttrs = upload.parsed ? `href="#/confirm"` : `href="#/create" aria-disabled="true"`;
@@ -422,12 +427,12 @@
         <section class="page-header">
           <div>
             <h2 class="page-title">新建评审任务</h2>
-            <p class="page-desc">选择招标文件与各投标人的技术标 PDF。上传后先完成文件入库、文本解析与评分项绑定，再进入人工核对。</p>
+            <p class="page-desc">选择招标文件与各投标人的技术标 PDF。文件清单识别完成后，点击下一步启动现场解析与计时。</p>
           </div>
           <div class="toolbar">
             <label class="btn primary" for="bidFileInput">选择投标文件</label>
             <input id="bidFileInput" class="file-input" type="file" accept="application/pdf,.pdf" multiple data-file-input>
-            <a class="${nextClass}" ${nextAttrs} data-start-parse>下一步：核对</a>
+            <a class="${nextClass}" ${nextAttrs} data-start-parse>下一步：解析</a>
           </div>
         </section>
 
@@ -486,7 +491,7 @@
             <span class="badge ${uploadBadge}">${recognizedBidders.length}/${DATA.bidders.length} 已识别</span>
           </div>
           <div class="panel-body">
-            <p class="panel-note">文件选择后逐家识别技术标 PDF，并回显文件数与字数；全部完成后才能进入招标信息核对。</p>
+            <p class="panel-note">文件选择后只做投标人和 PDF 清单识别；点击“下一步：解析”后才开始 S1 入库和现场计时。</p>
             ${recognizedBidders.length ? `
               <div class="bidder-compact-list">
                 ${recognizedBidders.map((bidder) => `
@@ -531,6 +536,7 @@
           <div class="toolbar">
             <a class="btn" href="#/create">上一步</a>
             <button class="btn" data-toggle-reference>${state.showScoringReference ? "收起对照" : "打开对照"}</button>
+            ${state.run.started ? `<a class="btn" href="#/running">查看运行监视</a>` : ""}
             ${DEMO_MODE ? `<a class="btn" href="${bindingIssueDemo ? "#/confirm" : "#/confirm?binding=issue"}">${bindingIssueDemo ? "恢复正常绑定" : "演示绑定异常"}</a>` : ""}
             <button class="btn primary" data-start-run ${mismatch ? "disabled" : ""}>确认并开始评审</button>
           </div>
@@ -540,7 +546,7 @@
           ${metric("评分项", DATA.scoringTable.items.length + " 项", "技术标评分项")}
           ${metric("总分", scoringTotal.toFixed(1) + " 分", scoringTotalNote)}
           ${metric("投标文件绑定", mismatch ? "存在异常" : "全部匹配", mismatch ? mismatchItem.id + " 为 " + mismatchItem.bound_count + "/" + mismatchItem.expected_bidders : "19 项均为 12/12")}
-          ${metric("现场计时", `<span data-run-elapsed>${state.run.startedAt ? formatDuration(elapsed) : "未开始"}</span>`, "页面①下一步起算")}
+          ${metric("现场计时", `<span data-run-elapsed>${state.run.startedAt ? formatDuration(elapsed) : "未开始"}</span>`, "页面①下一步：解析起算")}
           ${metric("人工介入", "本页一次", "确认后进入现场评审")}
         </section>
 
@@ -648,6 +654,9 @@
     const remainingReviews = Math.max(0, TOTAL_REVIEWS - run.completedReviews);
     const estimatedMs = run.completedReviews ? remainingReviews * Math.max(avgLatency, 2400) / DATA.reportData.perf.concurrency : 0;
     const waitingMs = run.lastEventAt ? runTimestampNow(run) - run.lastEventAt : 0;
+    const resultButton = isResultsAccessible()
+      ? `<a class="btn primary" href="#/results">查看已完成结果</a>`
+      : `<span class="btn primary disabled" aria-disabled="true" title="逐项评审开始后才会产生结果">查看已完成结果</span>`;
 
     return `
       <main class="page">
@@ -659,7 +668,7 @@
           <div class="toolbar">
             <button class="btn" data-toggle-run>${run.paused ? "继续" : "暂停"}</button>
             <button class="btn" data-reset-run>${html(modeText("重置流程", "重置演示"))}</button>
-            <a class="btn primary" href="#/results">查看已完成结果</a>
+            ${resultButton}
           </div>
         </section>
 
@@ -755,6 +764,7 @@
     const completedKeys = completedReviewKeySet();
     const completedCount = Math.min(state.run.finished ? TOTAL_REVIEWS : state.run.completedReviews, TOTAL_REVIEWS);
     const pendingCount = Math.max(0, TOTAL_REVIEWS - completedCount);
+    const canExportReport = Boolean(state.run.finished);
     const visibleReviewFlags = completedReviewResults()
       .filter((row) => row.status === "rated" && row.score !== 0 && row.confidence < LOW_CONFIDENCE_THRESHOLD);
     const rows = DATA.scoringTable.items.map((item) => {
@@ -781,16 +791,27 @@
           </div>
           <div class="toolbar">
             <a class="btn" href="#/running">返回运行监视</a>
-            <button class="btn primary" data-export-report>导出报告</button>
+            <button class="btn primary" data-export-report ${canExportReport ? "" : "disabled"} title="${canExportReport ? "导出完整静态 HTML 报告" : "评审完成后才能导出正式报告"}">导出报告</button>
           </div>
         </section>
 
         <section class="summary-strip">
           ${metric("投标人", DATA.bidders.length + " 家", "横向滚动展示")}
           ${metric("已完成", completedCount + " / " + TOTAL_REVIEWS, pendingCount ? pendingCount + " 项评审中" : "全部完成")}
-          ${metric("用时", formatDuration(elapsed), state.run.startedAt ? "从页面①文件选择起算" : "尚未开始")}
+          ${metric("用时", formatDuration(elapsed), state.run.startedAt ? "从页面①下一步：解析起算" : "尚未开始")}
           ${metric("建议复核", visibleReviewFlags.length + " 项", "confidence < " + LOW_CONFIDENCE_THRESHOLD)}
         </section>
+
+        ${pendingCount ? `
+          <section class="panel status-panel" style="margin-top: 18px;">
+            <div class="panel-body">
+              <div class="info-box">
+                <strong>当前为运行快照</strong>
+                <span class="muted">还有 ${pendingCount} 项未完成，当前合计不含评审中项；正式报告需等全部评审完成后导出。</span>
+              </div>
+            </div>
+          </section>
+        ` : ""}
 
         <section class="panel" style="margin-top: 18px;">
           <div class="panel-header">
@@ -1304,7 +1325,6 @@
     state.upload.totalFiles = fileCount || totalBidderPdfCount();
     state.upload.sourceLabel = state.upload.totalFiles + " 个文件已选择";
     state.upload.startedAt = Date.now();
-    ensureRunStarted("投标文件上传完成，开始 PDF 入库和解析计时");
     startUploadRecognitionTimer();
     saveState();
     render();
@@ -1323,6 +1343,7 @@
       if (upload.recognizedCount >= DATA.bidders.length) {
         upload.parsed = true;
         upload.finishedAt = Date.now();
+        upload.sourceLabel = (upload.totalFiles || totalBidderPdfCount()) + " 个文件已识别";
         clearUploadRecognitionTimer();
       }
       saveState();
@@ -1738,11 +1759,11 @@
     if (parse) {
       event.preventDefault();
       if (!isUploadParsed()) {
-        window.alert("请先选择投标文件，并等待解析完成。");
+        window.alert("请先选择投标文件，并等待识别完成。");
         return;
       }
       if (!state.run.started) {
-        ensureRunStarted("投标文件上传完成，开始 PDF 入库和解析计时");
+        ensureRunStarted("页面①点击下一步：解析，开始 PDF 入库和现场计时");
       }
       setRoute("#/confirm");
       return;
@@ -1768,6 +1789,10 @@
 
     const exportReport = event.target.closest("[data-export-report]");
     if (exportReport) {
+      if (!state.run.finished) {
+        window.alert("评审完成后才能导出正式报告。当前结果页仅作为运行快照查看。");
+        return;
+      }
       downloadReport();
       return;
     }
