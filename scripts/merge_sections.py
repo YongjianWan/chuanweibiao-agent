@@ -8,6 +8,7 @@
 - 每个章节块注入 bidder 字段，便于跨投标人引用
 - id 保持原样，不全局重写；外部引用时以 (bidder, id) 为复合键
 - 生成统计信息：总章节数、总字数、按投标人分布
+- **产出是确定性的**：不含时间戳，输入不变则重跑零 diff（见 issue #5 第 1 条）
 
 这是 S1 -> S4 的汇总节点：S2 仍按单个投标人独立跑，但报告层需要
 知道全部章节来自哪些文件、哪些投标人。
@@ -15,7 +16,6 @@
 import argparse
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -26,10 +26,35 @@ def load_sections(bidder_dir: Path, bidder_id: str):
         raise FileNotFoundError(f"{bidder_id} 缺少 sections.json: {path}")
 
     sections = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(sections, dict):
+        raise ValueError(
+            f"{path} 顶层是对象，看起来是 sections_all.json（README §4「章节块全量索引」）。"
+            f"本脚本读的是单家 sections.json，不能把合并产物再合并一次。"
+        )
     if not isinstance(sections, list):
         raise ValueError(f"{path} 顶层必须是数组")
 
+    # 单家内 id 唯一 —— 这是 (bidder, id) 复合键成立的唯一前提（README §4）。
+    # 撞了不能静默通过，否则错误会一路传到页面⑤的原文定位。
+    seen = {}
     for sec in sections:
+        seen[sec["id"]] = seen.get(sec["id"], 0) + 1
+    dup = {k: v for k, v in seen.items() if v > 1}
+    if dup:
+        detail = "、".join(f"{k} x{v}" for k, v in sorted(dup.items())[:5])
+        raise ValueError(
+            f"{bidder_id} 的 sections.json 内 id 重复 {len(dup)} 个：{detail}"
+            f"{'…' if len(dup) > 5 else ''}。"
+            f"README §4 要求 id 在单家范围内唯一，S1 应按家分别运行。"
+        )
+
+    for sec in sections:
+        existing = sec.get("bidder")
+        if existing is not None and existing != bidder_id:
+            raise ValueError(
+                f"{path} 中块 {sec['id']} 已带 bidder={existing!r}，"
+                f"与目录名 {bidder_id!r} 不一致。不静默覆盖，请先确认数据来源。"
+            )
         sec["bidder"] = bidder_id
     return sections
 
@@ -61,7 +86,6 @@ def merge_project(project_dir: str, out_name: str = "sections_all.json"):
         "project": manifest.get("project", project.name),
         "project_slug": manifest.get("project_slug", project.name),
         "schema_version": manifest.get("data_schema_version", "1.0"),
-        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S%z"),
         "bidders": bidders,
         "sections": all_sections,
         "stats": {
