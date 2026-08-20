@@ -949,6 +949,11 @@
     const uploadBadge = !upload.selected ? "neutral" : upload.parsed ? "success" : upload.recognitionComplete ? "danger" : "primary";
     const nextClass = upload.parsed ? "btn primary" : "btn primary disabled";
     const nextAttrs = upload.parsed ? `href="#/confirm"` : `href="#/create" aria-disabled="true"`;
+    // 评审进行中禁止重新选择文件：beginUploadRecognition 会重置前端状态，
+    // 但服务端的旧运行还在跑，再选一次就会起第二条流水线，两条并发打向端点——
+    // 实测端点 12 路就崩（README §6 阶段二）。等本轮跑完（finished）才解锁。
+    const uploadLocked = state.run.started && !state.run.finished;
+    const uploadLockTitle = "评审进行中，等本轮跑完再选择新文件";
     return `
       <main class="page">
         <section class="page-header">
@@ -957,10 +962,15 @@
             <p class="page-desc">选择本次要评审的投标文件。招标文件及评分标准已加载，本次仅评审所选投标文件。</p>
           </div>
           <div class="toolbar upload-actions">
+            ${uploadLocked ? `
+            <span class="btn primary disabled" aria-disabled="true" title="${uploadLockTitle}">${mainUploadLabel}</span>
+            <span class="btn disabled" aria-disabled="true" title="${uploadLockTitle}">补充选择 PDF</span>
+            ` : `
             <label class="btn primary" for="bidDirInput">${mainUploadLabel}</label>
             <input id="bidDirInput" class="file-input" type="file" accept="application/pdf,.pdf" webkitdirectory directory multiple data-file-input>
             <label class="btn" for="bidFileInput">补充选择 PDF</label>
             <input id="bidFileInput" class="file-input" type="file" accept="application/pdf,.pdf" multiple data-file-input>
+            `}
             <a class="${nextClass}" ${nextAttrs} data-start-parse>下一步：解析</a>
           </div>
         </section>
@@ -1020,7 +1030,9 @@
             <span class="badge ${uploadBadge}">${upload.selected ? recognizedBidders.length + "/" + DATA.bidders.length + " 已识别" : "待选择"}</span>
           </div>
           <div class="panel-body">
-            <p class="panel-note">识别依据为本次选择文件的目录名、文件名、GUID 和评分项名称；正文抽取将在接入现场运行接口后执行。</p>
+            <p class="panel-note">识别依据为本次选择文件的目录名、文件名、GUID 和评分项名称；${liveActive() || LIVE.available
+              ? "正文抽取在点击「下一步：解析」后由服务层真实执行。"
+              : "正文抽取需要服务层（python src/server.py），未连接时页面仅作回放演示。"}</p>
             ${renderUploadFilterNote()}
             ${recognizedBidders.length ? `
               <div class="bidder-compact-list">
@@ -1304,7 +1316,11 @@
             <p class="page-desc">本页展示逐项评审进度、当前处理状态、重试和未评定项；分母为 ${TOTAL_REVIEWS} = ${DATA.bidders.length} 家投标人 × ${DATA.scoringTable.items.length} 个评分项。</p>
           </div>
           <div class="toolbar">
-            <button class="btn" data-toggle-run>${run.paused ? "继续" : "暂停"}</button>
+            <button class="btn" data-toggle-run title="${liveActive()
+              ? "仅暂停页面滚动；服务层的模型调用不会停，计时也照走"
+              : "暂停回放"}">${liveActive()
+              ? (run.paused ? "继续滚动" : "暂停滚动（后台继续）")
+              : (run.paused ? "继续" : "暂停")}</button>
             ${resultButton}
           </div>
         </section>
@@ -1365,7 +1381,9 @@
             <div class="panel-body">
               <div class="info-box">
                 <strong>数据说明</strong>
-                <span class="muted">当前展示最近一次真实全量评审的过程记录；接入现场运行接口后，可切换为本次上传文件的实时运行记录。</span>
+                <span class="muted">${liveActive()
+                  ? "本次运行：页面①点击后由服务层实时执行 S1→S4，下方逐项记录为本次产生（run " + html(LIVE.runId) + "）。"
+                  : "未连接服务层，当前展示最近一次真实全量评审的过程记录（回放）。启动 python src/server.py 后刷新即为实时运行。"}</span>
               </div>
               <div class="info-box" style="margin-top: 12px;">
                 <strong>token 口径</strong>
@@ -1435,7 +1453,8 @@
           </div>
           <div class="toolbar">
             <a class="btn" href="#/running">返回运行监视</a>
-            <button class="btn primary" data-export-report ${canExportReport ? "" : "disabled"} title="${canExportReport ? "导出报告" : "评审完成后才能导出报告"}">导出报告</button>
+            <button class="btn primary" data-export-report ${canExportReport ? "" : "disabled"} title="${canExportReport ? "导出静态 HTML 报告" : "评审完成后才能导出报告"}">导出报告</button>
+            ${liveActive() ? `<button class="btn" data-export-xlsx ${canExportReport ? "" : "disabled"} title="${canExportReport ? "导出 Excel（评分汇总 / 逐项明细 / 未评定 / 建议复核 / 性能）" : "评审完成后才能导出"}">导出 Excel</button>` : ""}
           </div>
         </section>
 
@@ -1892,6 +1911,146 @@
     return value ? value + " 路" : html((DATA.reportData.perf && DATA.reportData.perf.concurrency) || "未采集");
   }
 
+  // ================= T10/T11：实时运行（README §3.8）=================
+  // 服务层（src/server.py）可达时接管数据源：POST /api/run 起一次真实运行，
+  // 轮询把服务端事件追加进 DATA.runEvents。**页面③的消费路径一行都不改**——
+  // 回放与实时走同一个 tickRun，区别只是事件从哪来。
+  const LIVE = {
+    available: false,
+    runId: null,
+    cursor: 0,
+    polling: false,
+    serverDone: false,
+    failed: false,
+    error: "",
+    reportLoaded: false,
+    announced: false
+  };
+
+  function liveActive() {
+    return LIVE.available && !!LIVE.runId && LIVE.runId !== "pending";
+  }
+
+  // 服务端还在跑，或事件还没消费完 —— 此时不许 completeRun
+  function liveStillRunning() {
+    return liveActive() && !LIVE.serverDone;
+  }
+
+  function liveProbe() {
+    if (typeof fetch !== "function") return Promise.resolve();
+    return fetch("/api/health", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { LIVE.available = !!(data && data.ok); })
+      .catch(() => { LIVE.available = false; });
+  }
+
+  function liveStart() {
+    if (!LIVE.available || LIVE.runId) return;
+    LIVE.runId = "pending";
+    fetch("/api/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}"
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.run_id) {
+          LIVE.runId = data.run_id;
+          LIVE.cursor = 0;
+          // 实时接管后，回放事件必须清空，否则真假两份事件会串在一起。
+          DATA.runEvents.length = 0;
+          state.run.eventIndex = 0;
+          pushRunLog({
+            time: clock(),
+            kind: "system",
+            message: "服务层已连接，本次为实时运行（run " + data.run_id + "，并发 "
+              + data.concurrency + " 路" + (data.mock ? "，Mock 模型" : "") + "）",
+            result: "实时"
+          });
+        } else if (data && data.active_run_id) {
+          // 服务端防重入（见 server.py）：已有一条在跑，多半是重复点击。
+          // 挂到那条运行上继续轮询，而不是退回回放——回放会冒充实时，那更糟。
+          LIVE.runId = data.active_run_id;
+          LIVE.cursor = 0;
+          DATA.runEvents.length = 0;
+          state.run.eventIndex = 0;
+          pushRunLog({
+            time: clock(),
+            kind: "system",
+            message: "已有运行进行中，页面③接续显示该次运行（run " + data.active_run_id + "）",
+            result: "实时"
+          });
+        } else {
+          LIVE.runId = null;
+          LIVE.failed = true;
+          LIVE.error = (data && data.error) || "服务层拒绝启动";
+          pushRunLog({ time: clock(), kind: "unrated",
+            message: "服务层启动失败：" + LIVE.error + "（页面③退回回放）", result: "失败" });
+        }
+      })
+      .catch((err) => {
+        LIVE.runId = null;
+        LIVE.available = false;
+        LIVE.failed = true;
+        LIVE.error = String(err);
+      });
+  }
+
+  function livePoll() {
+    if (!liveActive() || LIVE.polling || LIVE.serverDone) return;
+    LIVE.polling = true;
+    fetch("/api/progress?run_id=" + LIVE.runId + "&cursor=" + LIVE.cursor, { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        LIVE.polling = false;
+        if (!data || data.error) return;
+        (data.events || []).forEach((event) => { DATA.runEvents.push(liveEvent(event)); });
+        LIVE.cursor = data.cursor;
+        LIVE.serverDone = !!data.done;
+        LIVE.failed = !!data.failed;
+        LIVE.error = data.error || "";
+        if (LIVE.failed && LIVE.error && !LIVE.announced) {
+          LIVE.announced = true;
+          pushRunLog({ time: clock(), kind: "unrated",
+            message: "运行失败：" + LIVE.error, result: "失败" });
+        }
+        if (LIVE.serverDone && !LIVE.reportLoaded) liveLoadReport();
+      })
+      .catch(() => { LIVE.polling = false; });
+  }
+
+  // 服务端给的是投标人**全名**（目录名），前端事件用短 id。
+  // 短 id 的生成规则只在前端有一份，所以映射放在这里做，不让服务端猜。
+  function liveEvent(event) {
+    if (!event || event.type === "stage") return event;
+    const bidder = bidderByName(event.bidder);
+    const mapped = Object.assign({}, event);
+    mapped.bidder_id = bidder ? bidder.id : event.bidder;
+    return mapped;
+  }
+
+  // 页面②的人工确认放行服务端的 S3。不确认，服务端就停在 S2 之后等着——
+  // 这条是为了让页面③滚动的起点确实晚于人工确认，而不是后台早已评完的回放。
+  function liveConfirm() {
+    if (!liveActive()) return;
+    fetch("/api/confirm?run_id=" + LIVE.runId, { method: "POST" }).catch(() => {});
+  }
+
+  function liveLoadReport() {
+    LIVE.reportLoaded = true;
+    fetch("/api/report?run_id=" + LIVE.runId, { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        // 后端 report.json 的 matrix / totals 就是以投标人全名为 key，
+        // 与前端 reportBidderKey() 的取键规则一致，可直接覆盖。
+        if (data && Array.isArray(data.matrix)) {
+          DATA.reportData = Object.assign({}, DATA.reportData, data);
+        }
+      })
+      .catch(() => {});
+  }
+  // ================= 实时运行到此为止 =================
+
   function ensureRunStarted(message) {
     const run = state.run;
     if (!run.started) {
@@ -1901,6 +2060,7 @@
       run.currentLabel = message || "开始读取 12 家投标技术标 PDF";
       run.stages["PDF 入库"] = "进行中";
       saveState();
+      liveStart();
     }
     if (!run.timer && !run.finished) {
       run.timer = setInterval(tickRun, 750);
@@ -1913,6 +2073,7 @@
     if (run.paused) {
       toggleRunPaused();
     }
+    liveConfirm();
     if (!run.reviewStarted) {
       run.reviewStarted = true;
       run.paused = false;
@@ -1970,6 +2131,17 @@
     clearRunTimer();
     clearUploadRecognitionTimer();
     state.run = createRunState();
+    // LIVE 必须跟着重置：否则第二轮 liveStart() 因 runId 仍挂着旧值而早退，
+    // 服务层不会收到新的 POST /api/run，页面③会把上一轮的事件当成新运行回放——
+    // 那正是 §1 P0 要防的「预跑好当场播放」。F5 刷新能绕过（LIVE 是内存态），
+    // 但演示现场不该依赖人记得刷新。
+    LIVE.runId = null;
+    LIVE.cursor = 0;
+    LIVE.serverDone = false;
+    LIVE.failed = false;
+    LIVE.error = "";
+    LIVE.reportLoaded = false;
+    LIVE.announced = false;
     state.upload = createUploadState();
     state.reviewOverrides = {};
     state.expertReviews = [];
@@ -2024,6 +2196,7 @@
     const route = getRoute();
     const run = state.run;
     let changed = false;
+    livePoll();
     if (!run.paused && !run.finished) {
       const now = Date.now();
       if (run.waitUntil && now < run.waitUntil) {
@@ -2033,16 +2206,24 @@
           run.waitUntil = null;
           changed = true;
         }
-        const event = DATA.runEvents[run.eventIndex];
-        if (event && canConsumeEvent(event)) {
-          processRunEvent(event);
-          run.eventIndex += 1;
-          changed = true;
-        } else if (event) {
-          markWaitingForReviewGate();
+        // 回放每 tick 消费一条（节奏好看）；实时模式一次追多条，
+        // 否则 750ms/条 会追不上并发 12 路的真实产出速度，页面③反而显得慢。
+        let budget = liveActive() ? 60 : 1;
+        while (budget > 0) {
+          budget -= 1;
+          const event = DATA.runEvents[run.eventIndex];
+          if (event && canConsumeEvent(event)) {
+            processRunEvent(event);
+            run.eventIndex += 1;
+            changed = true;
+            if (run.waitUntil) break;
+          } else {
+            if (event) markWaitingForReviewGate();
+            break;
+          }
         }
       }
-      if (run.eventIndex >= DATA.runEvents.length) {
+      if (run.eventIndex >= DATA.runEvents.length && !liveStillRunning()) {
         completeRun();
         changed = true;
       }
@@ -2690,6 +2871,17 @@
       return;
     }
 
+    const exportXlsx = event.target.closest("[data-export-xlsx]");
+    if (exportXlsx) {
+      if (!state.run.finished) {
+        window.alert("评审完成后才能导出报告。");
+        return;
+      }
+      // 服务端设了 Content-Disposition: attachment，交给浏览器下载即可
+      window.location.href = "/api/report.xlsx?run_id=" + LIVE.runId;
+      return;
+    }
+
     const exportReport = event.target.closest("[data-export-report]");
     if (exportReport) {
       if (!state.run.finished) {
@@ -2758,6 +2950,14 @@
     const input = event.target && event.target.closest ? event.target.closest("[data-file-input]") : null;
     if (!input) return;
     if (input.files && input.files.length === 0) return;
+    if (state.run.started && !state.run.finished) {
+      // 兜底：正常 UI 已锁（见 renderCreatePage 的 uploadLocked），
+      // 这里防的是手改 DOM 之类绕过界面的情况。重新选择会重置前端状态，
+      // 但服务端旧运行还在跑，再放行就会两条流水线同时打端点。
+      window.alert("评审进行中，等本轮跑完再选择新文件。");
+      input.value = "";
+      return;
+    }
     beginUploadRecognition(input.files);
   });
 
@@ -2767,7 +2967,11 @@
     if (run.paused) {
       const now = Date.now();
       const pausedMs = run.pausedAt ? Math.max(0, now - run.pausedAt) : 0;
-      run.pausedTotalMs += pausedMs;
+      // 实时模式下暂停的只是页面滚动，服务层照跑、墙钟照走，**不能把这段时间从耗时里扣掉**——
+      // 耗时是 §1 的 P0 考核项，少报比难看严重。回放模式下扣除是对的，那本来就没有真实运行。
+      if (!liveActive()) {
+        run.pausedTotalMs += pausedMs;
+      }
       if (run.waitUntil) {
         run.waitUntil += pausedMs;
       }
@@ -2829,6 +3033,8 @@
       setTimeout(scrollRunLogToBottom, 0);
     }
   });
+
+  liveProbe();
 
   if (!location.hash) {
     location.hash = "#/create";
