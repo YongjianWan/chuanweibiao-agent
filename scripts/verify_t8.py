@@ -11,7 +11,7 @@
   2. 每项字段齐全（item_id / item_guid / bidder / name / candidates / units / fallback / evidence_chars / budget / picked）
   3. picked[].page 存在且为整数（页面⑤ 跳转依赖）
   4. match_score 字段名正确（不是 score，见 CLAUDE.md 硬规矩）
-  5. budget 按分值分配公式可复算（data-contract.md §5）
+  5. budget 按 S2 当前分值分配公式可复算（data-contract.md §5）
   6. evidence_chars <= budget
   7. bidder 在 19 项内一致
   8. （可选）与评分表 GUID/名称一致（传 --scoring-table 时才检查）
@@ -25,6 +25,9 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from s2_locate import calc_budget
+
 GUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 )
@@ -33,12 +36,6 @@ REQUIRED_TOP = {"item_id", "item_guid", "bidder", "name",
                 "evidence_chars", "budget", "pool_sections", "picked"}
 REQUIRED_PICKED = {"section_id", "file", "path", "unit", "page",
                    "match_score", "hit", "chars", "truncated"}
-
-
-def calc_budget(max_score, total_score=100.0, n_items=19, base_budget=3000, lo=1500, hi=6000):
-    raw = base_budget * n_items * float(max_score) / total_score
-    return max(lo, min(hi, int(raw)))
-
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="T8 located.json 验收核对")
@@ -103,7 +100,7 @@ def main(argv=None):
     check("evidence_chars <= budget",
           all(int(x.get("evidence_chars", 0)) <= int(x.get("budget", 0)) for x in data))
 
-    # budget 可复算（有评分表时才严格核对，否则只检查落在 [1500,6000]）
+    # budget 可复算（有评分表时才严格核对，否则只检查落在 [1500,9000]）
     if scoring_items:
         budget_ok = True
         for x in data:
@@ -118,8 +115,8 @@ def main(argv=None):
                 break
         check("budget 按分值分配公式可复算", budget_ok)
     else:
-        check("budget 落在 [1500,6000]",
-              all(1500 <= int(x.get("budget", 0)) <= 6000 for x in data))
+        check("budget 落在 [1500,9000]",
+              all(1500 <= int(x.get("budget", 0)) <= 9000 for x in data))
 
     picked_ok = True
     page_ok = True
