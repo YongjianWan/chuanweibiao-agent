@@ -19,6 +19,8 @@ from s3_review import (
     _validate_scoring_item,
     review_all,
     review_one,
+    AgentFactoryClient,
+    _parse_json_object,
 )
 
 
@@ -270,3 +272,67 @@ def test_real_scoring_table_passes_validation():
         _validate_scoring_item(item)
         ok += 1
     assert ok == len(table["items"]) == 19
+
+
+# ---------------------------------------------------------------- 智能体工厂客户端
+
+
+def test_agent_factory_thread_ids_are_unique_under_concurrency():
+    """每次调用必须有独立 thread_id。
+
+    平台文档称「不传 thread_id 每次独立」，2026-08-20 实测为错：不传时前一次调用
+    种下的内容会被后一次读到。228 次评审共用上下文会让 12 家标书互相污染，
+    撞 README §0「只做每家独立打分」。这条断言守住隔离。
+    """
+    import threading as _threading
+
+    client = AgentFactoryClient("http://x", "k", "agent-1")
+    seen: list[str] = []
+    lock = _threading.Lock()
+
+    def grab():
+        for _ in range(50):
+            value = client._next_thread_id()
+            with lock:
+                seen.append(value)
+
+    threads = [_threading.Thread(target=grab) for _ in range(4)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert len(seen) == 200
+    assert len(set(seen)) == 200, "thread_id 出现重复，并发下会串会话"
+    assert all(value.startswith(client.run_id) for value in seen)
+
+
+def test_agent_factory_run_ids_differ_between_instances():
+    """重跑要换 run_id，否则会读到上一批的会话内容。"""
+    first = AgentFactoryClient("http://x", "k", "agent-1")
+    second = AgentFactoryClient("http://x", "k", "agent-1", run_id="explicit-run")
+    assert second.run_id == "explicit-run"
+    assert first.run_id != second.run_id
+
+
+def test_agent_factory_estimates_tokens_when_usage_absent():
+    """端点 usage 恒为 null，token 只能估算；估算值必须为正，报告中另行标注来源。"""
+    assert AgentFactoryClient._estimate_tokens("x" * 150) == 100
+    assert AgentFactoryClient._estimate_tokens("") == 1
+
+
+def test_agent_factory_requires_env(monkeypatch):
+    for key in ("AF_BASE_URL", "AF_API_KEY", "AF_AGENT_ID"):
+        monkeypatch.delenv(key, raising=False)
+    with pytest.raises(ValueError, match="缺少智能体工厂环境变量"):
+        AgentFactoryClient.from_env()
+
+
+def test_parse_json_object_survives_prose_and_fences():
+    """真实端点实测：19 次里有 1 次在 JSON 前吐思考过程或裹代码块。"""
+    assert _parse_json_object('思考中。\n```json\n{"tier": "优"}\n```\n以上') == {"tier": "优"}
+    assert _parse_json_object('Let me analyze. {"tier": "良", "reason": "含 } 括号"} done') == {
+        "tier": "良",
+        "reason": "含 } 括号",
+    }
+    assert _parse_json_object('<think>推理</think>{"tier": "一般"}') == {"tier": "一般"}
