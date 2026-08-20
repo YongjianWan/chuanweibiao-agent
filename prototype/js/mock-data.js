@@ -624,20 +624,16 @@
 
   const LOW_CONFIDENCE_THRESHOLD = 0.85;
 
-  function scoreText(value) {
-    return Number.isInteger(value) ? String(value) : value.toFixed(1);
-  }
-
-  function buildCriteria(name, tiers) {
-    const general = tiers.find((tier) => tier.tier === "一般");
-    const good = tiers.find((tier) => tier.tier === "良");
-    const excellent = tiers.find((tier) => tier.tier === "优");
-    if (!general || !good || !excellent) return "";
-    return name + "；评委根据投标文件情况分为一般、良、优，分别酌情得" +
-      scoreText(general.min) + "-" + scoreText(general.max) + " 分、" +
-      scoreText(good.min) + "-" + scoreText(good.max) + " 分、" +
-      scoreText(excellent.min) + "-" + scoreText(excellent.max) +
-      " 分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在" + name + "中体现。";
+  // criteria 只能逐字来自招标文件（data-contract.md §3），缺了就是缺了——
+  // 早先这里有个 buildCriteria() 会按同样句式合成一段，而页面⑤把它标成
+  // 「招标文件第 33~37 页评审标准原文」展示，等于我方杜撰判分依据。已删，别加回来。
+  function requireCriteria(def) {
+    const criteria = typeof def.criteria === "string" ? def.criteria.trim() : "";
+    if (!criteria) {
+      console.error("[mock-data] 评分项 " + def.id + " 缺少 criteria；" +
+        "请从 config/projects/济阳区实验高级中学.yaml 补齐，不要合成。");
+    }
+    return criteria;
   }
 
   const items = itemDefs.map((def) => {
@@ -651,7 +647,7 @@
       bound_count: 12,
       expected_bidders: 12,
       tiers,
-      criteria: def.criteria || buildCriteria(def.name, tiers),
+      criteria: requireCriteria(def),
       aspects: def.aspects || [],
       synonyms: def.synonyms || []
     };

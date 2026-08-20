@@ -88,13 +88,9 @@
           ...item,
           name: typeof savedItem.name === "string" ? savedItem.name : item.name,
           max_score: finiteNumber(savedItem.max_score, item.max_score),
-          criteria: typeof item.criteria === "string" && item.criteria
-            ? item.criteria
-            : typeof savedItem.criteria === "string"
-              ? savedItem.criteria
-              : typeof savedItem.tier_quote === "string"
-                ? savedItem.tier_quote
-                : "",
+          // criteria 是招标文件原文、页面②只读，因此永远以代码里的为准，不吃本地存档。
+          // 旧的 tier_quote 兜底已删：STORAGE_KEY 提到 v4 之后旧存档根本读不到，那条分支走不到。
+          criteria: typeof item.criteria === "string" ? item.criteria : "",
           tiers: item.tiers.map((tier, index) => {
             const savedTier = Array.isArray(savedItem.tiers) ? savedItem.tiers[index] : null;
             if (!savedTier) return tier;
@@ -725,7 +721,7 @@
                   <tr>
                     <td><strong>${html(item.name)}</strong></td>
                     <td>${item.max_score.toFixed(1)}</td>
-                    <td>${html(item.criteria || tierSummary(item))}</td>
+                    <td>${item.criteria ? html(item.criteria) : `<span class="muted">评审标准原文缺失，需回招标文件补</span>`}</td>
                   </tr>
                 `).join("")}
               </tbody>
@@ -1058,7 +1054,7 @@
                     <div class="tier-quote-label">招标文件第 33~37 页评审标准原文</div>
                     ${html(item.criteria)}
                   </blockquote>
-                ` : ""}
+                ` : `<p class="small muted">评审标准原文缺失，本项判档位缺少依据，需回招标文件补。</p>`}
               </div>
             </section>
 
@@ -1327,14 +1323,6 @@
         <div class="metric-note">${html(note)}</div>
       </div>
     `;
-  }
-
-  function tierSummary(item) {
-    return item.tiers
-      .slice()
-      .reverse()
-      .map((tier) => `${tier.tier} ${tier.min.toFixed(1)}-${tier.max.toFixed(1)}`)
-      .join(" / ");
   }
 
   function totalScore() {
