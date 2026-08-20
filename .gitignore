@@ -32,3 +32,6 @@ data/projects/jiyang-epc/evidence/
 # sections_all.json 一律不进 git（任何项目）：它是各家 sections.json 的合并副本，
 # 同一份正文在仓库里存两遍。产出确定性且只要 1 秒，用 merge_sections.py 重建即可。
 data/projects/*/sections_all.json
+
+# 运行期产出（演练与正式评审结果）：含评审分数，不进仓库。
+data/out/

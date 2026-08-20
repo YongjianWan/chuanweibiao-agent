@@ -4,7 +4,7 @@
 
 实现要点：
 - 两层并发：bidder → item，统一用 asyncio + Semaphore 控制并发
-- 每项结果原子落盘：temp → fsync → rename
+- 每项结果完成当场落盘：work_dir/<bidder>/<item_id>.json，随 manifest 一起持久化
 - manifest.json 记录已完成项，可中途 kill 后续跑
 - 重试由 S3 内部完成，调度器只负责分发
 - 取消/超时：信号捕获后优雅停止，已完成项保护
@@ -82,7 +82,20 @@ def save_manifest(path: Path, manifest: Manifest):
         f.write(content)
         f.flush()
         os.fsync(f.fileno())
-    tmp.replace(path)
+    _replace_with_retry(tmp, path)
+
+
+def _replace_with_retry(src: Path, dst: Path, max_attempts: int = 5, backoff: float = 0.1) -> None:
+    """os.replace 的 Windows 加固：Defender/索引器会瞬时占用刚写完的 tmp 文件，
+    PermissionError 时按指数退避有限重试；其他异常（如磁盘满）照常抛出。"""
+    for attempt in range(max_attempts):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError:
+            if attempt == max_attempts - 1:
+                raise
+            time.sleep(backoff * (2 ** attempt))
 
 
 async def async_sleep(seconds: float) -> None:
@@ -192,15 +205,12 @@ async def run_batch(
             manifest.errored.add(key)
             results_by_key[key] = result
             errored += 1
+        if result is not None:
+            # 完成当场落盘：进程中途被杀时，manifest 里 completed/errored 的结果本体不丢。
+            # asyncio 单线程顺序 await，无并发写，直接同步写即可。
+            _write_item_result(work_dir, key, result)
         manifest.in_flight.discard(key)
         save_manifest(manifest_path, manifest)
-
-    # 将结果写入每个 item 的独立文件
-    for key, result in results_by_key.items():
-        bidder_dir = work_dir / key.bidder
-        bidder_dir.mkdir(parents=True, exist_ok=True)
-        item_file = bidder_dir / f"{key.item_id}.json"
-        item_file.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     return {
         "total": total,
@@ -208,6 +218,29 @@ async def run_batch(
         "errored": errored,
         "results_by_key": results_by_key,
     }
+
+
+def _write_item_result(work_dir: Path, key: JobKey, result: Mapping[str, Any]) -> None:
+    """把单个作业结果写入 work_dir/<bidder>/<item_id>.json。"""
+    bidder_dir = work_dir / key.bidder
+    bidder_dir.mkdir(parents=True, exist_ok=True)
+    item_file = bidder_dir / f"{key.item_id}.json"
+    item_file.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def load_all_results(work_dir: Path) -> dict[JobKey, dict[str, Any]]:
+    """读取 work_dir 下所有已落盘的 per-item 结果，供续跑后的全量聚合。
+
+    键从文件路径还原（<bidder>/<item_id>.json）；result is None（评分表缺项）的
+    key 没有 per-item 文件，自然不在返回中，调用方按缺失容忍处理。
+    """
+    results: dict[JobKey, dict[str, Any]] = {}
+    if not work_dir.exists():
+        return results
+    for item_file in sorted(work_dir.glob("*/*.json")):
+        key = JobKey(bidder=item_file.parent.name, item_id=item_file.stem)
+        results[key] = json.loads(item_file.read_text(encoding="utf-8"))
+    return results
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -286,12 +319,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         max_attempts=args.max_attempts,
     ))
 
-    # 写最终汇总
+    # 写最终汇总：以 work_dir 下已落盘的 per-item 文件为准做全量聚合，
+    # 覆盖 manifest.completed 的所有 key，保证续跑后 reviews.json 不残缺。
+    all_results = load_all_results(work_dir)
     output = {
         "project": scoring_table.get("project", ""),
         "generated_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
         "model": "mock" if args.mock else client_factory().name,
-        "review_results": [r for r in results["results_by_key"].values()],
+        "review_results": list(all_results.values()),
         "perf": {
             "calls": results["total"],
             "retries": 0,  # 由每个结果的 perf 决定，汇总在 review_results
