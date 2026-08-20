@@ -880,6 +880,7 @@
       let rate = mockCompletionRate(bidderIndex, itemIndex, tier ? tier.tier : null);
       let attempts = 1;
       let last_error = "";
+      let missReason = null;
 
       if (bidder.id === "zhongjian1" && item.id === "T-05") {
         status = "unrated";
@@ -889,14 +890,16 @@
       }
 
       if (status === "rated" && bidder.id === "jinan1" && item.id === "T-02") {
-        tier = item.tiers.find((row) => row.tier === "良");
-        rate = 0.1;
+        tier = null;
+        rate = 0;
         attempts = 2;
+        missReason = "not_found";
       }
 
       if (status === "rated" && bidder.id === "dezhou" && item.id === "T-16") {
-        tier = item.tiers.find((row) => row.tier === "优");
-        rate = 0.18;
+        tier = null;
+        rate = 0;
+        missReason = "no_file";
       }
 
       if (status === "rated" && bidder.id === "zhongjian2" && item.id === "T-06") {
@@ -909,9 +912,16 @@
       }
 
       const score = status === "unrated" ? null : scoreInTier(tier, rate);
+      if (status === "rated" && score === 0 && !missReason) {
+        missReason = "not_found";
+      }
       const evidencePackage = makeEvidencePackage(bidder, item, bidderIndex, itemIndex, status, score);
       const confidenceState = status === "unrated"
         ? { confidence: 0, factors: ["未评定"] }
+        : missReason === "not_found"
+        ? { confidence: 0.5, factors: ["检索未命中"] }
+        : missReason === "no_file"
+        ? { confidence: 1, factors: ["缺文件"] }
         : confidenceFromFactors({
           fallback: evidencePackage.fallback,
           truncated: evidencePackage.picked.some((row) => row.truncated),
@@ -926,9 +936,14 @@
         status,
         tier: tier ? tier.tier : null,
         score,
+        miss_reason: status === "rated" && score === 0 ? missReason || "not_found" : null,
         cite: status === "unrated" || score === 0 ? [] : evidencePackage.picked.slice(0, 2).map((_, index) => index),
         reason: status === "unrated"
           ? "模型连续返回无效结果，系统按未评定处理。"
+          : missReason === "no_file"
+          ? "该投标人未提交本评分项对应的投标文件，按招标文件规则“若此条缺项不得分”处理为 0 分。"
+          : missReason === "not_found"
+          ? "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。"
           : score === 0
           ? "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。"
           : "投标文件覆盖了主要评审要求，能够说明组织安排、节点控制和保障措施；部分内容仍偏概括，与本项目 EPC 协同和现场条件结合不够充分。",
@@ -1001,6 +1016,11 @@
     });
   }
 
+  function shouldReview(row) {
+    if (!row || row.status !== "rated" || row.confidence >= LOW_CONFIDENCE_THRESHOLD) return false;
+    return !(row.score === 0 && row.miss_reason === "no_file");
+  }
+
   const reportData = {
     project: scoringTable.project,
     generated_at: "2026-08-21T14:03:11+08:00",
@@ -1017,7 +1037,7 @@
         last_error: row.last_error
       })),
     review_flags: reviewResults
-      .filter((row) => row.status === "rated" && row.score !== 0 && row.confidence < LOW_CONFIDENCE_THRESHOLD)
+      .filter(shouldReview)
       .map((row) => ({
         bidder: row.bidder,
         item_id: row.item_id,
@@ -1094,6 +1114,7 @@
       status: result.status,
       score: result.score,
       tier: result.tier,
+      miss_reason: result.miss_reason,
       confidence: result.confidence,
       attempts: result.attempts,
       in_tokens: result.perf.in_tokens,
