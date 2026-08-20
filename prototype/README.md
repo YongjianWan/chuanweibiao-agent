@@ -38,13 +38,13 @@ prototype/index.html
 
 ## 数据说明
 
-Mock 数据统一放在 `prototype/js/mock-data.js`，通过全局对象 `window.PROTOTYPE_DATA` 提供；证据种子由 `prototype/js/located-seed.js` 提供。
+Mock 数据统一放在 `prototype/js/mock-data.js`，通过全局对象 `window.PROTOTYPE_DATA` 提供；证据种子由 `prototype/js/located-seed.js` 提供。真实评审分数由 `prototype/js/real-results.js` 提供，页面启动时检测到 `window.REAL_RESULTS` 就优先使用真实结果，缺失时自动回退到 Mock。
 
 数据字段尽量贴近 README §4 的数据契约，保留了 `item_guid`、`section_id`、`page`、`match_score`、`hit`、`tier`、`aspects` 等后续对接字段；界面默认不向用户暴露这些内部技术字段。
 
-`prototype/js/located-seed.js` 与 `data/interim/mock/review_results.json` 由 `scripts/build-prototype-mock.js` 生成。脚本优先读取 `data/projects/jiyang-epc/evidence/<bidder>/located.json` 与 `data/projects/jiyang-epc/sections/<bidder>/sections.json`，拿真实 S2 证据包里的 `bidder` / `item_id` / `item_guid` / PDF 页码作为种子；这些产物不存在时，才回退到早期 `data/interim/located.json`、`data/interim/sections.json` 样例。
+`prototype/js/located-seed.js` 与 `prototype/js/real-results.js` 由 `scripts/build-prototype-mock.js` 生成。脚本优先读取 `data/projects/jiyang-epc/evidence/<bidder>/located.json` 与 `data/projects/jiyang-epc/sections/<bidder>/sections.json`，拿真实 S2 证据包里的 `bidder` / `item_id` / `item_guid` / PDF 页码作为种子；这些产物不存在时，才回退到早期 `data/interim/located.json`、`data/interim/sections.json` 样例。若存在 `data/projects/jiyang-epc/reviews/reviews.json`，脚本会同时生成真实评审结果、总分矩阵、低置信度复核清单与运行事件流。
 
-低置信度阈值统一为 `confidence < 0.85`。Mock 评分结果只用于前端演示：`tier` 与 `score` 均模拟模型输出，`score` 保持在档位区间内；`confidence` 从 1.0 起按降级、截断、重试三个因素相乘，不再使用随机低基线，也不再展示要素加权定分。
+低置信度阈值统一为 `confidence < 0.85`。真实结果直接使用 S3 输出的 `tier` / `score` / `confidence` / `reason` / `cite`；Mock 评分结果只用于前端演示：`tier` 与 `score` 均模拟模型输出，`score` 保持在档位区间内；`confidence` 从 1.0 起按降级、截断、重试三个因素相乘，不再使用随机低基线，也不再展示要素加权定分。
 
 `sectionBlocks` 提供章节块层级数据。真实 PDF 链路产出 `picked[].page` 后会透传展示；回退到早期样例时，没有页码的证据会显示“页码未采集”。`section_id` 按 README §4 使用 `文件序号#块顺序号`，`#` 后保持纯整数。
 

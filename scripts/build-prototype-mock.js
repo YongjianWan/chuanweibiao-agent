@@ -8,8 +8,9 @@ const legacySectionsPath = path.join(root, "data", "interim", "sections.json");
 const projectDir = path.join(root, "data", "projects", "jiyang-epc");
 const seedPath = path.join(root, "prototype", "js", "located-seed.js");
 const mockDataPath = path.join(root, "prototype", "js", "mock-data.js");
-const outputDir = path.join(root, "data", "interim", "mock");
-const outputPath = path.join(outputDir, "review_results.json");
+const realReviewsInputPath = path.join(projectDir, "reviews", "reviews.json");
+const realResultsPath = path.join(root, "prototype", "js", "real-results.js");
+const LOW_CONFIDENCE_THRESHOLD = 0.85;
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -129,24 +130,246 @@ function loadPrototypeData(seed) {
   return context.window.PROTOTYPE_DATA;
 }
 
-function writeReviewResults(data, source) {
-  fs.mkdirSync(outputDir, { recursive: true });
-  fs.writeFileSync(outputPath, JSON.stringify({
-    source_located_json: source.sourceLocated,
-    source_sections_json: source.sourceSections,
+function round1(value) {
+  return Math.round(Number(value || 0) * 10) / 10;
+}
+
+function orderedBidderNames(data, reviewResults) {
+  const seen = new Set();
+  const resultNames = new Set(reviewResults.map((row) => row.bidder).filter(Boolean));
+  const ordered = [];
+  data.bidders.forEach((bidder) => {
+    if (resultNames.has(bidder.name) && !seen.has(bidder.name)) {
+      ordered.push(bidder.name);
+      seen.add(bidder.name);
+    }
+  });
+  [...resultNames].sort().forEach((name) => {
+    if (!seen.has(name)) {
+      ordered.push(name);
+      seen.add(name);
+    }
+  });
+  return ordered;
+}
+
+function normalizeRealResults(rawResults, data) {
+  const bidderByName = new Map(data.bidders.map((bidder) => [bidder.name, bidder]));
+  return rawResults.map((row) => {
+    const bidder = bidderByName.get(row.bidder);
+    return {
+      ...row,
+      bidder_id: row.bidder_id || (bidder ? bidder.id : row.bidder),
+      cite: Array.isArray(row.cite) ? row.cite : [],
+      miss_reason: row.miss_reason || null,
+      last_error: row.last_error || "",
+      perf: row.perf && typeof row.perf === "object" ? row.perf : {
+        in_tokens: 0,
+        out_tokens: 0,
+        latency_ms: 0
+      }
+    };
+  });
+}
+
+function flagWhy(row) {
+  if (row.miss_reason === "not_found") return "证据定位未命中，检索未命中不等于投标人未写";
+  if ((row.attempts || 0) > 1) return `经 ${row.attempts} 次尝试才成功（重试过）`;
+  return "置信度低于阈值（证据降级或截断，见对应证据包）";
+}
+
+function buildAuditRows(data, bidderNames, resultsByKey) {
+  return data.scoringTable.items.flatMap((item) => {
+    const rows = bidderNames.map((bidder) => resultsByKey.get(bidder + "__" + item.id));
+    if (rows.some((row) => !row || row.status !== "rated")) return [];
+
+    const groups = new Set();
+    const tierDist = item.tiers.reduce((dist, tier) => {
+      dist[tier.tier] = 0;
+      return dist;
+    }, {});
+    let misses = 0;
+    rows.forEach((row) => {
+      if (row.tier == null) {
+        groups.add("未命中");
+        misses += 1;
+        return;
+      }
+      groups.add(row.tier);
+      tierDist[row.tier] = (tierDist[row.tier] || 0) + 1;
+    });
+    if (groups.size !== 1) return [];
+
+    if (misses) {
+      tierDist["未命中"] = misses;
+      return [{
+        item_id: item.id,
+        kind: "no_discrimination",
+        detail: bidderNames.length + " 家全部 0 分（未命中）",
+        tier_dist: tierDist
+      }];
+    }
+    const only = [...groups][0];
+    return [{
+      item_id: item.id,
+      kind: "no_discrimination",
+      detail: bidderNames.length + " 家全部判「" + only + "」档",
+      tier_dist: tierDist
+    }];
+  });
+}
+
+function buildRealReportData(realJson, reviewResults, data) {
+  const bidderNames = orderedBidderNames(data, reviewResults);
+  const resultsByKey = new Map(reviewResults.map((row) => [row.bidder + "__" + row.item_id, row]));
+  const matrix = data.scoringTable.items.map((item) => {
+    const scores = {};
+    bidderNames.forEach((bidder) => {
+      const row = resultsByKey.get(bidder + "__" + item.id);
+      scores[bidder] = row && row.status === "rated" ? row.score : null;
+    });
+    return {
+      item_id: item.id,
+      name: item.name,
+      max_score: item.max_score,
+      scores
+    };
+  });
+  const totals = {};
+  bidderNames.forEach((bidder) => {
+    const rows = data.scoringTable.items.map((item) => resultsByKey.get(bidder + "__" + item.id));
+    const score = rows.reduce((sum, row) => sum + (row && typeof row.score === "number" ? row.score : 0), 0);
+    totals[bidder] = {
+      score: round1(score),
+      unrated: rows.filter((row) => !row || row.status !== "rated").length,
+      expert_score: round1(score),
+      expert_overrides: 0
+    };
+  });
+  const sumAttempts = reviewResults.reduce((sum, row) => sum + (row.attempts || 0), 0);
+  const firstCalls = reviewResults.filter((row) => (row.attempts || 0) >= 1).length;
+  const latencySec = round1(reviewResults.reduce((sum, row) => sum + ((row.perf || {}).latency_ms || 0), 0) / 1000);
+
+  return {
+    project: realJson.project || data.reportData.project,
+    generated_at: realJson.generated_at || new Date().toISOString(),
+    bidders: bidderNames,
+    matrix,
+    totals,
+    details: reviewResults,
+    unrated: reviewResults
+      .filter((row) => row.status === "unrated")
+      .map((row) => ({
+        bidder: row.bidder,
+        item_id: row.item_id,
+        attempts: row.attempts || 0,
+        last_error: row.last_error || ""
+      })),
+    review_flags: reviewResults
+      .filter((row) => row.status === "rated" && (row.confidence || 0) < LOW_CONFIDENCE_THRESHOLD)
+      .map((row) => ({
+        bidder: row.bidder,
+        item_id: row.item_id,
+        confidence: row.confidence,
+        why: flagWhy(row)
+      })),
+    audit: buildAuditRows(data, bidderNames, resultsByKey),
+    expert_reviews: [],
+    perf: {
+      wall_clock_sec: typeof (realJson.perf || {}).wall_clock_sec === "number" ? realJson.perf.wall_clock_sec : null,
+      wall_clock_note: "未采集（逐项 latency 之和为 " + latencySec + " 秒，并发下实际墙钟低于该值）",
+      concurrency: (realJson.perf || {}).concurrency || "未采集",
+      calls: bidderNames.length * data.scoringTable.items.length,
+      retries: sumAttempts - firstCalls,
+      in_tokens: reviewResults.reduce((sum, row) => sum + ((row.perf || {}).in_tokens || 0), 0),
+      out_tokens: reviewResults.reduce((sum, row) => sum + ((row.perf || {}).out_tokens || 0), 0),
+      gpu: "未采集",
+      vram_peak_gb: null,
+      gpu_note: "模型为远程托管端点时，我方进程内无法采集显存；此处显示为未采集。"
+    },
+    compute_notes: data.reportData.compute_notes
+  };
+}
+
+function buildRealRunEvents(reviewResults, data) {
+  const byKey = new Map(reviewResults.map((row) => [row.bidder_id + "__" + row.item_id, row]));
+  const events = [
+    { type: "stage", stage: "PDF 入库", status: "running", message: "开始读取 12 家投标技术标 PDF" },
+    { type: "stage", stage: "PDF 入库", status: "done", message: "完成 12 家投标文件入库" },
+    { type: "stage", stage: "证据定位", status: "running", message: "按评分项绑定关系进入单 PDF 内部定位证据" },
+    { type: "stage", stage: "证据定位", status: "done", message: "真实证据包已生成，开始逐项评审" },
+    { type: "stage", stage: "逐项评审", status: "running", message: "逐项评审开始" }
+  ];
+  data.bidders.forEach((bidder) => {
+    data.scoringTable.items.forEach((item) => {
+      const row = byKey.get(bidder.id + "__" + item.id);
+      if (!row) return;
+      for (let attempt = 1; attempt < (row.attempts || 1); attempt += 1) {
+        events.push({
+          type: "retry",
+          bidder_id: row.bidder_id,
+          item_id: row.item_id,
+          attempt,
+          max_attempts: row.attempts,
+          message: "模型返回格式不完整，准备重试"
+        });
+      }
+      events.push({
+        type: "review",
+        bidder_id: row.bidder_id,
+        item_id: row.item_id,
+        status: row.status,
+        score: row.score,
+        tier: row.tier,
+        miss_reason: row.miss_reason,
+        confidence: row.confidence,
+        attempts: row.attempts,
+        last_error: row.last_error,
+        in_tokens: (row.perf || {}).in_tokens || 0,
+        out_tokens: (row.perf || {}).out_tokens || 0,
+        latency_ms: (row.perf || {}).latency_ms || 0
+      });
+    });
+  });
+  events.push({ type: "stage", stage: "结果汇总", status: "running", message: "生成并排结果矩阵和复核清单" });
+  events.push({ type: "stage", stage: "结果汇总", status: "done", message: "真实评审结果已汇总完成" });
+  return events;
+}
+
+function writeRealResults(data) {
+  if (!exists(realReviewsInputPath)) {
+    fs.writeFileSync(realResultsPath, [
+      "// Generated by scripts/build-prototype-mock.js. No real reviews found; mock data remains active.",
+      "window.REAL_RESULTS = null;",
+      ""
+    ].join("\n"), "utf8");
+    return { count: 0 };
+  }
+
+  const realJson = readJson(realReviewsInputPath);
+  const rawResults = Array.isArray(realJson.review_results) ? realJson.review_results : [];
+  const reviewResults = normalizeRealResults(rawResults, data);
+  const realData = {
+    source_reviews_json: "data/projects/jiyang-epc/reviews/reviews.json",
     generated_by: "scripts/build-prototype-mock.js",
     generated_at: new Date().toISOString(),
-    note: "S3 mock: evidence fields are seeded from S2 located evidence; score, tier, reason and confidence are mock values.",
-    review_results: data.reviewResults,
-    evidence_packages: data.evidencePackages,
-    report_data: data.reportData
-  }, null, 2) + "\n", "utf8");
+    model: realJson.model || "",
+    reviewResults,
+    reportData: buildRealReportData(realJson, reviewResults, data),
+    runEvents: buildRealRunEvents(reviewResults, data)
+  };
+  fs.writeFileSync(realResultsPath, [
+    "// Generated by scripts/build-prototype-mock.js from data/projects/jiyang-epc/reviews/reviews.json. Do not edit by hand.",
+    "window.REAL_RESULTS = " + JSON.stringify(realData, null, 2) + ";",
+    ""
+  ].join("\n"), "utf8");
+  return { count: reviewResults.length };
 }
 
 const source = buildLocatedSeed();
 writeLocatedSeed(source.seed, source.sourceLocated);
 const data = loadPrototypeData(source.seed);
-writeReviewResults(data, source);
+const real = writeRealResults(data);
 
 console.log(`wrote ${path.relative(root, seedPath)} (${source.seed.length} seed packages)`);
-console.log(`wrote ${path.relative(root, outputPath)} (${data.reviewResults.length} review results)`);
+console.log(`wrote ${path.relative(root, realResultsPath)} (${real.count} real review results)`);

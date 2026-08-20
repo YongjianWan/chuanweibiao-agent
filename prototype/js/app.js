@@ -1,12 +1,12 @@
 (function () {
-  const DATA = window.PROTOTYPE_DATA;
+  const DATA = applyRealResults(window.PROTOTYPE_DATA, window.REAL_RESULTS);
   const SCORING_REFERENCE = window.SCORING_REFERENCE || null;
   const DEMO_MODE = false;
   const app = document.getElementById("app");
   const TOTAL_REVIEWS = DATA.bidders.length * DATA.scoringTable.items.length;
   const LOW_CONFIDENCE_THRESHOLD = DATA.lowConfidenceThreshold || 0.85;
   const stageNames = ["PDF 入库", "证据定位", "逐项评审", "结果汇总"];
-  const STORAGE_KEY = "technical-review-state-v4";
+  const STORAGE_KEY = "technical-review-state-v5";
   const LOG_BOTTOM_GAP = 16;
   const BIDDER_RECOGNITION_MS = 420;
   const REVIEW_EVENT_KEYS = DATA.runEvents
@@ -14,6 +14,49 @@
     .map((event) => reviewKeyFor(event.bidder_id, event.item_id));
 
   const state = loadAppState();
+
+  function applyRealResults(baseData, realData) {
+    if (!baseData || !realData || !Array.isArray(realData.reviewResults) || !realData.reviewResults.length) {
+      return baseData;
+    }
+
+    const baseBidders = Array.isArray(baseData.bidders) ? baseData.bidders : [];
+    const bidderByName = new Map(baseBidders.map((bidder) => [bidder.name, bidder]));
+    const realBidderNames = new Set(realData.reviewResults.map((row) => row.bidder).filter(Boolean));
+    const bidders = baseBidders
+      .filter((bidder) => realBidderNames.has(bidder.name))
+      .concat([...realBidderNames]
+        .filter((name) => !bidderByName.has(name))
+        .sort()
+        .map((name) => ({
+          id: name,
+          name,
+          short: name.replace(/\d+$/, "").slice(0, 8),
+          pdfCount: 20,
+          chars: 0
+        })));
+    const bidderByRealName = new Map(bidders.map((bidder) => [bidder.name, bidder]));
+    const reviewResults = realData.reviewResults.map((row) => {
+      const bidder = bidderByRealName.get(row.bidder);
+      return {
+        ...row,
+        bidder_id: row.bidder_id || (bidder ? bidder.id : row.bidder)
+      };
+    });
+
+    return {
+      ...baseData,
+      dataSource: {
+        kind: "real",
+        source: realData.source_reviews_json || "",
+        generated_at: realData.generated_at || ""
+      },
+      bidders: bidders.length ? bidders : baseBidders,
+      reviewResults,
+      reportData: realData.reportData || baseData.reportData,
+      runEvents: Array.isArray(realData.runEvents) && realData.runEvents.length ? realData.runEvents : baseData.runEvents
+    };
+  }
 
   function createRunState() {
     return {
@@ -328,7 +371,13 @@
   }
 
   function resultBy(bidderId, itemId) {
-    return normalizeReviewResult(DATA.reviewResults.find((row) => row.bidder_id === bidderId && row.item_id === itemId));
+    const bidder = bidderById(bidderId);
+    return normalizeReviewResult(DATA.reviewResults.find((row) =>
+      row.item_id === itemId && (
+        row.bidder_id === bidderId ||
+        (bidder && row.bidder === bidder.name)
+      )
+    ));
   }
 
   function isLowConfidence(result) {
@@ -1864,6 +1913,12 @@
     const generatedAt = new Date().toLocaleString("zh-CN", { hour12: false });
     const perf = DATA.reportData.perf;
     const computeNotes = DATA.reportData.compute_notes || {};
+    const reportWallClock = typeof perf.wall_clock_sec === "number"
+      ? formatDuration(perf.wall_clock_sec * 1000)
+      : "未采集";
+    const concurrencyText = typeof perf.concurrency === "number"
+      ? perf.concurrency + " 路"
+      : html(perf.concurrency || "未采集");
     const completedKeys = completedReviewKeySet();
     const reportReviews = expertReviewRecords().filter((record) => {
       const bidder = bidderById(record.bidder_id);
@@ -2048,9 +2103,9 @@
   <h2>性能数据</h2>
   <table class="perf">
     <tbody>
-      <tr><th>报告耗时</th><td>${formatDuration(perf.wall_clock_sec * 1000)}</td></tr>
+      <tr><th>报告耗时</th><td>${reportWallClock}</td></tr>
       <tr><th>页面计时</th><td>${formatDuration(reportElapsedMs())}</td></tr>
-      <tr><th>并发</th><td>${perf.concurrency} 路</td></tr>
+      <tr><th>并发</th><td>${concurrencyText}</td></tr>
       <tr><th>调用数</th><td>${number(perf.calls)}</td></tr>
       <tr><th>重试数</th><td>${number(perf.retries)}</td></tr>
       <tr><th>输入 tokens</th><td>${number(perf.in_tokens)}</td></tr>

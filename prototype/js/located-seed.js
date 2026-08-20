@@ -608,7 +608,7 @@ window.LOCATED_SEED = [
     "bidder": "中冶建工集团有限公司8010856",
     "name": "调试、试运行与移交管理方案",
     "pool_sections": 32,
-    "candidates": 104,
+    "candidates": 116,
     "units": 6,
     "fallback": false,
     "evidence_chars": 3420,
@@ -632,8 +632,8 @@ window.LOCATED_SEED = [
         "match_score": 36.2,
         "hit": [
           "T:联动调试",
-          "t:联动",
-          "t:调试"
+          "t:调试",
+          "t:联动"
         ],
         "chars": 151,
         "truncated": false,
@@ -659,8 +659,8 @@ window.LOCATED_SEED = [
         "match_score": 36.2,
         "hit": [
           "T:联动调试",
-          "t:联动",
-          "t:调试"
+          "t:调试",
+          "t:联动"
         ],
         "chars": 133,
         "truncated": false,
@@ -686,8 +686,8 @@ window.LOCATED_SEED = [
         "match_score": 36.2,
         "hit": [
           "T:联动调试",
-          "t:联动",
-          "t:调试"
+          "t:调试",
+          "t:联动"
         ],
         "chars": 133,
         "truncated": false,
@@ -713,8 +713,8 @@ window.LOCATED_SEED = [
         "match_score": 36.2,
         "hit": [
           "T:联动调试",
-          "t:联动",
-          "t:调试"
+          "t:调试",
+          "t:联动"
         ],
         "chars": 116,
         "truncated": false,
@@ -872,12 +872,12 @@ window.LOCATED_SEED = [
         ],
         "match_score": 22.4,
         "hit": [
+          "b:外部",
+          "b:冲突",
           "b:机制",
           "b:解决",
-          "b:冲突",
-          "b:外部",
-          "b:关系",
-          "t:协调"
+          "t:协调",
+          "b:关系"
         ],
         "chars": 191,
         "truncated": false,
@@ -900,12 +900,12 @@ window.LOCATED_SEED = [
         ],
         "match_score": 22.4,
         "hit": [
+          "b:外部",
+          "b:冲突",
           "b:机制",
           "b:解决",
-          "b:冲突",
-          "b:外部",
-          "b:关系",
-          "t:协调"
+          "t:协调",
+          "b:关系"
         ],
         "chars": 1226,
         "truncated": false,
@@ -928,12 +928,12 @@ window.LOCATED_SEED = [
         ],
         "match_score": 22.4,
         "hit": [
+          "b:外部",
+          "b:冲突",
           "b:机制",
           "b:解决",
-          "b:冲突",
-          "b:外部",
-          "b:关系",
-          "t:协调"
+          "t:协调",
+          "b:关系"
         ],
         "chars": 1148,
         "truncated": true,
@@ -1206,8 +1206,8 @@ window.LOCATED_SEED = [
         "match_score": 41.3,
         "hit": [
           "T:测量放线",
-          "t:测量",
-          "t:放线"
+          "t:放线",
+          "t:测量"
         ],
         "chars": 142,
         "truncated": false,
@@ -1235,8 +1235,8 @@ window.LOCATED_SEED = [
         "match_score": 41.3,
         "hit": [
           "T:测量放线",
-          "t:测量",
-          "t:放线"
+          "t:放线",
+          "t:测量"
         ],
         "chars": 187,
         "truncated": false,
@@ -1260,8 +1260,8 @@ window.LOCATED_SEED = [
         "match_score": 40.3,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 108,
         "truncated": false,
@@ -1285,8 +1285,8 @@ window.LOCATED_SEED = [
         "match_score": 40.3,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 61,
         "truncated": false,
@@ -1562,8 +1562,8 @@ window.LOCATED_SEED = [
         "match_score": 22.2,
         "hit": [
           "T:工期保证",
-          "t:保证",
-          "t:工期"
+          "t:工期",
+          "t:保证"
         ],
         "chars": 315,
         "truncated": false,
@@ -1589,8 +1589,8 @@ window.LOCATED_SEED = [
         "match_score": 22.2,
         "hit": [
           "T:工期保证",
-          "t:保证",
-          "t:工期"
+          "t:工期",
+          "t:保证"
         ],
         "chars": 523,
         "truncated": false,
@@ -1616,8 +1616,8 @@ window.LOCATED_SEED = [
         "match_score": 22.2,
         "hit": [
           "T:工期保证",
-          "t:保证",
-          "t:工期"
+          "t:工期",
+          "t:保证"
         ],
         "chars": 148,
         "truncated": false,
@@ -1643,8 +1643,8 @@ window.LOCATED_SEED = [
         "match_score": 22.2,
         "hit": [
           "T:工期保证",
-          "t:保证",
-          "t:工期"
+          "t:工期",
+          "t:保证"
         ],
         "chars": 620,
         "truncated": false,
@@ -2158,8 +2158,8 @@ window.LOCATED_SEED = [
         "match_score": 19.6,
         "hit": [
           "B:第三方服务",
-          "b:第三方",
-          "t:服务"
+          "t:服务",
+          "b:第三方"
         ],
         "chars": 2565,
         "truncated": true,
@@ -2224,8 +2224,8 @@ window.LOCATED_SEED = [
         "match_score": 32.7,
         "hit": [
           "T:绿色建筑",
-          "t:绿色",
-          "t:建筑"
+          "t:建筑",
+          "t:绿色"
         ],
         "chars": 312,
         "truncated": false,
@@ -2253,8 +2253,8 @@ window.LOCATED_SEED = [
         "match_score": 32.7,
         "hit": [
           "T:绿色建筑",
-          "t:绿色",
-          "t:建筑"
+          "t:建筑",
+          "t:绿色"
         ],
         "chars": 287,
         "truncated": false,
@@ -2282,8 +2282,8 @@ window.LOCATED_SEED = [
         "match_score": 32.7,
         "hit": [
           "T:绿色建筑",
-          "t:绿色",
-          "t:建筑"
+          "t:建筑",
+          "t:绿色"
         ],
         "chars": 234,
         "truncated": false,
@@ -2322,11 +2322,11 @@ window.LOCATED_SEED = [
         ],
         "match_score": 18.6,
         "hit": [
-          "b:预警",
           "b:纠偏",
+          "b:预警",
           "b:机制",
-          "b:监测",
-          "t:进度"
+          "t:进度",
+          "b:监测"
         ],
         "chars": 575,
         "truncated": false,
@@ -2351,11 +2351,11 @@ window.LOCATED_SEED = [
         ],
         "match_score": 18.6,
         "hit": [
-          "b:预警",
           "b:纠偏",
+          "b:预警",
           "b:机制",
-          "b:监测",
-          "t:进度"
+          "t:进度",
+          "b:监测"
         ],
         "chars": 122,
         "truncated": false,
@@ -2380,11 +2380,11 @@ window.LOCATED_SEED = [
         ],
         "match_score": 18.6,
         "hit": [
-          "b:预警",
           "b:纠偏",
+          "b:预警",
           "b:机制",
-          "b:监测",
-          "t:进度"
+          "t:进度",
+          "b:监测"
         ],
         "chars": 886,
         "truncated": false,
@@ -2450,8 +2450,8 @@ window.LOCATED_SEED = [
         "match_score": 23.3,
         "hit": [
           "b:审计",
-          "t:机制",
           "t:资金",
+          "t:机制",
           "b:监管"
         ],
         "chars": 740,
@@ -2478,8 +2478,8 @@ window.LOCATED_SEED = [
         "match_score": 23.3,
         "hit": [
           "b:审计",
-          "t:机制",
           "t:资金",
+          "t:机制",
           "b:监管"
         ],
         "chars": 849,
@@ -2998,8 +2998,8 @@ window.LOCATED_SEED = [
         "match_score": 40.5,
         "hit": [
           "T:界面划分",
-          "t:划分",
-          "t:界面"
+          "t:界面",
+          "t:划分"
         ],
         "chars": 259,
         "truncated": false,
@@ -3025,8 +3025,8 @@ window.LOCATED_SEED = [
         "match_score": 40.5,
         "hit": [
           "T:界面划分",
-          "t:划分",
-          "t:界面"
+          "t:界面",
+          "t:划分"
         ],
         "chars": 242,
         "truncated": false,
@@ -3052,8 +3052,8 @@ window.LOCATED_SEED = [
         "match_score": 40.5,
         "hit": [
           "T:界面划分",
-          "t:划分",
-          "t:界面"
+          "t:界面",
+          "t:划分"
         ],
         "chars": 245,
         "truncated": false,
@@ -3079,8 +3079,8 @@ window.LOCATED_SEED = [
         "match_score": 40.5,
         "hit": [
           "T:界面划分",
-          "t:划分",
-          "t:界面"
+          "t:界面",
+          "t:划分"
         ],
         "chars": 117,
         "truncated": false,
@@ -3239,11 +3239,11 @@ window.LOCATED_SEED = [
         ],
         "match_score": 29.8,
         "hit": [
-          "t:施工图",
           "t:安排",
           "t:计划",
-          "t:专业",
-          "t:进度"
+          "t:施工图",
+          "t:进度",
+          "t:专业"
         ],
         "chars": 203,
         "truncated": false,
@@ -3270,11 +3270,11 @@ window.LOCATED_SEED = [
         ],
         "match_score": 29.8,
         "hit": [
-          "t:施工图",
           "t:安排",
           "t:计划",
-          "t:专业",
-          "t:进度"
+          "t:施工图",
+          "t:进度",
+          "t:专业"
         ],
         "chars": 194,
         "truncated": false,
@@ -3301,11 +3301,11 @@ window.LOCATED_SEED = [
         ],
         "match_score": 29.8,
         "hit": [
-          "t:施工图",
           "t:安排",
           "t:计划",
-          "t:专业",
-          "t:进度"
+          "t:施工图",
+          "t:进度",
+          "t:专业"
         ],
         "chars": 160,
         "truncated": false,
@@ -3332,11 +3332,11 @@ window.LOCATED_SEED = [
         ],
         "match_score": 29.8,
         "hit": [
-          "t:施工图",
           "t:安排",
           "t:计划",
-          "t:专业",
-          "t:进度"
+          "t:施工图",
+          "t:进度",
+          "t:专业"
         ],
         "chars": 211,
         "truncated": false,
@@ -3376,8 +3376,8 @@ window.LOCATED_SEED = [
         "match_score": 36.8,
         "hit": [
           "T:测量放线",
-          "t:测量",
-          "t:放线"
+          "t:放线",
+          "t:测量"
         ],
         "chars": 227,
         "truncated": false,
@@ -3403,8 +3403,8 @@ window.LOCATED_SEED = [
         "match_score": 36.8,
         "hit": [
           "T:测量放线",
-          "t:测量",
-          "t:放线"
+          "t:放线",
+          "t:测量"
         ],
         "chars": 470,
         "truncated": false,
@@ -3430,8 +3430,8 @@ window.LOCATED_SEED = [
         "match_score": 36.8,
         "hit": [
           "T:测量放线",
-          "t:测量",
-          "t:放线"
+          "t:放线",
+          "t:测量"
         ],
         "chars": 193,
         "truncated": false,
@@ -3457,8 +3457,8 @@ window.LOCATED_SEED = [
         "match_score": 36.8,
         "hit": [
           "T:测量放线",
-          "t:测量",
-          "t:放线"
+          "t:放线",
+          "t:测量"
         ],
         "chars": 86,
         "truncated": false,
@@ -3500,8 +3500,8 @@ window.LOCATED_SEED = [
         "match_score": 40.2,
         "hit": [
           "T:临边洞口",
-          "t:洞口",
-          "t:临边"
+          "t:临边",
+          "t:洞口"
         ],
         "chars": 208,
         "truncated": false,
@@ -3529,8 +3529,8 @@ window.LOCATED_SEED = [
         "match_score": 40.2,
         "hit": [
           "T:临边洞口",
-          "t:洞口",
-          "t:临边"
+          "t:临边",
+          "t:洞口"
         ],
         "chars": 51,
         "truncated": false,
@@ -3558,8 +3558,8 @@ window.LOCATED_SEED = [
         "match_score": 40.2,
         "hit": [
           "T:临边洞口",
-          "t:洞口",
-          "t:临边"
+          "t:临边",
+          "t:洞口"
         ],
         "chars": 111,
         "truncated": false,
@@ -3587,8 +3587,8 @@ window.LOCATED_SEED = [
         "match_score": 40.2,
         "hit": [
           "T:临边洞口",
-          "t:洞口",
-          "t:临边"
+          "t:临边",
+          "t:洞口"
         ],
         "chars": 36,
         "truncated": false,
@@ -3604,7 +3604,7 @@ window.LOCATED_SEED = [
     "bidder": "中国建筑一局（集团）有限公司8009256",
     "name": "环境保护及防尘施工措施",
     "pool_sections": 48,
-    "candidates": 68,
+    "candidates": 73,
     "units": 6,
     "fallback": false,
     "evidence_chars": 3420,
@@ -3630,8 +3630,8 @@ window.LOCATED_SEED = [
         "match_score": 34.2,
         "hit": [
           "T:建筑垃圾",
-          "t:建筑",
-          "t:垃圾"
+          "t:垃圾",
+          "t:建筑"
         ],
         "chars": 68,
         "truncated": false,
@@ -3659,8 +3659,8 @@ window.LOCATED_SEED = [
         "match_score": 34.2,
         "hit": [
           "T:建筑垃圾",
-          "t:建筑",
-          "t:垃圾"
+          "t:垃圾",
+          "t:建筑"
         ],
         "chars": 224,
         "truncated": false,
@@ -3688,8 +3688,8 @@ window.LOCATED_SEED = [
         "match_score": 34.2,
         "hit": [
           "T:建筑垃圾",
-          "t:建筑",
-          "t:垃圾"
+          "t:垃圾",
+          "t:建筑"
         ],
         "chars": 235,
         "truncated": false,
@@ -3717,8 +3717,8 @@ window.LOCATED_SEED = [
         "match_score": 34.2,
         "hit": [
           "T:建筑垃圾",
-          "t:建筑",
-          "t:垃圾"
+          "t:垃圾",
+          "t:建筑"
         ],
         "chars": 226,
         "truncated": false,
@@ -3756,8 +3756,8 @@ window.LOCATED_SEED = [
         "match_score": 28.8,
         "hit": [
           "T:节点工期",
-          "t:节点",
-          "t:工期"
+          "t:工期",
+          "t:节点"
         ],
         "chars": 92,
         "truncated": false,
@@ -3781,8 +3781,8 @@ window.LOCATED_SEED = [
         "match_score": 28.8,
         "hit": [
           "T:节点工期",
-          "t:节点",
-          "t:工期"
+          "t:工期",
+          "t:节点"
         ],
         "chars": 190,
         "truncated": false,
@@ -3806,8 +3806,8 @@ window.LOCATED_SEED = [
         "match_score": 28.8,
         "hit": [
           "T:节点工期",
-          "t:节点",
-          "t:工期"
+          "t:工期",
+          "t:节点"
         ],
         "chars": 256,
         "truncated": false,
@@ -3831,8 +3831,8 @@ window.LOCATED_SEED = [
         "match_score": 28.8,
         "hit": [
           "T:节点工期",
-          "t:节点",
-          "t:工期"
+          "t:工期",
+          "t:节点"
         ],
         "chars": 11,
         "truncated": false,
@@ -4576,8 +4576,8 @@ window.LOCATED_SEED = [
         "match_score": 40.9,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 118,
         "truncated": false,
@@ -4603,8 +4603,8 @@ window.LOCATED_SEED = [
         "match_score": 40.9,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 91,
         "truncated": false,
@@ -4630,8 +4630,8 @@ window.LOCATED_SEED = [
         "match_score": 40.9,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 45,
         "truncated": false,
@@ -4657,8 +4657,8 @@ window.LOCATED_SEED = [
         "match_score": 40.9,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 91,
         "truncated": false,
@@ -4698,9 +4698,9 @@ window.LOCATED_SEED = [
         "match_score": 35.6,
         "hit": [
           "T:资金使用计划",
+          "t:使用",
           "t:计划",
-          "t:资金",
-          "t:使用"
+          "t:资金"
         ],
         "chars": 4,
         "truncated": false,
@@ -4726,9 +4726,9 @@ window.LOCATED_SEED = [
         "match_score": 35.6,
         "hit": [
           "T:资金使用计划",
+          "t:使用",
           "t:计划",
-          "t:资金",
-          "t:使用"
+          "t:资金"
         ],
         "chars": 4,
         "truncated": false,
@@ -4754,9 +4754,9 @@ window.LOCATED_SEED = [
         "match_score": 35.6,
         "hit": [
           "T:资金使用计划",
+          "t:使用",
           "t:计划",
-          "t:资金",
-          "t:使用"
+          "t:资金"
         ],
         "chars": 54,
         "truncated": false,
@@ -4782,9 +4782,9 @@ window.LOCATED_SEED = [
         "match_score": 35.6,
         "hit": [
           "T:资金使用计划",
+          "t:使用",
           "t:计划",
-          "t:资金",
-          "t:使用"
+          "t:资金"
         ],
         "chars": 13,
         "truncated": false,
@@ -5522,12 +5522,12 @@ window.LOCATED_SEED = [
         ],
         "match_score": 37.3,
         "hit": [
-          "t:施工图",
           "t:安排",
-          "t:设计",
           "b:计划",
+          "t:施工图",
+          "b:进度",
           "t:专业",
-          "b:进度"
+          "t:设计"
         ],
         "chars": 98,
         "truncated": false,
@@ -5552,12 +5552,12 @@ window.LOCATED_SEED = [
         ],
         "match_score": 37.3,
         "hit": [
-          "t:施工图",
           "t:安排",
-          "t:设计",
           "b:计划",
+          "t:施工图",
+          "b:进度",
           "t:专业",
-          "b:进度"
+          "t:设计"
         ],
         "chars": 936,
         "truncated": false,
@@ -5582,12 +5582,12 @@ window.LOCATED_SEED = [
         ],
         "match_score": 37.3,
         "hit": [
-          "t:施工图",
           "t:安排",
-          "t:设计",
           "b:计划",
+          "t:施工图",
+          "b:进度",
           "t:专业",
-          "b:进度"
+          "t:设计"
         ],
         "chars": 397,
         "truncated": false,
@@ -5946,8 +5946,8 @@ window.LOCATED_SEED = [
         "match_score": 33.7,
         "hit": [
           "T:建筑垃圾",
-          "t:建筑",
-          "t:垃圾"
+          "t:垃圾",
+          "t:建筑"
         ],
         "chars": 200,
         "truncated": false,
@@ -5987,8 +5987,8 @@ window.LOCATED_SEED = [
         "match_score": 40.9,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 348,
         "truncated": false,
@@ -6014,8 +6014,8 @@ window.LOCATED_SEED = [
         "match_score": 40.9,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 328,
         "truncated": false,
@@ -6041,8 +6041,8 @@ window.LOCATED_SEED = [
         "match_score": 40.9,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 256,
         "truncated": false,
@@ -6065,8 +6065,8 @@ window.LOCATED_SEED = [
         "match_score": 23.4,
         "hit": [
           "T:总进度计划",
-          "t:计划",
-          "t:进度"
+          "t:进度",
+          "t:计划"
         ],
         "chars": 70,
         "truncated": false,
@@ -6232,8 +6232,8 @@ window.LOCATED_SEED = [
         "match_score": 61,
         "hit": [
           "T:实测实量",
-          "t:实量",
-          "t:实测"
+          "t:实测",
+          "t:实量"
         ],
         "chars": 1834,
         "truncated": false,
@@ -6259,8 +6259,8 @@ window.LOCATED_SEED = [
         "match_score": 61,
         "hit": [
           "T:实测实量",
-          "t:实量",
-          "t:实测"
+          "t:实测",
+          "t:实量"
         ],
         "chars": 227,
         "truncated": false,
@@ -6286,8 +6286,8 @@ window.LOCATED_SEED = [
         "match_score": 61,
         "hit": [
           "T:实测实量",
-          "t:实量",
-          "t:实测"
+          "t:实测",
+          "t:实量"
         ],
         "chars": 634,
         "truncated": false,
@@ -6313,8 +6313,8 @@ window.LOCATED_SEED = [
         "match_score": 61,
         "hit": [
           "T:实测实量",
-          "t:实量",
-          "t:实测"
+          "t:实测",
+          "t:实量"
         ],
         "chars": 204,
         "truncated": false,
@@ -6824,8 +6824,8 @@ window.LOCATED_SEED = [
         "match_score": 32.5,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 237,
         "truncated": false,
@@ -6853,8 +6853,8 @@ window.LOCATED_SEED = [
         "match_score": 32.5,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 144,
         "truncated": false,
@@ -6882,8 +6882,8 @@ window.LOCATED_SEED = [
         "match_score": 32.5,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 150,
         "truncated": false,
@@ -7550,8 +7550,8 @@ window.LOCATED_SEED = [
         "match_score": 33.3,
         "hit": [
           "T:例会制度",
-          "t:例会",
-          "t:制度"
+          "t:制度",
+          "t:例会"
         ],
         "chars": 221,
         "truncated": false,
@@ -7579,8 +7579,8 @@ window.LOCATED_SEED = [
         "match_score": 33.3,
         "hit": [
           "T:例会制度",
-          "t:例会",
-          "t:制度"
+          "t:制度",
+          "t:例会"
         ],
         "chars": 290,
         "truncated": false,
@@ -7608,8 +7608,8 @@ window.LOCATED_SEED = [
         "match_score": 33.3,
         "hit": [
           "T:例会制度",
-          "t:例会",
-          "t:制度"
+          "t:制度",
+          "t:例会"
         ],
         "chars": 294,
         "truncated": false,
@@ -7637,8 +7637,8 @@ window.LOCATED_SEED = [
         "match_score": 33.3,
         "hit": [
           "T:例会制度",
-          "t:例会",
-          "t:制度"
+          "t:制度",
+          "t:例会"
         ],
         "chars": 252,
         "truncated": false,
@@ -7786,10 +7786,10 @@ window.LOCATED_SEED = [
         ],
         "match_score": 26.6,
         "hit": [
-          "t:施工图",
           "t:安排",
-          "t:专业",
-          "t:进度"
+          "t:施工图",
+          "t:进度",
+          "t:专业"
         ],
         "chars": 380,
         "truncated": false,
@@ -7814,10 +7814,10 @@ window.LOCATED_SEED = [
         ],
         "match_score": 26.6,
         "hit": [
-          "t:施工图",
           "t:安排",
-          "t:专业",
-          "t:进度"
+          "t:施工图",
+          "t:进度",
+          "t:专业"
         ],
         "chars": 405,
         "truncated": false,
@@ -7842,10 +7842,10 @@ window.LOCATED_SEED = [
         ],
         "match_score": 26.6,
         "hit": [
-          "t:施工图",
           "t:安排",
-          "t:专业",
-          "t:进度"
+          "t:施工图",
+          "t:进度",
+          "t:专业"
         ],
         "chars": 135,
         "truncated": false,
@@ -7870,10 +7870,10 @@ window.LOCATED_SEED = [
         ],
         "match_score": 26.6,
         "hit": [
-          "t:施工图",
           "t:安排",
-          "t:专业",
-          "t:进度"
+          "t:施工图",
+          "t:进度",
+          "t:专业"
         ],
         "chars": 548,
         "truncated": false,
@@ -7913,8 +7913,8 @@ window.LOCATED_SEED = [
         "match_score": 44.2,
         "hit": [
           "T:装饰装修",
-          "t:装修",
-          "t:装饰"
+          "t:装饰",
+          "t:装修"
         ],
         "chars": 484,
         "truncated": false,
@@ -7940,8 +7940,8 @@ window.LOCATED_SEED = [
         "match_score": 44.2,
         "hit": [
           "T:装饰装修",
-          "t:装修",
-          "t:装饰"
+          "t:装饰",
+          "t:装修"
         ],
         "chars": 1593,
         "truncated": false,
@@ -7967,8 +7967,8 @@ window.LOCATED_SEED = [
         "match_score": 44.2,
         "hit": [
           "T:装饰装修",
-          "t:装修",
-          "t:装饰"
+          "t:装饰",
+          "t:装修"
         ],
         "chars": 300,
         "truncated": false,
@@ -7994,8 +7994,8 @@ window.LOCATED_SEED = [
         "match_score": 44.2,
         "hit": [
           "T:装饰装修",
-          "t:装修",
-          "t:装饰"
+          "t:装饰",
+          "t:装修"
         ],
         "chars": 846,
         "truncated": false,
@@ -9225,8 +9225,8 @@ window.LOCATED_SEED = [
         "match_score": 42,
         "hit": [
           "T:变更签证",
-          "t:变更",
-          "t:签证"
+          "t:签证",
+          "t:变更"
         ],
         "chars": 302,
         "truncated": false,
@@ -9252,8 +9252,8 @@ window.LOCATED_SEED = [
         "match_score": 42,
         "hit": [
           "T:变更签证",
-          "t:变更",
-          "t:签证"
+          "t:签证",
+          "t:变更"
         ],
         "chars": 332,
         "truncated": false,
@@ -9279,8 +9279,8 @@ window.LOCATED_SEED = [
         "match_score": 42,
         "hit": [
           "T:变更签证",
-          "t:变更",
-          "t:签证"
+          "t:签证",
+          "t:变更"
         ],
         "chars": 82,
         "truncated": false,
@@ -9306,8 +9306,8 @@ window.LOCATED_SEED = [
         "match_score": 42,
         "hit": [
           "T:变更签证",
-          "t:变更",
-          "t:签证"
+          "t:签证",
+          "t:变更"
         ],
         "chars": 206,
         "truncated": false,
@@ -9469,8 +9469,8 @@ window.LOCATED_SEED = [
         "match_score": 23.2,
         "hit": [
           "B:应急预案",
-          "t:应急",
-          "t:预案"
+          "t:预案",
+          "t:应急"
         ],
         "chars": 492,
         "truncated": false,
@@ -9496,8 +9496,8 @@ window.LOCATED_SEED = [
         "match_score": 23.2,
         "hit": [
           "B:应急预案",
-          "t:应急",
-          "t:预案"
+          "t:预案",
+          "t:应急"
         ],
         "chars": 491,
         "truncated": false,
@@ -9523,8 +9523,8 @@ window.LOCATED_SEED = [
         "match_score": 23.2,
         "hit": [
           "B:应急预案",
-          "t:应急",
-          "t:预案"
+          "t:预案",
+          "t:应急"
         ],
         "chars": 520,
         "truncated": false,
@@ -9550,8 +9550,8 @@ window.LOCATED_SEED = [
         "match_score": 23.2,
         "hit": [
           "B:应急预案",
-          "t:应急",
-          "t:预案"
+          "t:预案",
+          "t:应急"
         ],
         "chars": 521,
         "truncated": false,
@@ -9591,8 +9591,8 @@ window.LOCATED_SEED = [
         "match_score": 35,
         "hit": [
           "T:联动调试",
-          "t:联动",
-          "t:调试"
+          "t:调试",
+          "t:联动"
         ],
         "chars": 208,
         "truncated": false,
@@ -9618,8 +9618,8 @@ window.LOCATED_SEED = [
         "match_score": 35,
         "hit": [
           "T:联动调试",
-          "t:联动",
-          "t:调试"
+          "t:调试",
+          "t:联动"
         ],
         "chars": 200,
         "truncated": false,
@@ -9645,8 +9645,8 @@ window.LOCATED_SEED = [
         "match_score": 35,
         "hit": [
           "T:联动调试",
-          "t:联动",
-          "t:调试"
+          "t:调试",
+          "t:联动"
         ],
         "chars": 159,
         "truncated": false,
@@ -9672,8 +9672,8 @@ window.LOCATED_SEED = [
         "match_score": 35,
         "hit": [
           "T:联动调试",
-          "t:联动",
-          "t:调试"
+          "t:调试",
+          "t:联动"
         ],
         "chars": 164,
         "truncated": false,
@@ -9845,8 +9845,8 @@ window.LOCATED_SEED = [
         "match_score": 34.1,
         "hit": [
           "T:手续办理",
-          "t:手续",
-          "t:办理"
+          "t:办理",
+          "t:手续"
         ],
         "chars": 101,
         "truncated": false,
@@ -9874,8 +9874,8 @@ window.LOCATED_SEED = [
         "match_score": 34.1,
         "hit": [
           "T:手续办理",
-          "t:手续",
-          "t:办理"
+          "t:办理",
+          "t:手续"
         ],
         "chars": 97,
         "truncated": false,
@@ -9903,8 +9903,8 @@ window.LOCATED_SEED = [
         "match_score": 34.1,
         "hit": [
           "T:手续办理",
-          "t:手续",
-          "t:办理"
+          "t:办理",
+          "t:手续"
         ],
         "chars": 62,
         "truncated": false,
@@ -9932,8 +9932,8 @@ window.LOCATED_SEED = [
         "match_score": 34.1,
         "hit": [
           "T:手续办理",
-          "t:手续",
-          "t:办理"
+          "t:办理",
+          "t:手续"
         ],
         "chars": 72,
         "truncated": false,
@@ -10221,8 +10221,8 @@ window.LOCATED_SEED = [
         "match_score": 39.2,
         "hit": [
           "T:基坑支护",
-          "t:支护",
-          "t:基坑"
+          "t:基坑",
+          "t:支护"
         ],
         "chars": 635,
         "truncated": false,
@@ -10246,8 +10246,8 @@ window.LOCATED_SEED = [
         "match_score": 39.2,
         "hit": [
           "T:基坑支护",
-          "t:支护",
-          "t:基坑"
+          "t:基坑",
+          "t:支护"
         ],
         "chars": 602,
         "truncated": false,
@@ -10271,8 +10271,8 @@ window.LOCATED_SEED = [
         "match_score": 39.2,
         "hit": [
           "T:基坑支护",
-          "t:支护",
-          "t:基坑"
+          "t:基坑",
+          "t:支护"
         ],
         "chars": 812,
         "truncated": false,
@@ -10296,8 +10296,8 @@ window.LOCATED_SEED = [
         "match_score": 39.2,
         "hit": [
           "T:基坑支护",
-          "t:支护",
-          "t:基坑"
+          "t:基坑",
+          "t:支护"
         ],
         "chars": 544,
         "truncated": false,
@@ -10339,8 +10339,8 @@ window.LOCATED_SEED = [
         "match_score": 39.8,
         "hit": [
           "B:临边洞口",
-          "t:洞口",
-          "t:临边"
+          "t:临边",
+          "t:洞口"
         ],
         "chars": 253,
         "truncated": false,
@@ -11183,8 +11183,8 @@ window.LOCATED_SEED = [
         ],
         "match_score": 18.3,
         "hit": [
-          "t:第三方",
-          "t:服务"
+          "t:服务",
+          "t:第三方"
         ],
         "chars": 145,
         "truncated": false,
@@ -11211,8 +11211,8 @@ window.LOCATED_SEED = [
         ],
         "match_score": 18.3,
         "hit": [
-          "t:第三方",
-          "t:服务"
+          "t:服务",
+          "t:第三方"
         ],
         "chars": 146,
         "truncated": false,
@@ -11239,8 +11239,8 @@ window.LOCATED_SEED = [
         ],
         "match_score": 18.3,
         "hit": [
-          "t:第三方",
-          "t:服务"
+          "t:服务",
+          "t:第三方"
         ],
         "chars": 126,
         "truncated": false,
@@ -11267,8 +11267,8 @@ window.LOCATED_SEED = [
         ],
         "match_score": 18.3,
         "hit": [
-          "t:第三方",
-          "t:服务"
+          "t:服务",
+          "t:第三方"
         ],
         "chars": 198,
         "truncated": false,
@@ -11426,8 +11426,8 @@ window.LOCATED_SEED = [
         "match_score": 36.4,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 312,
         "truncated": false,
@@ -11453,8 +11453,8 @@ window.LOCATED_SEED = [
         "match_score": 36.4,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 61,
         "truncated": false,
@@ -11480,8 +11480,8 @@ window.LOCATED_SEED = [
         "match_score": 36.4,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 1008,
         "truncated": false,
@@ -11507,8 +11507,8 @@ window.LOCATED_SEED = [
         "match_score": 36.4,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 209,
         "truncated": false,
@@ -12152,8 +12152,8 @@ window.LOCATED_SEED = [
         "match_score": 38.4,
         "hit": [
           "T:手续办理",
-          "t:手续",
-          "t:办理"
+          "t:办理",
+          "t:手续"
         ],
         "chars": 61,
         "truncated": false,
@@ -12179,8 +12179,8 @@ window.LOCATED_SEED = [
         "match_score": 38.4,
         "hit": [
           "T:手续办理",
-          "t:手续",
-          "t:办理"
+          "t:办理",
+          "t:手续"
         ],
         "chars": 211,
         "truncated": false,
@@ -12395,10 +12395,10 @@ window.LOCATED_SEED = [
         ],
         "match_score": 24.7,
         "hit": [
-          "t:施工图",
           "t:安排",
-          "t:专业",
-          "t:进度"
+          "t:施工图",
+          "t:进度",
+          "t:专业"
         ],
         "chars": 134,
         "truncated": false,
@@ -12423,10 +12423,10 @@ window.LOCATED_SEED = [
         ],
         "match_score": 24.7,
         "hit": [
-          "t:施工图",
           "t:安排",
-          "t:专业",
-          "t:进度"
+          "t:施工图",
+          "t:进度",
+          "t:专业"
         ],
         "chars": 110,
         "truncated": false,
@@ -12451,10 +12451,10 @@ window.LOCATED_SEED = [
         ],
         "match_score": 24.7,
         "hit": [
-          "t:施工图",
           "t:安排",
-          "t:专业",
-          "t:进度"
+          "t:施工图",
+          "t:进度",
+          "t:专业"
         ],
         "chars": 30,
         "truncated": false,
@@ -12479,10 +12479,10 @@ window.LOCATED_SEED = [
         ],
         "match_score": 24.7,
         "hit": [
-          "t:施工图",
           "t:安排",
-          "t:专业",
-          "t:进度"
+          "t:施工图",
+          "t:进度",
+          "t:专业"
         ],
         "chars": 191,
         "truncated": false,
@@ -12522,8 +12522,8 @@ window.LOCATED_SEED = [
         "match_score": 39.4,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 637,
         "truncated": false,
@@ -12549,8 +12549,8 @@ window.LOCATED_SEED = [
         "match_score": 39.4,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 501,
         "truncated": false,
@@ -12576,8 +12576,8 @@ window.LOCATED_SEED = [
         "match_score": 39.4,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 477,
         "truncated": false,
@@ -12603,8 +12603,8 @@ window.LOCATED_SEED = [
         "match_score": 39.4,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 465,
         "truncated": false,
@@ -12820,9 +12820,9 @@ window.LOCATED_SEED = [
         "match_score": 36.9,
         "hit": [
           "B:扬尘在线监测",
+          "t:监测",
           "t:扬尘",
-          "t:在线",
-          "t:监测"
+          "t:在线"
         ],
         "chars": 723,
         "truncated": false,
@@ -12848,9 +12848,9 @@ window.LOCATED_SEED = [
         "match_score": 36.9,
         "hit": [
           "B:扬尘在线监测",
+          "t:监测",
           "t:扬尘",
-          "t:在线",
-          "t:监测"
+          "t:在线"
         ],
         "chars": 65,
         "truncated": false,
@@ -13008,8 +13008,8 @@ window.LOCATED_SEED = [
         "match_score": 33.6,
         "hit": [
           "T:临时用电",
-          "t:用电",
-          "t:临时"
+          "t:临时",
+          "t:用电"
         ],
         "chars": 250,
         "truncated": false,
@@ -13035,8 +13035,8 @@ window.LOCATED_SEED = [
         "match_score": 33.6,
         "hit": [
           "T:临时用电",
-          "t:用电",
-          "t:临时"
+          "t:临时",
+          "t:用电"
         ],
         "chars": 187,
         "truncated": false,
@@ -13062,8 +13062,8 @@ window.LOCATED_SEED = [
         "match_score": 33.6,
         "hit": [
           "T:临时用电",
-          "t:用电",
-          "t:临时"
+          "t:临时",
+          "t:用电"
         ],
         "chars": 162,
         "truncated": false,
@@ -13089,8 +13089,8 @@ window.LOCATED_SEED = [
         "match_score": 33.6,
         "hit": [
           "T:临时用电",
-          "t:用电",
-          "t:临时"
+          "t:临时",
+          "t:用电"
         ],
         "chars": 127,
         "truncated": false,
@@ -13370,9 +13370,9 @@ window.LOCATED_SEED = [
         "match_score": 18.6,
         "hit": [
           "t:采购",
-          "b:分工",
+          "b:组织",
           "t:职责",
-          "b:组织"
+          "b:分工"
         ],
         "chars": 864,
         "truncated": false,
@@ -13398,9 +13398,9 @@ window.LOCATED_SEED = [
         "match_score": 18.6,
         "hit": [
           "t:采购",
-          "b:分工",
+          "b:组织",
           "t:职责",
-          "b:组织"
+          "b:分工"
         ],
         "chars": 1009,
         "truncated": false,
@@ -13426,9 +13426,9 @@ window.LOCATED_SEED = [
         "match_score": 18.6,
         "hit": [
           "t:采购",
-          "b:分工",
+          "b:组织",
           "t:职责",
-          "b:组织"
+          "b:分工"
         ],
         "chars": 599,
         "truncated": false,
@@ -13454,9 +13454,9 @@ window.LOCATED_SEED = [
         "match_score": 18.6,
         "hit": [
           "t:采购",
-          "b:分工",
+          "b:组织",
           "t:职责",
-          "b:组织"
+          "b:分工"
         ],
         "chars": 93,
         "truncated": true,
@@ -13615,9 +13615,9 @@ window.LOCATED_SEED = [
         "match_score": 51.4,
         "hit": [
           "T:平面布局优化",
-          "t:优化",
+          "t:平面",
           "t:布局",
-          "t:平面"
+          "t:优化"
         ],
         "chars": 222,
         "truncated": false,
@@ -13640,8 +13640,8 @@ window.LOCATED_SEED = [
         "match_score": 47.6,
         "hit": [
           "T:钢筋含量",
-          "t:含量",
-          "t:钢筋"
+          "t:钢筋",
+          "t:含量"
         ],
         "chars": 39,
         "truncated": false,
@@ -13665,8 +13665,8 @@ window.LOCATED_SEED = [
         "match_score": 47.6,
         "hit": [
           "T:钢筋含量",
-          "t:含量",
-          "t:钢筋"
+          "t:钢筋",
+          "t:含量"
         ],
         "chars": 243,
         "truncated": false,
@@ -13690,8 +13690,8 @@ window.LOCATED_SEED = [
         "match_score": 47.6,
         "hit": [
           "T:钢筋含量",
-          "t:含量",
-          "t:钢筋"
+          "t:钢筋",
+          "t:含量"
         ],
         "chars": 188,
         "truncated": false,
@@ -13728,8 +13728,8 @@ window.LOCATED_SEED = [
         ],
         "match_score": 47,
         "hit": [
-          "t:预警",
           "t:纠偏",
+          "t:预警",
           "t:机制",
           "t:进度"
         ],
@@ -13754,8 +13754,8 @@ window.LOCATED_SEED = [
         ],
         "match_score": 47,
         "hit": [
-          "t:预警",
           "t:纠偏",
+          "t:预警",
           "t:机制",
           "t:进度"
         ],
@@ -13779,8 +13779,8 @@ window.LOCATED_SEED = [
         ],
         "match_score": 20.1,
         "hit": [
-          "b:预警",
           "b:纠偏",
+          "b:预警",
           "b:机制",
           "t:进度"
         ],
@@ -13844,9 +13844,9 @@ window.LOCATED_SEED = [
         "match_score": 24.9,
         "hit": [
           "B:资金使用计划",
+          "t:使用",
           "b:计划",
-          "t:资金",
-          "t:使用"
+          "t:资金"
         ],
         "chars": 175,
         "truncated": false,
@@ -13870,9 +13870,9 @@ window.LOCATED_SEED = [
         "match_score": 24.9,
         "hit": [
           "B:资金使用计划",
+          "t:使用",
           "b:计划",
-          "t:资金",
-          "t:使用"
+          "t:资金"
         ],
         "chars": 220,
         "truncated": false,
@@ -13896,9 +13896,9 @@ window.LOCATED_SEED = [
         "match_score": 24.9,
         "hit": [
           "B:资金使用计划",
+          "t:使用",
           "b:计划",
-          "t:资金",
-          "t:使用"
+          "t:资金"
         ],
         "chars": 160,
         "truncated": false,
@@ -13922,8 +13922,8 @@ window.LOCATED_SEED = [
         "match_score": 18,
         "hit": [
           "B:成本控制",
-          "t:成本",
-          "b:控制"
+          "b:控制",
+          "t:成本"
         ],
         "chars": 194,
         "truncated": false,
@@ -13960,10 +13960,10 @@ window.LOCATED_SEED = [
         ],
         "match_score": 42.3,
         "hit": [
+          "t:档次",
           "t:管控",
           "t:品牌",
-          "t:设备",
-          "t:档次"
+          "t:设备"
         ],
         "chars": 256,
         "truncated": false,
@@ -13986,10 +13986,10 @@ window.LOCATED_SEED = [
         ],
         "match_score": 42.3,
         "hit": [
+          "t:档次",
           "t:管控",
           "t:品牌",
-          "t:设备",
-          "t:档次"
+          "t:设备"
         ],
         "chars": 282,
         "truncated": false,
@@ -14012,10 +14012,10 @@ window.LOCATED_SEED = [
         ],
         "match_score": 42.3,
         "hit": [
+          "t:档次",
           "t:管控",
           "t:品牌",
-          "t:设备",
-          "t:档次"
+          "t:设备"
         ],
         "chars": 181,
         "truncated": false,
@@ -14038,10 +14038,10 @@ window.LOCATED_SEED = [
         ],
         "match_score": 42.3,
         "hit": [
+          "t:档次",
           "t:管控",
           "t:品牌",
-          "t:设备",
-          "t:档次"
+          "t:设备"
         ],
         "chars": 114,
         "truncated": false,
@@ -14189,8 +14189,8 @@ window.LOCATED_SEED = [
         "match_score": 42.3,
         "hit": [
           "T:联动调试",
-          "t:联动",
-          "t:调试"
+          "t:调试",
+          "t:联动"
         ],
         "chars": 292,
         "truncated": false,
@@ -14214,8 +14214,8 @@ window.LOCATED_SEED = [
         "match_score": 42.3,
         "hit": [
           "T:联动调试",
-          "t:联动",
-          "t:调试"
+          "t:调试",
+          "t:联动"
         ],
         "chars": 571,
         "truncated": false,
@@ -14239,8 +14239,8 @@ window.LOCATED_SEED = [
         "match_score": 42.3,
         "hit": [
           "T:联动调试",
-          "t:联动",
-          "t:调试"
+          "t:调试",
+          "t:联动"
         ],
         "chars": 180,
         "truncated": false,
@@ -14351,8 +14351,8 @@ window.LOCATED_SEED = [
         "match_score": 43.3,
         "hit": [
           "T:预警机制",
-          "t:预警",
-          "t:机制"
+          "t:机制",
+          "t:预警"
         ],
         "chars": 216,
         "truncated": false,
@@ -14375,10 +14375,10 @@ window.LOCATED_SEED = [
         ],
         "match_score": 23.8,
         "hit": [
-          "b:体系",
           "t:风险",
-          "b:识别",
-          "b:评估"
+          "b:体系",
+          "b:评估",
+          "b:识别"
         ],
         "chars": 234,
         "truncated": false,
@@ -14416,8 +14416,8 @@ window.LOCATED_SEED = [
         "match_score": 36.9,
         "hit": [
           "T:手续办理",
-          "t:手续",
-          "t:办理"
+          "t:办理",
+          "t:手续"
         ],
         "chars": 265,
         "truncated": false,
@@ -14441,8 +14441,8 @@ window.LOCATED_SEED = [
         "match_score": 36.9,
         "hit": [
           "T:手续办理",
-          "t:手续",
-          "t:办理"
+          "t:办理",
+          "t:手续"
         ],
         "chars": 527,
         "truncated": false,
@@ -14466,8 +14466,8 @@ window.LOCATED_SEED = [
         "match_score": 36.9,
         "hit": [
           "T:手续办理",
-          "t:手续",
-          "t:办理"
+          "t:办理",
+          "t:手续"
         ],
         "chars": 239,
         "truncated": false,
@@ -14491,8 +14491,8 @@ window.LOCATED_SEED = [
         "match_score": 36.9,
         "hit": [
           "T:手续办理",
-          "t:手续",
-          "t:办理"
+          "t:办理",
+          "t:手续"
         ],
         "chars": 187,
         "truncated": false,
@@ -14732,7 +14732,7 @@ window.LOCATED_SEED = [
     "bidder": "中诚投建工集团有限公司1036507",
     "name": "施工方案及技术措施",
     "pool_sections": 794,
-    "candidates": 164,
+    "candidates": 170,
     "units": 6,
     "fallback": false,
     "evidence_chars": 3314,
@@ -14754,8 +14754,8 @@ window.LOCATED_SEED = [
         "match_score": 39.9,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 407,
         "truncated": false,
@@ -14779,8 +14779,8 @@ window.LOCATED_SEED = [
         "match_score": 39.9,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 493,
         "truncated": false,
@@ -14804,8 +14804,8 @@ window.LOCATED_SEED = [
         "match_score": 39.9,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 138,
         "truncated": false,
@@ -14831,8 +14831,8 @@ window.LOCATED_SEED = [
         "match_score": 39.9,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 37,
         "truncated": false,
@@ -14871,9 +14871,9 @@ window.LOCATED_SEED = [
         ],
         "match_score": 33.7,
         "hit": [
-          "t:绿色",
           "t:资源",
-          "t:节约"
+          "t:节约",
+          "t:绿色"
         ],
         "chars": 71,
         "truncated": false,
@@ -15025,8 +15025,8 @@ window.LOCATED_SEED = [
         "match_score": 32.6,
         "hit": [
           "T:建筑垃圾",
-          "t:建筑",
-          "t:垃圾"
+          "t:垃圾",
+          "t:建筑"
         ],
         "chars": 198,
         "truncated": false,
@@ -15052,8 +15052,8 @@ window.LOCATED_SEED = [
         "match_score": 32.6,
         "hit": [
           "T:建筑垃圾",
-          "t:建筑",
-          "t:垃圾"
+          "t:垃圾",
+          "t:建筑"
         ],
         "chars": 42,
         "truncated": false,
@@ -15079,8 +15079,8 @@ window.LOCATED_SEED = [
         "match_score": 32.6,
         "hit": [
           "T:建筑垃圾",
-          "t:建筑",
-          "t:垃圾"
+          "t:垃圾",
+          "t:建筑"
         ],
         "chars": 124,
         "truncated": false,
@@ -15118,8 +15118,8 @@ window.LOCATED_SEED = [
         "match_score": 38.2,
         "hit": [
           "T:劳动力计划",
-          "t:计划",
-          "t:劳动力"
+          "t:劳动力",
+          "t:计划"
         ],
         "chars": 192,
         "truncated": false,
@@ -15143,8 +15143,8 @@ window.LOCATED_SEED = [
         "match_score": 38.2,
         "hit": [
           "T:劳动力计划",
-          "t:计划",
-          "t:劳动力"
+          "t:劳动力",
+          "t:计划"
         ],
         "chars": 36,
         "truncated": false,
@@ -15168,8 +15168,8 @@ window.LOCATED_SEED = [
         "match_score": 38.2,
         "hit": [
           "T:劳动力计划",
-          "t:计划",
-          "t:劳动力"
+          "t:劳动力",
+          "t:计划"
         ],
         "chars": 34,
         "truncated": false,
@@ -15193,8 +15193,8 @@ window.LOCATED_SEED = [
         "match_score": 38.2,
         "hit": [
           "T:劳动力计划",
-          "t:计划",
-          "t:劳动力"
+          "t:劳动力",
+          "t:计划"
         ],
         "chars": 93,
         "truncated": false,
@@ -15231,8 +15231,8 @@ window.LOCATED_SEED = [
         "match_score": 32.6,
         "hit": [
           "T:临时设施",
-          "t:设施",
-          "t:临时"
+          "t:临时",
+          "t:设施"
         ],
         "chars": 356,
         "truncated": false,
@@ -15256,8 +15256,8 @@ window.LOCATED_SEED = [
         "match_score": 32.6,
         "hit": [
           "T:临时设施",
-          "t:设施",
-          "t:临时"
+          "t:临时",
+          "t:设施"
         ],
         "chars": 413,
         "truncated": false,
@@ -16009,8 +16009,8 @@ window.LOCATED_SEED = [
         "match_score": 36.8,
         "hit": [
           "T:里程碑节点",
-          "t:里程碑",
-          "t:节点"
+          "t:节点",
+          "t:里程碑"
         ],
         "chars": 523,
         "truncated": false,
@@ -16924,8 +16924,8 @@ window.LOCATED_SEED = [
         "match_score": 38.6,
         "hit": [
           "T:测量放线",
-          "t:测量",
-          "t:放线"
+          "t:放线",
+          "t:测量"
         ],
         "chars": 444,
         "truncated": false,
@@ -16951,8 +16951,8 @@ window.LOCATED_SEED = [
         "match_score": 38.6,
         "hit": [
           "T:测量放线",
-          "t:测量",
-          "t:放线"
+          "t:放线",
+          "t:测量"
         ],
         "chars": 484,
         "truncated": false,
@@ -16978,8 +16978,8 @@ window.LOCATED_SEED = [
         "match_score": 35.4,
         "hit": [
           "T:基坑支护",
-          "t:支护",
-          "t:基坑"
+          "t:基坑",
+          "t:支护"
         ],
         "chars": 1153,
         "truncated": false,
@@ -17005,8 +17005,8 @@ window.LOCATED_SEED = [
         "match_score": 35.4,
         "hit": [
           "T:基坑支护",
-          "t:支护",
-          "t:基坑"
+          "t:基坑",
+          "t:支护"
         ],
         "chars": 382,
         "truncated": false,
@@ -17161,9 +17161,9 @@ window.LOCATED_SEED = [
         "match_score": 47,
         "hit": [
           "T:扬尘在线监测",
+          "t:监测",
           "t:扬尘",
-          "t:在线",
-          "t:监测"
+          "t:在线"
         ],
         "chars": 136,
         "truncated": false,
@@ -17187,9 +17187,9 @@ window.LOCATED_SEED = [
         "match_score": 47,
         "hit": [
           "T:扬尘在线监测",
+          "t:监测",
           "t:扬尘",
-          "t:在线",
-          "t:监测"
+          "t:在线"
         ],
         "chars": 619,
         "truncated": false,
@@ -17213,9 +17213,9 @@ window.LOCATED_SEED = [
         "match_score": 47,
         "hit": [
           "T:扬尘在线监测",
+          "t:监测",
           "t:扬尘",
-          "t:在线",
-          "t:监测"
+          "t:在线"
         ],
         "chars": 622,
         "truncated": false,
@@ -17239,9 +17239,9 @@ window.LOCATED_SEED = [
         "match_score": 47,
         "hit": [
           "T:扬尘在线监测",
+          "t:监测",
           "t:扬尘",
-          "t:在线",
-          "t:监测"
+          "t:在线"
         ],
         "chars": 593,
         "truncated": false,
@@ -17612,8 +17612,8 @@ window.LOCATED_SEED = [
         "match_score": 51.4,
         "hit": [
           "T:限额领料",
-          "t:限额",
-          "t:领料"
+          "t:领料",
+          "t:限额"
         ],
         "chars": 508,
         "truncated": false,
@@ -17639,8 +17639,8 @@ window.LOCATED_SEED = [
         "match_score": 51.4,
         "hit": [
           "T:限额领料",
-          "t:限额",
-          "t:领料"
+          "t:领料",
+          "t:限额"
         ],
         "chars": 590,
         "truncated": false,
@@ -17666,8 +17666,8 @@ window.LOCATED_SEED = [
         "match_score": 51.4,
         "hit": [
           "T:限额领料",
-          "t:限额",
-          "t:领料"
+          "t:领料",
+          "t:限额"
         ],
         "chars": 785,
         "truncated": false,
@@ -17693,8 +17693,8 @@ window.LOCATED_SEED = [
         "match_score": 51.4,
         "hit": [
           "T:限额领料",
-          "t:限额",
-          "t:领料"
+          "t:领料",
+          "t:限额"
         ],
         "chars": 943,
         "truncated": false,
@@ -17731,8 +17731,8 @@ window.LOCATED_SEED = [
         "match_score": 44.5,
         "hit": [
           "T:开箱检验",
-          "t:检验",
-          "t:开箱"
+          "t:开箱",
+          "t:检验"
         ],
         "chars": 113,
         "truncated": false,
@@ -17756,8 +17756,8 @@ window.LOCATED_SEED = [
         "match_score": 44.5,
         "hit": [
           "T:开箱检验",
-          "t:检验",
-          "t:开箱"
+          "t:开箱",
+          "t:检验"
         ],
         "chars": 66,
         "truncated": false,
@@ -17781,8 +17781,8 @@ window.LOCATED_SEED = [
         "match_score": 44.5,
         "hit": [
           "T:开箱检验",
-          "t:检验",
-          "t:开箱"
+          "t:开箱",
+          "t:检验"
         ],
         "chars": 203,
         "truncated": false,
@@ -17806,8 +17806,8 @@ window.LOCATED_SEED = [
         "match_score": 44.5,
         "hit": [
           "T:开箱检验",
-          "t:检验",
-          "t:开箱"
+          "t:开箱",
+          "t:检验"
         ],
         "chars": 215,
         "truncated": false,
@@ -17844,8 +17844,8 @@ window.LOCATED_SEED = [
         "match_score": 26.6,
         "hit": [
           "T:检测服务",
-          "t:服务",
-          "t:检测"
+          "t:检测",
+          "t:服务"
         ],
         "chars": 113,
         "truncated": false,
@@ -17869,8 +17869,8 @@ window.LOCATED_SEED = [
         "match_score": 26.6,
         "hit": [
           "T:检测服务",
-          "t:服务",
-          "t:检测"
+          "t:检测",
+          "t:服务"
         ],
         "chars": 64,
         "truncated": false,
@@ -17894,8 +17894,8 @@ window.LOCATED_SEED = [
         "match_score": 26.6,
         "hit": [
           "T:检测服务",
-          "t:服务",
-          "t:检测"
+          "t:检测",
+          "t:服务"
         ],
         "chars": 425,
         "truncated": false,
@@ -17919,8 +17919,8 @@ window.LOCATED_SEED = [
         "match_score": 26.6,
         "hit": [
           "T:检测服务",
-          "t:服务",
-          "t:检测"
+          "t:检测",
+          "t:服务"
         ],
         "chars": 494,
         "truncated": false,
@@ -18078,8 +18078,8 @@ window.LOCATED_SEED = [
         "match_score": 31.7,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 586,
         "truncated": false,
@@ -18105,8 +18105,8 @@ window.LOCATED_SEED = [
         "match_score": 31.7,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 477,
         "truncated": false,
@@ -18132,8 +18132,8 @@ window.LOCATED_SEED = [
         "match_score": 31.7,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 390,
         "truncated": false,
@@ -18159,8 +18159,8 @@ window.LOCATED_SEED = [
         "match_score": 31.7,
         "hit": [
           "T:关键线路",
-          "t:线路",
-          "t:关键"
+          "t:关键",
+          "t:线路"
         ],
         "chars": 390,
         "truncated": false,
@@ -18690,8 +18690,8 @@ window.LOCATED_SEED = [
         "match_score": 34.6,
         "hit": [
           "t:策略",
-          "t:应对",
-          "t:风险"
+          "t:风险",
+          "t:应对"
         ],
         "chars": 107,
         "truncated": false,
@@ -18717,8 +18717,8 @@ window.LOCATED_SEED = [
         "match_score": 34.6,
         "hit": [
           "t:策略",
-          "t:应对",
-          "t:风险"
+          "t:风险",
+          "t:应对"
         ],
         "chars": 84,
         "truncated": false,
@@ -18744,8 +18744,8 @@ window.LOCATED_SEED = [
         "match_score": 34.6,
         "hit": [
           "t:策略",
-          "t:应对",
-          "t:风险"
+          "t:风险",
+          "t:应对"
         ],
         "chars": 96,
         "truncated": false,
@@ -18771,8 +18771,8 @@ window.LOCATED_SEED = [
         "match_score": 34.6,
         "hit": [
           "t:策略",
-          "t:应对",
-          "t:风险"
+          "t:风险",
+          "t:应对"
         ],
         "chars": 639,
         "truncated": false,
@@ -19173,8 +19173,8 @@ window.LOCATED_SEED = [
         "match_score": 37.6,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 319,
         "truncated": false,
@@ -19200,8 +19200,8 @@ window.LOCATED_SEED = [
         "match_score": 37.6,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 83,
         "truncated": false,
@@ -19227,8 +19227,8 @@ window.LOCATED_SEED = [
         "match_score": 37.6,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 316,
         "truncated": false,
@@ -19254,8 +19254,8 @@ window.LOCATED_SEED = [
         "match_score": 37.6,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 283,
         "truncated": false,
@@ -19421,9 +19421,9 @@ window.LOCATED_SEED = [
         "match_score": 53.5,
         "hit": [
           "T:扬尘在线监测",
+          "t:监测",
           "t:扬尘",
-          "t:在线",
-          "t:监测"
+          "t:在线"
         ],
         "chars": 318,
         "truncated": false,
@@ -19449,9 +19449,9 @@ window.LOCATED_SEED = [
         "match_score": 53.5,
         "hit": [
           "T:扬尘在线监测",
+          "t:监测",
           "t:扬尘",
-          "t:在线",
-          "t:监测"
+          "t:在线"
         ],
         "chars": 180,
         "truncated": false,
@@ -19477,9 +19477,9 @@ window.LOCATED_SEED = [
         "match_score": 53.5,
         "hit": [
           "T:扬尘在线监测",
+          "t:监测",
           "t:扬尘",
-          "t:在线",
-          "t:监测"
+          "t:在线"
         ],
         "chars": 213,
         "truncated": false,
@@ -19505,9 +19505,9 @@ window.LOCATED_SEED = [
         "match_score": 53.5,
         "hit": [
           "T:扬尘在线监测",
+          "t:监测",
           "t:扬尘",
-          "t:在线",
-          "t:监测"
+          "t:在线"
         ],
         "chars": 216,
         "truncated": false,
@@ -19919,8 +19919,8 @@ window.LOCATED_SEED = [
         "match_score": 52.4,
         "hit": [
           "T:限额领料",
-          "t:限额",
-          "t:领料"
+          "t:领料",
+          "t:限额"
         ],
         "chars": 112,
         "truncated": false,
@@ -19946,8 +19946,8 @@ window.LOCATED_SEED = [
         "match_score": 52.4,
         "hit": [
           "T:限额领料",
-          "t:限额",
-          "t:领料"
+          "t:领料",
+          "t:限额"
         ],
         "chars": 485,
         "truncated": false,
@@ -19973,8 +19973,8 @@ window.LOCATED_SEED = [
         "match_score": 52.4,
         "hit": [
           "T:限额领料",
-          "t:限额",
-          "t:领料"
+          "t:领料",
+          "t:限额"
         ],
         "chars": 723,
         "truncated": false,
@@ -20000,8 +20000,8 @@ window.LOCATED_SEED = [
         "match_score": 52.4,
         "hit": [
           "T:限额领料",
-          "t:限额",
-          "t:领料"
+          "t:领料",
+          "t:限额"
         ],
         "chars": 334,
         "truncated": false,
@@ -20247,10 +20247,10 @@ window.LOCATED_SEED = [
         ],
         "match_score": 15.8,
         "hit": [
-          "b:合同",
-          "t:服务",
           "b:保障",
-          "b:后续"
+          "b:后续",
+          "b:合同",
+          "t:服务"
         ],
         "chars": 234,
         "truncated": false,
@@ -20287,8 +20287,8 @@ window.LOCATED_SEED = [
         "match_score": 36.3,
         "hit": [
           "T:优化建议",
-          "t:优化",
-          "t:建议"
+          "t:建议",
+          "t:优化"
         ],
         "chars": 408,
         "truncated": false,
@@ -20312,8 +20312,8 @@ window.LOCATED_SEED = [
         "match_score": 36.3,
         "hit": [
           "T:优化建议",
-          "t:优化",
-          "t:建议"
+          "t:建议",
+          "t:优化"
         ],
         "chars": 93,
         "truncated": false,
@@ -20337,8 +20337,8 @@ window.LOCATED_SEED = [
         "match_score": 36.3,
         "hit": [
           "T:优化建议",
-          "t:优化",
-          "t:建议"
+          "t:建议",
+          "t:优化"
         ],
         "chars": 39,
         "truncated": false,
@@ -20362,8 +20362,8 @@ window.LOCATED_SEED = [
         "match_score": 36.3,
         "hit": [
           "T:优化建议",
-          "t:优化",
-          "t:建议"
+          "t:建议",
+          "t:优化"
         ],
         "chars": 38,
         "truncated": false,
@@ -21038,10 +21038,10 @@ window.LOCATED_SEED = [
         ],
         "match_score": 48.1,
         "hit": [
+          "t:办法",
           "t:沟通",
-          "t:承诺",
           "t:职能部门",
-          "t:办法"
+          "t:承诺"
         ],
         "chars": 1963,
         "truncated": false,
@@ -21064,8 +21064,8 @@ window.LOCATED_SEED = [
         "match_score": 39.6,
         "hit": [
           "T:例会制度",
-          "t:例会",
-          "t:制度"
+          "t:制度",
+          "t:例会"
         ],
         "chars": 331,
         "truncated": false,
@@ -21089,8 +21089,8 @@ window.LOCATED_SEED = [
         "match_score": 39.6,
         "hit": [
           "T:例会制度",
-          "t:例会",
-          "t:制度"
+          "t:制度",
+          "t:例会"
         ],
         "chars": 271,
         "truncated": true,
@@ -21311,8 +21311,8 @@ window.LOCATED_SEED = [
         "match_score": 43.8,
         "hit": [
           "T:基坑支护",
-          "t:支护",
-          "t:基坑"
+          "t:基坑",
+          "t:支护"
         ],
         "chars": 93,
         "truncated": false,
@@ -21338,8 +21338,8 @@ window.LOCATED_SEED = [
         "match_score": 43.8,
         "hit": [
           "T:基坑支护",
-          "t:支护",
-          "t:基坑"
+          "t:基坑",
+          "t:支护"
         ],
         "chars": 47,
         "truncated": false,
@@ -21365,8 +21365,8 @@ window.LOCATED_SEED = [
         "match_score": 43.8,
         "hit": [
           "T:基坑支护",
-          "t:支护",
-          "t:基坑"
+          "t:基坑",
+          "t:支护"
         ],
         "chars": 85,
         "truncated": false,
@@ -21392,8 +21392,8 @@ window.LOCATED_SEED = [
         "match_score": 43.8,
         "hit": [
           "T:基坑支护",
-          "t:支护",
-          "t:基坑"
+          "t:基坑",
+          "t:支护"
         ],
         "chars": 138,
         "truncated": false,
@@ -21675,8 +21675,8 @@ window.LOCATED_SEED = [
         "match_score": 25.1,
         "hit": [
           "B:劳动力计划",
-          "t:计划",
-          "t:劳动力"
+          "t:劳动力",
+          "t:计划"
         ],
         "chars": 444,
         "truncated": false,
@@ -21702,8 +21702,8 @@ window.LOCATED_SEED = [
         "match_score": 25.1,
         "hit": [
           "B:劳动力计划",
-          "t:计划",
-          "t:劳动力"
+          "t:劳动力",
+          "t:计划"
         ],
         "chars": 808,
         "truncated": false,
@@ -21727,8 +21727,8 @@ window.LOCATED_SEED = [
         "match_score": 22.8,
         "hit": [
           "T:总进度计划",
-          "t:计划",
-          "t:进度"
+          "t:进度",
+          "t:计划"
         ],
         "chars": 1236,
         "truncated": false,
@@ -21754,8 +21754,8 @@ window.LOCATED_SEED = [
         "match_score": 22.8,
         "hit": [
           "T:总进度计划",
-          "t:计划",
-          "t:进度"
+          "t:进度",
+          "t:计划"
         ],
         "chars": 2236,
         "truncated": false,
@@ -21904,8 +21904,8 @@ window.LOCATED_SEED = [
         "match_score": 45.4,
         "hit": [
           "T:实测实量",
-          "t:实量",
-          "t:实测"
+          "t:实测",
+          "t:实量"
         ],
         "chars": 384,
         "truncated": false,
@@ -21931,8 +21931,8 @@ window.LOCATED_SEED = [
         "match_score": 45.4,
         "hit": [
           "T:实测实量",
-          "t:实量",
-          "t:实测"
+          "t:实测",
+          "t:实量"
         ],
         "chars": 51,
         "truncated": false,
@@ -21955,8 +21955,8 @@ window.LOCATED_SEED = [
         "match_score": 45.4,
         "hit": [
           "T:实测实量",
-          "t:实量",
-          "t:实测"
+          "t:实测",
+          "t:实量"
         ],
         "chars": 247,
         "truncated": false,
@@ -21980,8 +21980,8 @@ window.LOCATED_SEED = [
         "match_score": 45.4,
         "hit": [
           "T:实测实量",
-          "t:实量",
-          "t:实测"
+          "t:实测",
+          "t:实量"
         ],
         "chars": 51,
         "truncated": false,
@@ -22367,8 +22367,8 @@ window.LOCATED_SEED = [
         "match_score": 26.9,
         "hit": [
           "T:绿色建筑",
-          "t:绿色",
-          "t:建筑"
+          "t:建筑",
+          "t:绿色"
         ],
         "chars": 45,
         "truncated": false,
@@ -22394,8 +22394,8 @@ window.LOCATED_SEED = [
         "match_score": 26.9,
         "hit": [
           "T:绿色建筑",
-          "t:绿色",
-          "t:建筑"
+          "t:建筑",
+          "t:绿色"
         ],
         "chars": 207,
         "truncated": false,
@@ -22421,8 +22421,8 @@ window.LOCATED_SEED = [
         "match_score": 26.9,
         "hit": [
           "T:绿色建筑",
-          "t:绿色",
-          "t:建筑"
+          "t:建筑",
+          "t:绿色"
         ],
         "chars": 209,
         "truncated": false,
@@ -22448,8 +22448,8 @@ window.LOCATED_SEED = [
         "match_score": 26.9,
         "hit": [
           "T:绿色建筑",
-          "t:绿色",
-          "t:建筑"
+          "t:建筑",
+          "t:绿色"
         ],
         "chars": 243,
         "truncated": false,
@@ -22516,8 +22516,8 @@ window.LOCATED_SEED = [
         "match_score": 22.6,
         "hit": [
           "T:总进度计划",
-          "t:计划",
-          "t:进度"
+          "t:进度",
+          "t:计划"
         ],
         "chars": 60,
         "truncated": false,
@@ -22543,8 +22543,8 @@ window.LOCATED_SEED = [
         "match_score": 22.6,
         "hit": [
           "T:总进度计划",
-          "t:计划",
-          "t:进度"
+          "t:进度",
+          "t:计划"
         ],
         "chars": 46,
         "truncated": false,
@@ -22570,8 +22570,8 @@ window.LOCATED_SEED = [
         "match_score": 22.6,
         "hit": [
           "T:总进度计划",
-          "t:计划",
-          "t:进度"
+          "t:进度",
+          "t:计划"
         ],
         "chars": 112,
         "truncated": false,
@@ -22607,8 +22607,8 @@ window.LOCATED_SEED = [
         ],
         "match_score": 24.2,
         "hit": [
-          "t:变更",
-          "t:签证"
+          "t:签证",
+          "t:变更"
         ],
         "chars": 61,
         "truncated": false,
@@ -22631,8 +22631,8 @@ window.LOCATED_SEED = [
         ],
         "match_score": 24.2,
         "hit": [
-          "t:变更",
-          "t:签证"
+          "t:签证",
+          "t:变更"
         ],
         "chars": 399,
         "truncated": false,
@@ -22655,8 +22655,8 @@ window.LOCATED_SEED = [
         ],
         "match_score": 24.2,
         "hit": [
-          "t:变更",
-          "t:签证"
+          "t:签证",
+          "t:变更"
         ],
         "chars": 271,
         "truncated": false,
@@ -22679,8 +22679,8 @@ window.LOCATED_SEED = [
         ],
         "match_score": 24.2,
         "hit": [
-          "t:变更",
-          "t:签证"
+          "t:签证",
+          "t:变更"
         ],
         "chars": 112,
         "truncated": false,
@@ -22932,7 +22932,7 @@ window.LOCATED_SEED = [
     "bidder": "山东平安建设集团有限公司8006862",
     "name": "调试、试运行与移交管理方案",
     "pool_sections": 42,
-    "candidates": 80,
+    "candidates": 103,
     "units": 6,
     "fallback": false,
     "evidence_chars": 3420,
@@ -23449,11 +23449,11 @@ window.LOCATED_SEED = [
         ],
         "match_score": 26.6,
         "hit": [
-          "t:施工图",
           "t:安排",
           "b:计划",
-          "t:专业",
-          "t:进度"
+          "t:施工图",
+          "t:进度",
+          "t:专业"
         ],
         "chars": 216,
         "truncated": false,
@@ -23478,11 +23478,11 @@ window.LOCATED_SEED = [
         ],
         "match_score": 26.6,
         "hit": [
-          "t:施工图",
           "t:安排",
           "b:计划",
-          "t:专业",
-          "t:进度"
+          "t:施工图",
+          "t:进度",
+          "t:专业"
         ],
         "chars": 534,
         "truncated": false,
@@ -23507,11 +23507,11 @@ window.LOCATED_SEED = [
         ],
         "match_score": 26.6,
         "hit": [
-          "t:施工图",
           "t:安排",
           "b:计划",
-          "t:专业",
-          "t:进度"
+          "t:施工图",
+          "t:进度",
+          "t:专业"
         ],
         "chars": 273,
         "truncated": false,
@@ -23555,8 +23555,8 @@ window.LOCATED_SEED = [
         "match_score": 40.1,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 345,
         "truncated": false,
@@ -23584,8 +23584,8 @@ window.LOCATED_SEED = [
         "match_score": 40.1,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 79,
         "truncated": false,
@@ -23613,8 +23613,8 @@ window.LOCATED_SEED = [
         "match_score": 40.1,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 98,
         "truncated": false,
@@ -23642,8 +23642,8 @@ window.LOCATED_SEED = [
         "match_score": 40.1,
         "hit": [
           "T:土方回填",
-          "t:土方",
-          "t:回填"
+          "t:回填",
+          "t:土方"
         ],
         "chars": 183,
         "truncated": false,
@@ -23800,9 +23800,9 @@ window.LOCATED_SEED = [
         "match_score": 28.7,
         "hit": [
           "B:扬尘在线监测",
+          "b:监测",
           "t:扬尘",
-          "b:在线",
-          "b:监测"
+          "b:在线"
         ],
         "chars": 163,
         "truncated": false,
@@ -23826,9 +23826,9 @@ window.LOCATED_SEED = [
         "match_score": 28.7,
         "hit": [
           "B:扬尘在线监测",
+          "b:监测",
           "t:扬尘",
-          "b:在线",
-          "b:监测"
+          "b:在线"
         ],
         "chars": 1145,
         "truncated": false,
@@ -23852,9 +23852,9 @@ window.LOCATED_SEED = [
         "match_score": 28.7,
         "hit": [
           "B:扬尘在线监测",
+          "b:监测",
           "t:扬尘",
-          "b:在线",
-          "b:监测"
+          "b:在线"
         ],
         "chars": 1272,
         "truncated": false,
@@ -24024,8 +24024,8 @@ window.LOCATED_SEED = [
         "match_score": 34.1,
         "hit": [
           "T:临时用电",
-          "t:用电",
-          "t:临时"
+          "t:临时",
+          "t:用电"
         ],
         "chars": 500,
         "truncated": false,
@@ -24049,8 +24049,8 @@ window.LOCATED_SEED = [
         "match_score": 34.1,
         "hit": [
           "T:临时用电",
-          "t:用电",
-          "t:临时"
+          "t:临时",
+          "t:用电"
         ],
         "chars": 449,
         "truncated": false,
@@ -24074,8 +24074,8 @@ window.LOCATED_SEED = [
         "match_score": 34.1,
         "hit": [
           "T:临时用电",
-          "t:用电",
-          "t:临时"
+          "t:临时",
+          "t:用电"
         ],
         "chars": 67,
         "truncated": false,
@@ -24099,8 +24099,8 @@ window.LOCATED_SEED = [
         "match_score": 34,
         "hit": [
           "T:临时用水",
-          "t:用水",
-          "t:临时"
+          "t:临时",
+          "t:用水"
         ],
         "chars": 156,
         "truncated": false,
@@ -24481,8 +24481,8 @@ window.LOCATED_SEED = [
         ],
         "match_score": 23.7,
         "hit": [
-          "t:第三方",
-          "t:服务"
+          "t:服务",
+          "t:第三方"
         ],
         "chars": 279,
         "truncated": false,
@@ -24507,8 +24507,8 @@ window.LOCATED_SEED = [
         ],
         "match_score": 23.7,
         "hit": [
-          "t:第三方",
-          "t:服务"
+          "t:服务",
+          "t:第三方"
         ],
         "chars": 1408,
         "truncated": false,
@@ -24533,8 +24533,8 @@ window.LOCATED_SEED = [
         ],
         "match_score": 23.7,
         "hit": [
-          "t:第三方",
-          "t:服务"
+          "t:服务",
+          "t:第三方"
         ],
         "chars": 272,
         "truncated": false,
@@ -24559,8 +24559,8 @@ window.LOCATED_SEED = [
         ],
         "match_score": 23.7,
         "hit": [
-          "t:第三方",
-          "t:服务"
+          "t:服务",
+          "t:第三方"
         ],
         "chars": 606,
         "truncated": true,
@@ -24600,8 +24600,8 @@ window.LOCATED_SEED = [
         "match_score": 43.2,
         "hit": [
           "T:优化建议",
-          "t:优化",
-          "t:建议"
+          "t:建议",
+          "t:优化"
         ],
         "chars": 23,
         "truncated": false,
@@ -24627,8 +24627,8 @@ window.LOCATED_SEED = [
         "match_score": 43.2,
         "hit": [
           "T:优化建议",
-          "t:优化",
-          "t:建议"
+          "t:建议",
+          "t:优化"
         ],
         "chars": 27,
         "truncated": false,
@@ -24654,8 +24654,8 @@ window.LOCATED_SEED = [
         "match_score": 43.2,
         "hit": [
           "T:优化建议",
-          "t:优化",
-          "t:建议"
+          "t:建议",
+          "t:优化"
         ],
         "chars": 90,
         "truncated": false,
@@ -24681,8 +24681,8 @@ window.LOCATED_SEED = [
         "match_score": 43.2,
         "hit": [
           "T:优化建议",
-          "t:优化",
-          "t:建议"
+          "t:建议",
+          "t:优化"
         ],
         "chars": 34,
         "truncated": false,
@@ -24722,8 +24722,8 @@ window.LOCATED_SEED = [
         "match_score": 21.3,
         "hit": [
           "T:设计进度",
-          "t:设计",
-          "t:进度"
+          "t:进度",
+          "t:设计"
         ],
         "chars": 195,
         "truncated": false,
@@ -24834,8 +24834,8 @@ window.LOCATED_SEED = [
         "match_score": 46.1,
         "hit": [
           "T:变更签证",
-          "t:变更",
-          "t:签证"
+          "t:签证",
+          "t:变更"
         ],
         "chars": 375,
         "truncated": false,
@@ -24861,8 +24861,8 @@ window.LOCATED_SEED = [
         "match_score": 46.1,
         "hit": [
           "T:变更签证",
-          "t:变更",
-          "t:签证"
+          "t:签证",
+          "t:变更"
         ],
         "chars": 648,
         "truncated": false,
@@ -24888,8 +24888,8 @@ window.LOCATED_SEED = [
         "match_score": 46.1,
         "hit": [
           "T:变更签证",
-          "t:变更",
-          "t:签证"
+          "t:签证",
+          "t:变更"
         ],
         "chars": 604,
         "truncated": false,
@@ -24915,8 +24915,8 @@ window.LOCATED_SEED = [
         "match_score": 46.1,
         "hit": [
           "T:变更签证",
-          "t:变更",
-          "t:签证"
+          "t:签证",
+          "t:变更"
         ],
         "chars": 248,
         "truncated": false,
@@ -25680,8 +25680,8 @@ window.LOCATED_SEED = [
         "match_score": 35.4,
         "hit": [
           "T:设计周期",
-          "t:设计",
-          "t:周期"
+          "t:周期",
+          "t:设计"
         ],
         "chars": 168,
         "truncated": false,
@@ -25707,8 +25707,8 @@ window.LOCATED_SEED = [
         "match_score": 35.4,
         "hit": [
           "T:设计周期",
-          "t:设计",
-          "t:周期"
+          "t:周期",
+          "t:设计"
         ],
         "chars": 238,
         "truncated": false,
@@ -25734,8 +25734,8 @@ window.LOCATED_SEED = [
         "match_score": 35.4,
         "hit": [
           "T:设计周期",
-          "t:设计",
-          "t:周期"
+          "t:周期",
+          "t:设计"
         ],
         "chars": 218,
         "truncated": false,
@@ -25761,8 +25761,8 @@ window.LOCATED_SEED = [
         "match_score": 35.4,
         "hit": [
           "T:设计周期",
-          "t:设计",
-          "t:周期"
+          "t:周期",
+          "t:设计"
         ],
         "chars": 203,
         "truncated": false,
@@ -25802,8 +25802,8 @@ window.LOCATED_SEED = [
         "match_score": 40,
         "hit": [
           "T:测量放线",
-          "t:测量",
-          "t:放线"
+          "t:放线",
+          "t:测量"
         ],
         "chars": 55,
         "truncated": false,
@@ -25829,8 +25829,8 @@ window.LOCATED_SEED = [
         "match_score": 40,
         "hit": [
           "T:测量放线",
-          "t:测量",
-          "t:放线"
+          "t:放线",
+          "t:测量"
         ],
         "chars": 50,
         "truncated": false,
@@ -25856,8 +25856,8 @@ window.LOCATED_SEED = [
         "match_score": 40,
         "hit": [
           "T:测量放线",
-          "t:测量",
-          "t:放线"
+          "t:放线",
+          "t:测量"
         ],
         "chars": 22,
         "truncated": false,
@@ -25883,8 +25883,8 @@ window.LOCATED_SEED = [
         "match_score": 40,
         "hit": [
           "T:测量放线",
-          "t:测量",
-          "t:放线"
+          "t:放线",
+          "t:测量"
         ],
         "chars": 35,
         "truncated": false,
@@ -26042,8 +26042,8 @@ window.LOCATED_SEED = [
         "match_score": 34.4,
         "hit": [
           "T:建筑垃圾",
-          "t:建筑",
-          "t:垃圾"
+          "t:垃圾",
+          "t:建筑"
         ],
         "chars": 502,
         "truncated": false,
@@ -26069,8 +26069,8 @@ window.LOCATED_SEED = [
         "match_score": 34.4,
         "hit": [
           "T:建筑垃圾",
-          "t:建筑",
-          "t:垃圾"
+          "t:垃圾",
+          "t:建筑"
         ],
         "chars": 97,
         "truncated": false,
@@ -26096,8 +26096,8 @@ window.LOCATED_SEED = [
         "match_score": 34.4,
         "hit": [
           "T:建筑垃圾",
-          "t:建筑",
-          "t:垃圾"
+          "t:垃圾",
+          "t:建筑"
         ],
         "chars": 114,
         "truncated": false,
@@ -26123,8 +26123,8 @@ window.LOCATED_SEED = [
         "match_score": 34.4,
         "hit": [
           "T:建筑垃圾",
-          "t:建筑",
-          "t:垃圾"
+          "t:垃圾",
+          "t:建筑"
         ],
         "chars": 397,
         "truncated": false,
@@ -26522,8 +26522,8 @@ window.LOCATED_SEED = [
         "match_score": 49.8,
         "hit": [
           "T:限额领料",
-          "t:限额",
-          "t:领料"
+          "t:领料",
+          "t:限额"
         ],
         "chars": 24,
         "truncated": false,
@@ -26549,8 +26549,8 @@ window.LOCATED_SEED = [
         "match_score": 49.8,
         "hit": [
           "T:限额领料",
-          "t:限额",
-          "t:领料"
+          "t:领料",
+          "t:限额"
         ],
         "chars": 30,
         "truncated": false,
@@ -26576,8 +26576,8 @@ window.LOCATED_SEED = [
         "match_score": 49.8,
         "hit": [
           "T:限额领料",
-          "t:限额",
-          "t:领料"
+          "t:领料",
+          "t:限额"
         ],
         "chars": 180,
         "truncated": false,
@@ -26603,8 +26603,8 @@ window.LOCATED_SEED = [
         "match_score": 49.8,
         "hit": [
           "T:限额领料",
-          "t:限额",
-          "t:领料"
+          "t:领料",
+          "t:限额"
         ],
         "chars": 280,
         "truncated": false,

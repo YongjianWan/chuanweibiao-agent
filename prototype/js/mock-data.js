@@ -1,17 +1,17 @@
 (function () {
   const bidders = [
     { id: "zhongye", name: "中冶建工集团有限公司8010856", short: "中冶建工", pdfCount: 20, chars: 535000 },
-    { id: "zhongjian1", name: "中国建筑一局（集团）有限公司8004216", short: "中建一局", pdfCount: 20, chars: 742000 },
-    { id: "jinan1", name: "济南一建集团有限公司8008754", short: "济南一建", pdfCount: 20, chars: 412000 },
-    { id: "zhongjian2", name: "中国建筑第二工程局有限公司8001968", short: "中建二局", pdfCount: 20, chars: 861000 },
+    { id: "zhongjian1", name: "中国建筑一局（集团）有限公司8009256", short: "中建一局", pdfCount: 20, chars: 742000 },
+    { id: "zhongjian7", name: "中国建筑第七工程局有限公司8015401", short: "中建七局", pdfCount: 20, chars: 812000 },
+    { id: "zhongjian2", name: "中国建筑第二工程局有限公司8008588", short: "中建二局", pdfCount: 20, chars: 861000 },
     { id: "zhongjian5", name: "中国建筑第五工程局有限公司8002423", short: "中建五局", pdfCount: 20, chars: 602000 },
-    { id: "zhongtie", name: "中铁建工集团有限公司8010219", short: "中铁建工", pdfCount: 20, chars: 1072000 },
-    { id: "shandong3", name: "山东三箭建设工程股份有限公司8003180", short: "山东三箭", pdfCount: 20, chars: 692000 },
-    { id: "qingjian", name: "青建集团股份公司8006620", short: "青建集团", pdfCount: 20, chars: 812000 },
-    { id: "tianqi", name: "天齐置业集团股份有限公司8007234", short: "天齐集团", pdfCount: 20, chars: 295000 },
-    { id: "zhongqing", name: "中青建安建设集团有限公司8005591", short: "中青建安", pdfCount: 20, chars: 954000 },
-    { id: "dezhou", name: "德州建设集团有限公司8007782", short: "德州建设", pdfCount: 20, chars: 1233000 },
-    { id: "shandongluqiao", name: "山东路桥集团有限公司8009083", short: "山东路桥", pdfCount: 20, chars: 2260000 }
+    { id: "zhongjian6", name: "中国建筑第六工程局有限公司8002534", short: "中建六局", pdfCount: 20, chars: 812000 },
+    { id: "zhongcheng", name: "中诚投建工集团有限公司1036507", short: "中诚投", pdfCount: 20, chars: 295000 },
+    { id: "zhongtie21", name: "中铁二十一局集团有限公司8009331", short: "中铁二十一局", pdfCount: 20, chars: 954000 },
+    { id: "zhongtie", name: "中铁建工集团有限公司8005815", short: "中铁建工", pdfCount: 20, chars: 1072000 },
+    { id: "shandong3", name: "山东三箭建设工程股份有限公司8007786", short: "山东三箭", pdfCount: 20, chars: 692000 },
+    { id: "shandongpingan", name: "山东平安建设集团有限公司8006862", short: "山东平安", pdfCount: 20, chars: 1233000 },
+    { id: "jinan1", name: "济南一建集团有限公司8008754", short: "济南一建", pdfCount: 20, chars: 412000 }
   ];
 
   const itemDefs = [
@@ -896,7 +896,7 @@
         missReason = "not_found";
       }
 
-      if (status === "rated" && bidder.id === "dezhou" && item.id === "T-16") {
+      if (status === "rated" && bidder.id === "shandongpingan" && item.id === "T-16") {
         tier = null;
         rate = 0;
         missReason = "no_file";
