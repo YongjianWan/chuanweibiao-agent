@@ -38,11 +38,22 @@ def 普通语料(n, prefix="2", guid="bbb", file="其他BBB.pdf"):
 # ── budget 按分值分配 ───────────────────────────────────────────────────
 
 def test_budget按分值分配():
-    assert S.calc_budget(20.0) == 6000   # 触上限
-    assert S.calc_budget(4.0) == 2280    # 3000*19*4/100
-    assert S.calc_budget(3.0) == 1710    # 3000*19*3/100
-    assert S.calc_budget(2.0) == 1500    # 1140 被下限 1500 兜住
-    assert S.calc_budget(100.0) == 6000  # 超上限钳到 6000
+    # 基准 4500 / 上限 9000（2026-08-20 由 T9 实测标定，见 docs/data-contract.md §5）
+    assert S.calc_budget(20.0) == 9000   # 17100 触上限
+    assert S.calc_budget(8.0) == 6840    # 4500*19*8/100
+    assert S.calc_budget(4.0) == 3420    # 4500*19*4/100
+    assert S.calc_budget(3.0) == 2565    # 4500*19*3/100
+    assert S.calc_budget(2.0) == 1710    # 4500*19*2/100，不再触下限
+    assert S.calc_budget(100.0) == 9000  # 超上限钳到 9000
+
+
+def test_budget的上限必须高于次高分值项的原始值():
+    """防回归：基准调大而上限不动时，8 分项与 20 分项会一起顶到上限，
+
+    「按分值分配」静默失效——20 分项判错一档的代价是 3 分项的 6 倍多，
+    却拿到和 8 分项相同的证据量。见 docs/data-contract.md §5。
+    """
+    assert S.calc_budget(20.0) > S.calc_budget(8.0) > S.calc_budget(4.0)
 
 
 # ── 检索范围收窄到单 PDF ─────────────────────────────────────────────────

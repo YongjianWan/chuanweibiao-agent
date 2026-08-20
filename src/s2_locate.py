@@ -241,11 +241,20 @@ def load_scoring_table(path):
 
 
 def calc_budget(max_score, total_score=100.0, n_items=19,
-                base_budget=3000, lo=1500, hi=6000):
+                base_budget=4500, lo=1500, hi=9000):
     """按分值分配预算（data-contract.md §5）。
 
-    budget_i = clamp(基准预算 × 项数 × max_score_i / 总分, 1500, 6000)
-    20 分项触上限 6000，4 分项 2280，3 分项 1710。
+    budget_i = clamp(基准预算 × 项数 × max_score_i / 总分, 1500, 9000)
+    基准 4500 时：20 分项触上限 9000，8 分项 6840，4 分项 3420，3 分项 2565，2 分项 1710。
+
+    基准由 3000 上调至 4500、上限由 6000 上调至 9000（2026-08-20）。依据：基准 3000
+    时 201/228 个证据包顶满 budget、200/228 含被截断的块，即证据是被切了尾巴而不是
+    刚好装下；而端点实测 12 家串行约 7.5 分钟、50 分钟预算富余约 6.7 倍，算力有富余
+    可以换精度（README §6 阶段二「budget 调优」）。
+
+    上限同步上调的原因：基准 4500 而上限仍为 6000 时，4 个 8 分项（raw 6840）与
+    20 分项（raw 17100）会一起被压到 6000，「按分值分配」失效——20 分项判错一档的
+    代价是 3 分项的 6 倍多，却拿到和 8 分项相同的证据量。上限 9000 后梯度恢复。
     """
     raw = base_budget * n_items * float(max_score) / total_score
     return max(lo, min(hi, int(raw)))
