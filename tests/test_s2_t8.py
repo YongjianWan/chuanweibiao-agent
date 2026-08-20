@@ -119,6 +119,8 @@ def test_跨换行锚点不误判为DF0():
         "证据只能来自匹配 GUID 的那一个 PDF"
     raw = next(s for s in sections if s["id"] == pkg.picked[0]["section_id"])["text"]
     assert "关键路径分析" not in raw, "原始 text 上短语确实被折行打断，匹配必须去换行"
+    assert "关键路径分析" in raw.replace("\r", "").replace("\n", ""), \
+        "去换行副本上应能命中，且匹配同时处理 \\r 与 \\n"
 
 
 # ── 输出字段齐全 ────────────────────────────────────────────────────────
