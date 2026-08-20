@@ -715,7 +715,9 @@
 
   function resultForDisplay(bidder, item, completedKeys = completedReviewKeySet()) {
     if (!isReviewCompleted(bidder.id, item.id, completedKeys)) return null;
-    const result = resultForDisplay(bidder, item, completedKeys);
+    // 取原始评审结果；这里曾误写成调用自身，导致 Maximum call stack size exceeded，
+    // 页面⑤（单项详情）因此完全打不开。修于 2026-08-21。
+    const result = resultBy(bidder.id, item.id);
     const reportScore = state.run.finished ? reportScoreFor(bidder, item) : undefined;
     if (reportScore === undefined) return result;
     if (reportScore === null) {
@@ -1530,6 +1532,8 @@
     const itemId = query.get("item") || "T-02";
     const bidder = bidderById(bidderId) || DATA.bidders[0];
     const item = itemById(itemId) || scoringItems()[1];
+    // completedKeys 此前未定义就被使用，抛 ReferenceError 导致本页不渲染。修于 2026-08-21。
+    const completedKeys = completedReviewKeySet();
     const result = resultForDisplay(bidder, item, completedKeys);
     const evidence = evidenceBy(bidder.id, item.id) || {};
 
