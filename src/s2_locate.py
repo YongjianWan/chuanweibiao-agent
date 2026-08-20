@@ -73,7 +73,7 @@ def score_section(sec, phrases, terms, idf, df, n):
     return s, hit
 
 
-def anchor(terms, df, n, pool_text=None):
+def anchor(terms, df, n):
     """该评审点的领域锚点 = 最罕见的那一个词，也就是最能区分它的词。
 
     取最罕见的一个而不是一批：取一批再 any() 命中，等于最通用的那个词说了算，闸门失效。
@@ -83,34 +83,13 @@ def anchor(terms, df, n, pool_text=None):
     退而求其次挑个次罕见的词接着找，只会放行一堆无关内容——实测中「平面布置」DF=0，
     换成「布置」（DF=9，出现在"布置任务"之类）后，命中了完全无关的验收交付章节。
 
-    GUID 绑定后检索池收窄到单个 PDF，全局最罕见的词可能不在当前池内。
-    此时允许换成当前池内存在的罕见词（仍须满足 ANCHOR_DF_RATIO），否则该池内
-    确实找不到该主题的任何章节。DF=0 的词仍然不换，守住「概念不存在」的最强信号。
-
     评审点用词与标书用词不同（「四新技术」对「新技术、新工艺」）属于同义词问题，
     解法是在映射配置里补同义词，不是让检索去猜。
 
     名称全是通用词的评审点没有锚点（返回 None），此时不设闸。
     """
     cands = [t for t in terms if df.get(t, 0) <= n * ANCHOR_DF_RATIO]
-    if not cands:
-        return None
-
-    rarest = min(cands, key=lambda x: df.get(x, 0))
-
-    # GUID 绑定路径下 pool_text 是当前 PDF 的全部文本。
-    # 若全局最罕见词不在当前池内，但在全局 DF>0（说明投标人写过这个概念，
-    # 只是用词落在当前池的其他罕见词上），则改用池内存在的罕见词，避免误杀。
-    if (
-        pool_text is not None
-        and df.get(rarest, 0) > 0
-        and rarest not in pool_text
-    ):
-        pool_cands = [t for t in cands if df.get(t, 0) > 0 and t in pool_text]
-        if pool_cands:
-            return min(pool_cands, key=lambda x: df.get(x, 0))
-
-    return rarest
+    return min(cands, key=lambda x: df.get(x, 0)) if cands else None
 
 
 def _rank(sections, phrases, terms, idf, df, n=None):
@@ -122,10 +101,7 @@ def _rank(sections, phrases, terms, idf, df, n=None):
     通用词过滤和锚点闸门一起失效。
     """
     n = len(sections) if n is None else n
-    pool_text = " ".join(
-        sec["text"] + " " + " ".join(sec["path"]) for sec in sections
-    )
-    anc = anchor(terms, df, n, pool_text)
+    anc = anchor(terms, df, n)
     if anc is not None and df.get(anc, 0) == 0:
         return []          # 该主题在本文件中不存在，直接未命中
     out = []
