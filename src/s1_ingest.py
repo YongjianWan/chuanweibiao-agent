@@ -20,6 +20,7 @@ import re
 import shutil
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import docx
@@ -376,6 +377,40 @@ def ingest_one(src: Path, out_path: Path):
     return all_sections
 
 
+def _ensure_manifest(root: Path, data_dir: Path, summary):
+    """没有 manifest.json 就按本次入库结果生成一份。
+
+    下游的 scripts/merge_sections.py 与 src/s2_locate.py 都要求项目目录有 manifest.json，
+    但在 2026-08-20 之前没有任何脚本产出它——`data/projects/jiyang-epc/manifest.json`
+    是 8/19 手工写的。后果是换一个新的项目目录跑 S1，merge 那一步必然报
+    「项目目录缺少 manifest.json」。S1 是唯一天然知道「这个项目有哪些投标人」的环节，
+    所以由它补上。
+
+    **已存在则原样保留，不覆盖**：手写的那份带 `note` / `created_at` 等字段，
+    覆盖掉等于丢信息。"""
+    manifest_path = data_dir / "manifest.json"
+    if manifest_path.exists():
+        return
+    manifest = {
+        "project": root.name,
+        "project_slug": data_dir.name,
+        "data_schema_version": "1.0",
+        "created_at": datetime.now().strftime("%Y-%m-%d"),
+        "source_dir": str(root).replace("\\", "/"),
+        "note": "由 src/s1_ingest.py --project 自动生成。sections/ 与 sections_all.json "
+                "是投标文件全文衍生物，不入 git，按 data/README.md 的流程重建。",
+        "bidders": [
+            {"id": bidder, "name": bidder, "sections": n, "chars": chars}
+            for bidder, n, chars in summary
+        ],
+    }
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print()
+    print("已生成 %s（%d 家）" % (manifest_path, len(summary)))
+
+
 def ingest_project(root: Path, data_dir: Path):
     """按家分别入库：<data_dir>/sections/<bidder>/sections.json，每家各跑一次 S1。"""
     bidders = _bidder_dirs(root)
@@ -393,6 +428,8 @@ def ingest_project(root: Path, data_dir: Path):
         print("===== %s =====" % bidder)
         secs = ingest_one(bidder_dir, out_path)
         summary.append((bidder, len(secs), sum(s["char_len"] for s in secs)))
+
+    _ensure_manifest(root, data_dir, summary)
 
     print()
     print("=" * 60)
