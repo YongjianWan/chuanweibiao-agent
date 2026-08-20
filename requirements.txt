@@ -3,6 +3,10 @@ pyyaml
 jieba
 pymupdf
 
+# scripts/export_xlsx.py：把 S4 报告导成 Excel 交给甲方（README §10.4）。
+# 只有导出这一步用得上，S0~S4 主流程不依赖它。
+openpyxl
+
 # 仅 Windows：把老的二进制 .doc 转成 .docx（src/s1_ingest.py 的 ensure_docx）。
 # 装了 Word 或 WPS 才有用。没有它就退回 LibreOffice 的 soffice 命令行。
 pywin32; sys_platform == "win32"
