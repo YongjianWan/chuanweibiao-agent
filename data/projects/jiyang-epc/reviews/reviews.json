@@ -1,6 +1,6 @@
 {
   "project": "济阳区实验高级中学项目工程总承包（EPC）",
-  "generated_at": "2026-08-20T18:07:36+08:00",
+  "generated_at": "2026-08-20T13:20:54.187Z",
   "model": "agent-14748c8d",
   "review_results": [
     {
@@ -6801,9 +6801,11 @@
     }
   ],
   "perf": {
-    "calls": 4,
-    "retries": 0,
-    "completed": 4,
-    "errored": 0
+    "calls": 228,
+    "retries": 163,
+    "completed": 228,
+    "errored": 0,
+    "wall_clock_sec": 186,
+    "concurrency": 12
   }
 }

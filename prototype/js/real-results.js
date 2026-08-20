@@ -3,7 +3,7 @@ window.REAL_RESULTS = {
   "source_reviews_json": "data/projects/jiyang-epc/reviews/reviews.json",
   "source_report_json": "data/out/report/report.json",
   "generated_by": "scripts/build-prototype-mock.js",
-  "generated_at": "2026-08-20T18:32:50+08:00",
+  "generated_at": "2026-08-20T21:22:48+08:00",
   "model": "agent-14748c8d",
   "reviewResults": [
     {
@@ -7033,7 +7033,7 @@ window.REAL_RESULTS = {
   ],
   "reportData": {
     "project": "济阳区实验高级中学项目工程总承包（EPC）",
-    "generated_at": "2026-08-20T18:32:50+08:00",
+    "generated_at": "2026-08-20T21:22:48+08:00",
     "bidders": [
       "中冶建工集团有限公司8010856",
       "中国建筑一局（集团）有限公司8009256",
@@ -14816,9 +14816,9 @@ window.REAL_RESULTS = {
     ],
     "expert_reviews": [],
     "perf": {
-      "wall_clock_sec": null,
-      "wall_clock_note": "未采集（调度器未落盘墙钟耗时；逐项 latency 之和为 1446.4 秒，并发下实际墙钟低于该值）",
-      "concurrency": "未采集",
+      "wall_clock_sec": 186,
+      "wall_clock_note": "调度器落盘墙钟耗时：186 秒",
+      "concurrency": 12,
       "calls": 228,
       "retries": 163,
       "in_tokens": 2048058,
