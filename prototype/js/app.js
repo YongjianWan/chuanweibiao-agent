@@ -5,7 +5,7 @@
   const TOTAL_REVIEWS = DATA.bidders.length * DATA.scoringTable.items.length;
   const LOW_CONFIDENCE_THRESHOLD = DATA.lowConfidenceThreshold || 0.85;
   const stageNames = ["PDF 入库", "证据定位", "逐项评审", "结果汇总"];
-  const STORAGE_KEY = "technical-review-state-v3";
+  const STORAGE_KEY = "technical-review-state-v4";
   const LOG_BOTTOM_GAP = 16;
   const BIDDER_RECOGNITION_MS = 420;
   const REVIEW_EVENT_KEYS = DATA.runEvents
@@ -58,6 +58,60 @@
     };
   }
 
+  function createScoringDraft() {
+    return {
+      items: DATA.scoringTable.items.map((item) => ({
+        ...item,
+        criteria: typeof item.criteria === "string" ? item.criteria : "",
+        tiers: item.tiers.map((tier) => ({
+          ...tier,
+          desc: typeof tier.desc === "string" ? tier.desc : ""
+        }))
+      })),
+      rules: DATA.scoringTable.rules.slice()
+    };
+  }
+
+  function hydrateScoringDraft(saved) {
+    const draft = createScoringDraft();
+    if (!saved || typeof saved !== "object") return draft;
+
+    if (Array.isArray(saved.rules) && saved.rules.length) {
+      draft.rules = saved.rules.map((rule) => String(rule));
+    }
+
+    if (Array.isArray(saved.items)) {
+      draft.items = draft.items.map((item) => {
+        const savedItem = saved.items.find((row) => row && row.id === item.id);
+        if (!savedItem) return item;
+        return {
+          ...item,
+          name: typeof savedItem.name === "string" ? savedItem.name : item.name,
+          max_score: finiteNumber(savedItem.max_score, item.max_score),
+          criteria: typeof item.criteria === "string" && item.criteria
+            ? item.criteria
+            : typeof savedItem.criteria === "string"
+              ? savedItem.criteria
+              : typeof savedItem.tier_quote === "string"
+                ? savedItem.tier_quote
+                : "",
+          tiers: item.tiers.map((tier, index) => {
+            const savedTier = Array.isArray(savedItem.tiers) ? savedItem.tiers[index] : null;
+            if (!savedTier) return tier;
+            return {
+              ...tier,
+              min: finiteNumber(savedTier.min, tier.min),
+              max: finiteNumber(savedTier.max, tier.max),
+              desc: typeof savedTier.desc === "string" ? savedTier.desc : ""
+            };
+          })
+        };
+      });
+    }
+
+    return draft;
+  }
+
   function totalBidderPdfCount() {
     return DATA.bidders.reduce((sum, bidder) => sum + bidder.pdfCount, 0);
   }
@@ -82,6 +136,7 @@
     state.run = createRunState();
     state.upload = createUploadState();
     state.reviewOverrides = {};
+    state.expertReviews = [];
     state.activeSectionId = "";
     state.showScoringReference = false;
     saveState();
@@ -92,6 +147,8 @@
       run: createRunState(),
       upload: createUploadState(),
       reviewOverrides: {},
+      expertReviews: [],
+      scoringDraft: createScoringDraft(),
       projectSummary: DATA.projectSummary,
       activeSectionId: "",
       showScoringReference: false
@@ -106,6 +163,8 @@
         run,
         upload: hydrateUploadState(saved.upload, run),
         reviewOverrides: saved.reviewOverrides && typeof saved.reviewOverrides === "object" ? saved.reviewOverrides : {},
+        expertReviews: Array.isArray(saved.expertReviews) ? saved.expertReviews : [],
+        scoringDraft: hydrateScoringDraft(saved.scoringDraft),
         projectSummary: typeof saved.projectSummary === "string" ? saved.projectSummary : DATA.projectSummary,
         activeSectionId: "",
         showScoringReference: false
@@ -205,6 +264,8 @@
         run,
         upload,
         reviewOverrides: state.reviewOverrides,
+        expertReviews: state.expertReviews,
+        scoringDraft: state.scoringDraft,
         projectSummary: state.projectSummary
       }));
     } catch (error) {
@@ -259,8 +320,26 @@
     location.hash = hash;
   }
 
+  function scoringItems() {
+    if (!state.scoringDraft) {
+      state.scoringDraft = createScoringDraft();
+    }
+    return state.scoringDraft && Array.isArray(state.scoringDraft.items)
+      ? state.scoringDraft.items
+      : DATA.scoringTable.items;
+  }
+
+  function scoringRules() {
+    if (!state.scoringDraft) {
+      state.scoringDraft = createScoringDraft();
+    }
+    return state.scoringDraft && Array.isArray(state.scoringDraft.rules)
+      ? state.scoringDraft.rules
+      : DATA.scoringTable.rules;
+  }
+
   function itemById(id) {
-    return DATA.scoringTable.items.find((item) => item.id === id);
+    return scoringItems().find((item) => item.id === id);
   }
 
   function bidderById(id) {
@@ -417,6 +496,7 @@
 
   function renderCreate() {
     const upload = state.upload;
+    const items = scoringItems();
     const recognizedBidders = DATA.bidders.slice(0, upload.recognizedCount);
     const recognizedChars = recognizedBidders.reduce((sum, bidder) => sum + bidder.chars, 0);
     const expectedFiles = totalBidderPdfCount();
@@ -440,7 +520,7 @@
         </section>
 
         <section class="summary-strip" aria-label="任务概览">
-          ${metric("评分规则", "已加载", DATA.scoringTable.items.length + " 个评分项 / 总分 " + totalScore().toFixed(1) + " 分")}
+          ${metric("评分规则", "已加载", items.length + " 个评分项 / 总分 " + totalScore().toFixed(1) + " 分")}
           ${metric("投标人", recognizedBidders.length + " / " + DATA.bidders.length + " 家", uploadStatus)}
           ${metric("逐项评审", TOTAL_REVIEWS + " 项", "12 家投标人 × 19 个评分项")}
           ${metric("语料体量", recognizedBidders.length ? chars(recognizedChars) : "待解析", shownFiles ? shownFiles + " 个 PDF" : "等待文件选择")}
@@ -464,7 +544,7 @@
                 </div>
                 <div class="field">
                   <label>评分规则状态</label>
-                  <div class="select-like">已加载 · ${DATA.scoringTable.items.length} 个评分项 · 总分 ${totalScore().toFixed(1)} 分</div>
+                  <div class="select-like">已加载 · ${items.length} 个评分项 · 总分 ${totalScore().toFixed(1)} 分</div>
                 </div>
                 <div class="field">
                   <label>投标文件</label>
@@ -519,7 +599,7 @@
   function renderConfirm() {
     const route = getRoute();
     const bindingIssueDemo = DEMO_MODE && route.query.get("binding") === "issue";
-    const confirmItems = DATA.scoringTable.items.map((item) => (
+    const confirmItems = scoringItems().map((item) => (
       bindingIssueDemo && item.id === "T-15"
         ? { ...item, bound_count: item.expected_bidders - 1 }
         : item
@@ -546,7 +626,7 @@
         </section>
 
         <section class="summary-strip">
-          ${metric("评分项", DATA.scoringTable.items.length + " 项", "技术标评分项")}
+          ${metric("评分项", confirmItems.length + " 项", "技术标评分项")}
           ${metric("总分", scoringTotal.toFixed(1) + " 分", scoringTotalNote)}
           ${metric("投标文件绑定", mismatch ? "存在异常" : "全部匹配", mismatch ? mismatchItem.id + " 为 " + mismatchItem.bound_count + "/" + mismatchItem.expected_bidders : "19 项均为 12/12")}
           ${metric("现场计时", `<span data-run-elapsed>${state.run.startedAt ? formatDuration(elapsed) : "未开始"}</span>`, "页面①下一步：解析起算")}
@@ -558,7 +638,7 @@
         <section class="layout-grid" style="margin-top: 18px;">
           <div class="panel">
             <div class="panel-header">
-              <h3 class="panel-title">评分表核对（只读）</h3>
+              <h3 class="panel-title">评分表核对（可编辑）</h3>
               <span class="badge ${mismatch ? "danger" : "success"}">${mismatch ? "存在缺项" : "可开始"}</span>
             </div>
             <div class="panel-body">
@@ -577,9 +657,13 @@
                     ${confirmItems.map((item, index) => `
                       <tr>
                         <td>${index + 1}</td>
-                        <td>${html(item.name)}</td>
-                        <td>${item.max_score.toFixed(1)}</td>
-                        <td>${tierSummary(item)}</td>
+                        <td>
+                          <input class="input table-input" value="${html(item.name)}" data-score-item="${html(item.id)}" data-score-field="name">
+                        </td>
+                        <td>
+                          <input class="input table-input number-input" type="number" min="0" step="0.1" value="${item.max_score}" data-score-item="${html(item.id)}" data-score-field="max_score">
+                        </td>
+                        <td>${renderTierEditors(item)}</td>
                         <td><span class="badge ${item.bound_count === item.expected_bidders ? "success" : "danger"}">${item.bound_count}/${item.expected_bidders} 家已匹配</span></td>
                       </tr>
                     `).join("")}
@@ -595,9 +679,12 @@
               <span class="badge primary">注入评审</span>
             </div>
             <div class="panel-body">
-              <ul class="rule-list">
-                ${DATA.scoringTable.rules.map((rule) => `
-                  <li><span class="check-dot">✓</span><span>${html(rule)}</span></li>
+              <ul class="rule-list editable-rules">
+                ${scoringRules().map((rule, index) => `
+                  <li>
+                    <span class="check-dot">✓</span>
+                    <input class="input" value="${html(rule)}" data-rule-index="${index}">
+                  </li>
                 `).join("")}
               </ul>
               <div class="field" style="margin-top: 18px;">
@@ -630,7 +717,7 @@
                 <tr>
                   <th>评分项</th>
                   <th>满分</th>
-                  <th>招标文件区间</th>
+                  <th>招标文件评审标准原文</th>
                 </tr>
               </thead>
               <tbody>
@@ -638,7 +725,7 @@
                   <tr>
                     <td><strong>${html(item.name)}</strong></td>
                     <td>${item.max_score.toFixed(1)}</td>
-                    <td>${html(item.tier_quote || tierSummary(item))}</td>
+                    <td>${html(item.criteria || tierSummary(item))}</td>
                   </tr>
                 `).join("")}
               </tbody>
@@ -646,6 +733,23 @@
           </div>
         </div>
       </section>
+    `;
+  }
+
+  function renderTierEditors(item) {
+    return `
+      <div class="tier-edit-list">
+        <div class="tier-edit-help">招标文件仅提供 item 级评审标准原文；下方档位说明为评审专家补充，非招标文件原文，可留空。</div>
+        ${item.tiers.map((tier, index) => `
+          <div class="tier-edit-row">
+            <span class="tier-edit-name">${html(tier.tier)}</span>
+            <input class="input tier-number" type="number" step="0.1" value="${tier.min}" data-score-item="${html(item.id)}" data-tier-index="${index}" data-tier-field="min" aria-label="${html(item.name + tier.tier)}下限">
+            <span class="muted">-</span>
+            <input class="input tier-number" type="number" step="0.1" value="${tier.max}" data-score-item="${html(item.id)}" data-tier-index="${index}" data-tier-field="max" aria-label="${html(item.name + tier.tier)}上限">
+            <input class="input tier-desc" value="${html(tier.desc)}" placeholder="专家补充说明，可留空" data-score-item="${html(item.id)}" data-tier-index="${index}" data-tier-field="desc" aria-label="${html(item.name + tier.tier)}专家补充说明">
+          </div>
+        `).join("")}
+      </div>
     `;
   }
 
@@ -670,7 +774,6 @@
           </div>
           <div class="toolbar">
             <button class="btn" data-toggle-run>${run.paused ? "继续" : "暂停"}</button>
-            <button class="btn" data-reset-run>${html(modeText("重置流程", "重置演示"))}</button>
             ${resultButton}
           </div>
         </section>
@@ -737,6 +840,9 @@
                 <strong>未命中与未评定</strong>
                 <span class="muted">0 分表示投标文件未写；“—”表示系统重试后仍未能给出判断，两者不会合并。</span>
               </div>
+              <div class="secondary-actions">
+                <button class="btn ghost" data-reset-run>${html(modeText("重置流程", "重置演示"))}</button>
+              </div>
             </div>
           </aside>
         </section>
@@ -770,14 +876,17 @@
     const canExportReport = Boolean(state.run.finished);
     const visibleReviewFlags = completedReviewResults()
       .filter((row) => row.status === "rated" && row.score !== 0 && row.confidence < LOW_CONFIDENCE_THRESHOLD);
-    const rows = DATA.scoringTable.items.map((item) => {
+    const visibleAuditFlags = (DATA.reportData.audit || [])
+      .filter((row) => scoringItems().some((item) => item.id === row.item_id))
+      .filter((row) => DATA.bidders.every((bidder) => isReviewCompleted(bidder.id, row.item_id, completedKeys)));
+    const rows = scoringItems().map((item) => {
       const allCompletedForItem = DATA.bidders.every((bidder) => isReviewCompleted(bidder.id, item.id, completedKeys));
-      const allZero = allCompletedForItem && DATA.bidders.every((bidder) => effectiveScoreFor(bidder.id, item.id) === 0);
+      const audit = allCompletedForItem ? auditByItem(item.id) : null;
       return `
-        <tr class="${allZero ? "row-warning" : ""}">
+        <tr class="${audit ? "row-warning" : ""}">
           <td class="sticky-item" data-score-col="0">
             <strong>${html(item.name)}</strong>
-            ${allZero ? `<div class="small muted">疑似检索配置问题</div>` : ""}
+            ${audit ? `<div class="small muted">无区分度，建议复核 · ${html(audit.detail)}</div>` : ""}
           </td>
           <td class="sticky-max" data-score-col="1">${item.max_score.toFixed(1)}</td>
           ${DATA.bidders.map((bidder, index) => renderScoreCell(bidder, item, index, completedKeys)).join("")}
@@ -802,7 +911,7 @@
           ${metric("投标人", DATA.bidders.length + " 家", "横向滚动展示")}
           ${metric("已完成", completedCount + " / " + TOTAL_REVIEWS, pendingCount ? pendingCount + " 项评审中" : "全部完成")}
           ${metric("用时", formatDuration(elapsed), state.run.startedAt ? "从页面①下一步：解析起算" : "尚未开始")}
-          ${metric("建议复核", visibleReviewFlags.length + " 项", "confidence < " + LOW_CONFIDENCE_THRESHOLD)}
+          ${metric("建议复核", (visibleReviewFlags.length + visibleAuditFlags.length) + " 项", "低置信 " + visibleReviewFlags.length + " / 无区分度 " + visibleAuditFlags.length)}
         </section>
 
         ${pendingCount ? `
@@ -837,8 +946,14 @@
                     <td class="sticky-item" data-score-col="0"><strong>合计（19 项）</strong></td>
                     <td class="sticky-max" data-score-col="1"><strong>${totalScore().toFixed(1)}</strong></td>
                     ${DATA.bidders.map((bidder, index) => {
-                      const total = effectiveTotalForBidder(bidder, completedKeys);
-                      return `<td data-score-col="${index + 2}" title="当前合计，不含评审中项"><strong>${total.score.toFixed(1)}${total.unrated ? "*" : ""}</strong></td>`;
+                      const systemTotal = systemTotalForBidder(bidder, completedKeys);
+                      const expertTotal = expertTotalForBidder(bidder, completedKeys);
+                      return `
+                        <td data-score-col="${index + 2}" title="系统合计不含评审中项；专家口径只在存在改判时显示">
+                          <strong>${systemTotal.score.toFixed(1)}${systemTotal.unrated ? "*" : ""}</strong>
+                          ${expertTotal.overrides ? `<div class="manual-score">专家 ${expertTotal.score.toFixed(1)}</div>` : ""}
+                        </td>
+                      `;
                     }).join("")}
                   </tr>
                 </tbody>
@@ -849,7 +964,8 @@
               <span>— = 未评定，系统未能给出判断，不计入合计</span>
               <span>评审中 = 结果尚未到达，暂不计入当前合计</span>
               <span>复核 = confidence &lt; ${LOW_CONFIDENCE_THRESHOLD}，建议人工复核</span>
-              <span>改判 = 专家已手动覆盖该单元格分数</span>
+              <span>无区分度 = 12 家落在同一档，建议复核</span>
+              <span>人工 = 专家改判值，与系统判分并存</span>
               <span>* = 该家存在未评定项，合计不完整</span>
             </div>
           </div>
@@ -862,7 +978,7 @@
     const bidderId = query.get("bidder") || DATA.bidders[0].id;
     const itemId = query.get("item") || "T-02";
     const bidder = bidderById(bidderId) || DATA.bidders[0];
-    const item = itemById(itemId) || DATA.scoringTable.items[1];
+    const item = itemById(itemId) || scoringItems()[1];
     const result = resultBy(bidder.id, item.id);
     const evidence = evidenceBy(bidder.id, item.id);
 
@@ -875,9 +991,8 @@
     }
 
     const reviewKey = reviewKeyFor(bidder.id, item.id);
-    const override = state.reviewOverrides[reviewKey];
-    const overrideScore = numericOverrideScore(override);
-    const effectiveScore = overrideScore !== null ? overrideScore : result.score;
+    const review = normalizeExpertReview(reviewKey, state.reviewOverrides[reviewKey]);
+    const overrideScore = numericOverrideScore(review);
     const citedEntries = citedEvidenceEntries(result, evidence);
     const activeSection = state.activeSectionId || (citedEntries[0] ? citedEntries[0].row.section_id : "");
     state.activeSectionId = activeSection;
@@ -887,14 +1002,14 @@
         ? "未命中"
         : "判分 " + result.tier;
     const scoreText = scoreLabel(result.score);
-    const effectiveScoreText = scoreLabel(effectiveScore);
+    const overrideScoreText = scoreLabel(overrideScore);
 
     return `
       <main class="page">
         <section class="page-header">
           <div>
             <h2 class="page-title">${html(bidder.short)} · ${html(item.name)}</h2>
-            <p class="page-desc">${titleStatus} · 系统 ${scoreText} / ${item.max_score.toFixed(1)} 分${overrideScore !== null ? "；人工改判 " + effectiveScoreText + " 分" : ""}</p>
+            <p class="page-desc">${titleStatus} · 系统 ${scoreText} / ${item.max_score.toFixed(1)} 分${overrideScore !== null ? "；人工改判 " + overrideScoreText + " 分" : ""}</p>
           </div>
           <div class="toolbar">
             <a class="btn" href="#/results">返回结果并排</a>
@@ -911,10 +1026,11 @@
                   : result.score === 0
                     ? `<span class="badge neutral">0 分未命中</span>`
                     : `<span class="badge primary">${html(result.tier)} · ${scoreText} 分</span>`}
-              </div>
-              <div class="panel-body">
-                <div class="summary-strip">
-                  ${metric("最终分数", effectiveScoreText, result.status === "unrated" ? "score 保持为 null" : overrideScore !== null ? "已按专家改判覆盖" : "满分 " + item.max_score.toFixed(1))}
+                </div>
+                <div class="panel-body">
+                  <div class="summary-strip">
+                  ${metric("系统判分", scoreText, result.status === "unrated" ? "score 保持为 null" : "不因下方操作改变")}
+                  ${metric("专家判分", overrideScore !== null ? overrideScoreText : "—", overrideScore !== null ? "仅进入专家口径合计" : "未改判")}
                   ${metric("当前档位", result.tier || "无", result.status === "unrated" ? "重试耗尽未进入判分" : result.score === 0 ? "按缺项不得分处理" : "来自评分区间")}
                   ${metric("置信度", result.confidence.toFixed(2), result.status === "unrated" ? "未产生有效判分" : isLowConfidence(result) ? "建议人工复核" : "可追溯")}
                   ${metric("调用次数", result.attempts + " 次", result.attempts > 1 ? "曾重试" : "一次成功")}
@@ -925,7 +1041,7 @@
             <section class="panel" style="margin-top: 18px;">
               <div class="panel-header">
                 <h3 class="panel-title">评分档位</h3>
-                <span class="badge neutral">招标文件第 33~37 页</span>
+                <span class="badge neutral">区间来自招标文件</span>
               </div>
               <div class="panel-body">
                 <div class="tier-list">
@@ -933,11 +1049,16 @@
                     <div class="tier ${tier.tier === result.tier ? "active" : ""}">
                       <div class="tier-name">${tier.tier}</div>
                       <div>${tier.min.toFixed(1)}-${tier.max.toFixed(1)} 分</div>
-                      <div class="small muted">${html(tier.desc)}</div>
+                      <div class="small muted">${tier.desc ? html(tier.desc) : "专家补充说明未填写"}</div>
                     </div>
                   `).join("")}
                 </div>
-                ${item.tier_quote ? `<blockquote class="tier-quote">${html(item.tier_quote)}</blockquote>` : ""}
+                ${item.criteria ? `
+                  <blockquote class="tier-quote">
+                    <div class="tier-quote-label">招标文件第 33~37 页评审标准原文</div>
+                    ${html(item.criteria)}
+                  </blockquote>
+                ` : ""}
               </div>
             </section>
 
@@ -973,11 +1094,12 @@
               <div class="panel-body">
                 <div class="review-form">
                   <button class="btn" data-review-approve data-bidder="${html(bidder.id)}" data-item="${html(item.id)}">认可</button>
-                  <input id="overrideScore" class="input" placeholder="改判分数" value="${override && override.score !== "" && override.score != null ? html(override.score) : ""}">
-                  <input id="overrideNote" class="input" placeholder="备注" value="${override && override.note ? html(override.note) : ""}">
+                  <input id="overrideScore" class="input" placeholder="改判分数" value="${overrideScore !== null ? html(overrideScore) : ""}">
+                  <input id="overrideNote" class="input" placeholder="备注" value="${review && review.note ? html(review.note) : ""}">
                   <button class="btn primary" data-review-save data-bidder="${html(bidder.id)}" data-item="${html(item.id)}">保存改判</button>
                 </div>
-                ${override ? `<div class="review-note">已记录：${html(override.type)}${override.score ? "，改判 " + html(override.score) + " 分" : ""}${override.note ? "，备注：" + html(override.note) : ""}</div>` : ""}
+                <div class="small muted" style="margin-top: 10px;">系统判分 ${scoreText} 分不因认可或改判改变；未评定项被改判后，页面④系统格仍显示 “—”。</div>
+                ${review ? `<div class="review-note">已记录：${html(review.action)}${overrideScore !== null ? "，人工 " + html(overrideScore) + " 分" : ""}${review.note ? "，备注：" + html(review.note) : ""}</div>` : ""}
               </div>
             </section>
           </div>
@@ -1130,19 +1252,15 @@
       `;
     }
     const href = routeForDetail(bidder.id, item.id);
-    const override = overrideBy(bidder.id, item.id);
-    const overrideScore = numericOverrideScore(override);
-    const approved = override && override.type === "认可";
+    const review = overrideBy(bidder.id, item.id);
+    const overrideScore = numericOverrideScore(review);
+    const approved = reviewAction(review) === "认可";
     const low = isLowConfidence(result);
     let cls = "score-cell";
     let label = "";
     let title = "点击查看判分依据";
 
-    if (overrideScore !== null) {
-      cls += " override";
-      label = scoreLabel(overrideScore) + " 改判";
-      title = "已人工改判，点击查看原始判分和依据";
-    } else if (result.status === "unrated") {
+    if (result.status === "unrated") {
       cls += " unrated";
       label = "—";
       title = "未评定，点击查看失败信息";
@@ -1155,15 +1273,20 @@
       if (low) cls += " review";
     }
 
-    if (approved && overrideScore === null) {
+    if (overrideScore !== null) {
+      title = "已人工改判，点击查看系统判分、人工分和依据";
+    } else if (approved) {
       cls += " approved";
-      label += " 认可";
       title = "专家已认可，点击查看判分依据";
     }
 
     return `
       <td data-score-col="${bidderIndex + 2}">
-        <a class="${cls}" href="${href}" title="${html(title)}">${html(label)}</a>
+        <a class="${cls}" href="${href}" title="${html(title)}">
+          <span class="score-cell-main">${html(label)}</span>
+          ${overrideScore !== null ? `<span class="manual-score">人工 ${scoreLabel(overrideScore)}</span>` : ""}
+          ${approved ? `<span class="approved-label">认可</span>` : ""}
+        </a>
       </td>
     `;
   }
@@ -1215,7 +1338,7 @@
   }
 
   function totalScore() {
-    return DATA.scoringTable.items.reduce((sum, item) => sum + item.max_score, 0);
+    return scoringItems().reduce((sum, item) => sum + item.max_score, 0);
   }
 
   function runElapsedMs() {
@@ -1311,6 +1434,7 @@
     state.run = createRunState();
     state.upload = createUploadState();
     state.reviewOverrides = {};
+    state.expertReviews = [];
     state.activeSectionId = "";
     state.showScoringReference = false;
     state.upload.selected = true;
@@ -1552,34 +1676,59 @@
   }
 
   function overrideBy(bidderId, itemId) {
-    return state.reviewOverrides[reviewKeyFor(bidderId, itemId)];
+    const key = reviewKeyFor(bidderId, itemId);
+    return normalizeExpertReview(key, state.reviewOverrides[key]);
   }
 
-  function numericOverrideScore(override) {
-    if (!override || override.type !== "人工改判") return null;
-    const score = Number(override.score);
+  function reviewAction(review) {
+    if (!review) return "";
+    if (review.action) return review.action;
+    if (review.type === "人工改判") return "改判";
+    return review.type || "";
+  }
+
+  function numericOverrideScore(review) {
+    if (reviewAction(review) !== "改判") return null;
+    const score = Number(review.expert_score ?? review.score);
     return Number.isFinite(score) ? score : null;
   }
 
-  function effectiveScoreFor(bidderId, itemId) {
-    const overrideScore = numericOverrideScore(overrideBy(bidderId, itemId));
-    if (overrideScore !== null) return overrideScore;
-    const result = resultBy(bidderId, itemId);
-    return result ? result.score : null;
+  function roundScore(value) {
+    return Math.round(value * 10) / 10;
   }
 
-  function effectiveTotalForBidder(bidder, completedKeys = completedReviewKeySet()) {
-    const rows = DATA.scoringTable.items
+  function systemTotalForBidder(bidder, completedKeys = completedReviewKeySet()) {
+    const rows = scoringItems()
       .filter((item) => isReviewCompleted(bidder.id, item.id, completedKeys))
-      .map((item) => ({
-        result: resultBy(bidder.id, item.id),
-        score: effectiveScoreFor(bidder.id, item.id)
-      }));
-    const score = rows.reduce((sum, row) => sum + (typeof row.score === "number" ? row.score : 0), 0);
-    const unrated = rows.filter((row) => row.result && row.result.status === "unrated" && typeof row.score !== "number").length;
+      .map((item) => resultBy(bidder.id, item.id));
+    const score = rows.reduce((sum, row) => sum + (row && typeof row.score === "number" ? row.score : 0), 0);
+    const unrated = rows.filter((row) => row && row.status === "unrated").length;
     return {
-      score: Math.round(score * 10) / 10,
+      score: roundScore(score),
       unrated
+    };
+  }
+
+  function expertTotalForBidder(bidder, completedKeys = completedReviewKeySet()) {
+    let score = 0;
+    let overrides = 0;
+    scoringItems()
+      .filter((item) => isReviewCompleted(bidder.id, item.id, completedKeys))
+      .forEach((item) => {
+        const result = resultBy(bidder.id, item.id);
+        const overrideScore = numericOverrideScore(overrideBy(bidder.id, item.id));
+        if (overrideScore !== null) {
+          score += overrideScore;
+          overrides += 1;
+          return;
+        }
+        if (result && typeof result.score === "number") {
+          score += result.score;
+        }
+      });
+    return {
+      score: roundScore(score),
+      overrides
     };
   }
 
@@ -1589,44 +1738,152 @@
     return value.toFixed(1);
   }
 
+  function localIsoNow() {
+    const date = new Date();
+    const offsetMinutes = -date.getTimezoneOffset();
+    const sign = offsetMinutes >= 0 ? "+" : "-";
+    const absolute = Math.abs(offsetMinutes);
+    return date.getFullYear() + "-" +
+      pad(date.getMonth() + 1) + "-" +
+      pad(date.getDate()) + "T" +
+      pad(date.getHours()) + ":" +
+      pad(date.getMinutes()) + ":" +
+      pad(date.getSeconds()) +
+      sign + pad(Math.floor(absolute / 60)) + ":" + pad(absolute % 60);
+  }
+
+  function normalizeExpertReview(key, review) {
+    if (!review || typeof review !== "object") return null;
+    const [bidderId = "", itemId = ""] = String(key || "").split("__");
+    const result = resultBy(review.bidder_id || bidderId, review.item_id || itemId);
+    const bidder = bidderById(review.bidder_id || bidderId);
+    const action = reviewAction(review);
+    const expertScore = action === "改判"
+      ? numericOverrideScore(review)
+      : result && typeof result.score === "number" ? result.score : null;
+    const systemScore = "system_score" in review ? review.system_score : result ? result.score : null;
+    const delta = "delta" in review
+      ? review.delta
+      : action === "改判" && typeof systemScore === "number" && typeof expertScore === "number"
+        ? roundScore(expertScore - systemScore)
+        : action === "认可" && typeof systemScore === "number"
+          ? 0
+          : null;
+
+    return {
+      bidder: review.bidder || (bidder ? bidder.name : ""),
+      bidder_id: review.bidder_id || bidderId,
+      item_id: review.item_id || itemId,
+      action,
+      system_score: systemScore,
+      expert_score: expertScore,
+      delta,
+      note: review.note || "",
+      reviewed_at: review.reviewed_at || ""
+    };
+  }
+
+  function makeExpertReview(bidderId, itemId, action, expertScore, note) {
+    const result = resultBy(bidderId, itemId);
+    const bidder = bidderById(bidderId);
+    const systemScore = result ? result.score : null;
+    const roundedExpert = action === "改判" ? roundScore(expertScore) : systemScore;
+    const delta = action === "改判" && typeof systemScore === "number"
+      ? roundScore(roundedExpert - systemScore)
+      : action === "认可" && typeof systemScore === "number"
+        ? 0
+        : null;
+    return {
+      bidder: bidder ? bidder.name : bidderId,
+      bidder_id: bidderId,
+      item_id: itemId,
+      action,
+      system_score: systemScore,
+      expert_score: roundedExpert,
+      delta,
+      note: note || "",
+      reviewed_at: localIsoNow()
+    };
+  }
+
+  function recordExpertReview(record) {
+    const key = reviewKeyFor(record.bidder_id, record.item_id);
+    state.reviewOverrides[key] = record;
+    if (!Array.isArray(state.expertReviews)) {
+      state.expertReviews = [];
+    }
+    state.expertReviews.push(record);
+  }
+
+  function expertReviewRecords() {
+    const records = Array.isArray(state.expertReviews)
+      ? state.expertReviews.map((record) => normalizeExpertReview(reviewKeyFor(record.bidder_id, record.item_id), record)).filter(Boolean)
+      : [];
+    const seen = new Set(records.map((record) => reviewKeyFor(record.bidder_id, record.item_id) + "__" + record.reviewed_at));
+    Object.entries(state.reviewOverrides || {}).forEach(([key, review]) => {
+      const record = normalizeExpertReview(key, review);
+      if (!record) return;
+      const marker = key + "__" + record.reviewed_at;
+      if (!seen.has(marker)) {
+        records.push(record);
+        seen.add(marker);
+      }
+    });
+    return records;
+  }
+
+  function auditByItem(itemId) {
+    return (DATA.reportData.audit || []).find((row) => row.item_id === itemId && row.kind === "no_discrimination");
+  }
+
   function buildReportHtml() {
     const generatedAt = new Date().toLocaleString("zh-CN", { hour12: false });
     const perf = DATA.reportData.perf;
+    const computeNotes = DATA.reportData.compute_notes || {};
     const completedKeys = completedReviewKeySet();
-    const matrixRows = DATA.scoringTable.items.map((item) => `
-      <tr>
-        <td>${html(item.name)}</td>
-        <td>${item.max_score.toFixed(1)}</td>
-        ${DATA.bidders.map((bidder) => {
-          if (!isReviewCompleted(bidder.id, item.id, completedKeys)) {
-            return `<td class="pending">评审中</td>`;
-          }
-          const result = resultBy(bidder.id, item.id);
-          const override = overrideBy(bidder.id, item.id);
-          const overrideScore = numericOverrideScore(override);
-          const effectiveScore = effectiveScoreFor(bidder.id, item.id);
-          const label = scoreLabel(effectiveScore) +
-            (overrideScore !== null ? " 改判" : isLowConfidence(result) ? " 复核" : override && override.type === "认可" ? " 认可" : "");
-          const cls = overrideScore !== null
-            ? "override"
-            : isLowConfidence(result)
+    const reportReviews = expertReviewRecords().filter((record) => {
+      const bidder = bidderById(record.bidder_id);
+      return bidder && isReviewCompleted(bidder.id, record.item_id, completedKeys);
+    });
+    const matrixRows = scoringItems().map((item) => {
+      const audit = auditByItem(item.id);
+      return `
+        <tr class="${audit ? "audit-row" : ""}">
+          <td>
+            ${html(item.name)}
+            ${audit ? `<div class="note">无区分度，建议复核：${html(audit.detail)}</div>` : ""}
+          </td>
+          <td>${item.max_score.toFixed(1)}</td>
+          ${DATA.bidders.map((bidder) => {
+            if (!isReviewCompleted(bidder.id, item.id, completedKeys)) {
+              return `<td class="pending">评审中</td><td></td>`;
+            }
+            const result = resultBy(bidder.id, item.id);
+            const review = overrideBy(bidder.id, item.id);
+            const overrideScore = numericOverrideScore(review);
+            const systemLabel = result.status === "unrated"
+              ? "—"
+              : scoreLabel(result.score) + (isLowConfidence(result) ? " 复核" : "");
+            const systemClass = isLowConfidence(result)
               ? "low"
               : result.status === "unrated"
                 ? "unrated"
                 : result.score === 0
                   ? "zero"
                   : "";
-          return `<td class="${cls}">${html(label)}</td>`;
-        }).join("")}
-      </tr>
-    `).join("");
+            return `<td class="${systemClass}">${html(systemLabel)}</td><td class="${overrideScore !== null ? "override" : ""}">${overrideScore !== null ? html(scoreLabel(overrideScore)) : ""}</td>`;
+          }).join("")}
+        </tr>
+      `;
+    }).join("");
     const totalRow = `
       <tr class="total">
         <td>合计（19 项）</td>
         <td>${totalScore().toFixed(1)}</td>
         ${DATA.bidders.map((bidder) => {
-          const total = effectiveTotalForBidder(bidder, completedKeys);
-          return `<td>${total.score.toFixed(1)}${total.unrated ? "*" : ""}</td>`;
+          const systemTotal = systemTotalForBidder(bidder, completedKeys);
+          const expertTotal = expertTotalForBidder(bidder, completedKeys);
+          return `<td>${systemTotal.score.toFixed(1)}${systemTotal.unrated ? "*" : ""}</td><td>${expertTotal.overrides ? expertTotal.score.toFixed(1) : ""}</td>`;
         }).join("")}
       </tr>
     `;
@@ -1658,6 +1915,30 @@
         return `<li>${html(row.bidder)} · ${html(row.item_id)} ${html(item ? item.name : "")} · confidence ${row.confidence.toFixed(2)} · ${html(row.why)}</li>`;
       }).join("")
       : "<li>无低置信度项</li>";
+    const auditRows = (DATA.reportData.audit || []).length
+      ? DATA.reportData.audit.map((row) => {
+        const item = itemById(row.item_id);
+        return `<li>${html(row.item_id)} ${html(item ? item.name : "")} · ${html(row.detail)}</li>`;
+      }).join("")
+      : "<li>无无区分度审计项</li>";
+    const expertRows = reportReviews.length
+      ? reportReviews.map((record) => {
+        const item = itemById(record.item_id);
+        return `
+          <tr>
+            <td>${html(record.bidder)}</td>
+            <td>${html(record.item_id)} ${html(item ? item.name : "")}</td>
+            <td>${html(record.action)}</td>
+            <td>${html(scoreLabel(record.system_score))}</td>
+            <td>${html(scoreLabel(record.expert_score))}</td>
+            <td>${html(scoreLabel(record.delta))}</td>
+            <td>${html(record.note || "")}</td>
+            <td>${html(record.reviewed_at || "")}</td>
+          </tr>
+        `;
+      }).join("")
+      : `<tr><td colspan="8">暂无专家复核记录</td></tr>`;
+    const computeMethod = Array.isArray(computeNotes.method) ? computeNotes.method : [];
 
     return `<!doctype html>
 <html lang="zh-CN">
@@ -1671,17 +1952,18 @@
     h2 { margin-top: 28px; font-size: 18px; }
     .meta, .note { color: #667085; }
     .table-wrap { overflow-x: auto; border: 1px solid #d9e0ea; }
-    table { width: 100%; border-collapse: collapse; min-width: 1180px; }
+    table { width: 100%; border-collapse: collapse; min-width: 1640px; }
     th, td { padding: 8px 10px; border: 1px solid #d9e0ea; text-align: left; vertical-align: top; }
     th { background: #f3f6fa; white-space: nowrap; }
     .total td { background: #f8fafc; font-weight: 700; }
+    .audit-row td { background: #fffaf0; }
     .low { color: #a45f0a; font-weight: 700; }
     .override { color: #0b6b52; font-weight: 700; }
     .unrated { color: #b42318; font-weight: 700; }
     .zero { color: #667085; }
     .pending { color: #667085; font-weight: 700; }
-    .single-column { min-width: 0; }
-    .perf { max-width: 720px; min-width: 0; }
+    .single-column, .perf, .expert-table { min-width: 0; }
+    .perf { max-width: 780px; }
     ul { padding-left: 18px; }
   </style>
 </head>
@@ -1696,7 +1978,12 @@
         <tr>
           <th>评分项</th>
           <th>满分</th>
-          ${DATA.bidders.map((bidder) => `<th>${html(bidder.short)}</th>`).join("")}
+          ${DATA.bidders.map((bidder) => `<th colspan="2">${html(bidder.short)}</th>`).join("")}
+        </tr>
+        <tr>
+          <th></th>
+          <th></th>
+          ${DATA.bidders.map(() => `<th>系统</th><th>专家</th>`).join("")}
         </tr>
       </thead>
       <tbody>
@@ -1705,7 +1992,7 @@
       </tbody>
     </table>
   </div>
-  <p class="note">0 = 未命中；— = 未评定；复核 = confidence &lt; ${LOW_CONFIDENCE_THRESHOLD}；改判 = 专家手动覆盖；* = 该家存在未评定项。</p>
+  <p class="note">0 = 未命中；— = 未评定；复核 = confidence &lt; ${LOW_CONFIDENCE_THRESHOLD}；专家列仅列人工改判值；* = 该家存在未评定项。</p>
 
   <h2>未评定单列</h2>
   <table class="single-column">
@@ -1715,6 +2002,17 @@
 
   <h2>建议人工复核</h2>
   <ul>${reviewRows}</ul>
+
+  <h2>无区分度审计</h2>
+  <ul>${auditRows}</ul>
+
+  <h2>专家复核记录</h2>
+  <table class="expert-table">
+    <thead>
+      <tr><th>投标人</th><th>评分项</th><th>动作</th><th>系统分</th><th>专家分</th><th>差值</th><th>备注</th><th>时间</th></tr>
+    </thead>
+    <tbody>${expertRows}</tbody>
+  </table>
 
   <h2>性能数据</h2>
   <table class="perf">
@@ -1728,6 +2026,16 @@
       <tr><th>输出 tokens</th><td>${number(perf.out_tokens)}</td></tr>
       <tr><th>GPU / 显存</th><td>${html(perf.gpu)} / ${perf.vram_peak_gb == null ? "未采集" : perf.vram_peak_gb + " GB"}</td></tr>
       <tr><th>说明</th><td>${html(perf.gpu_note)}</td></tr>
+    </tbody>
+  </table>
+
+  <h2>compute_notes</h2>
+  <table class="perf">
+    <tbody>
+      <tr><th>算力归属</th><td>${html(computeNotes.owner || "未采集")}</td></tr>
+      <tr><th>硬件规格</th><td>${html(computeNotes.spec || "未采集")}</td></tr>
+      <tr><th>模型版本</th><td>${html(computeNotes.model || "未采集")}</td></tr>
+      <tr><th>技术做法</th><td><ul>${computeMethod.map((row) => `<li>${html(row)}</li>`).join("") || "<li>未采集</li>"}</ul></td></tr>
     </tbody>
   </table>
 </body>
@@ -1816,8 +2124,10 @@
 
     const approve = event.target.closest("[data-review-approve]");
     if (approve) {
-      const key = reviewKeyFor(approve.getAttribute("data-bidder"), approve.getAttribute("data-item"));
-      state.reviewOverrides[key] = { type: "认可", score: "", note: "" };
+      const bidderId = approve.getAttribute("data-bidder");
+      const itemId = approve.getAttribute("data-item");
+      const note = document.getElementById("overrideNote")?.value.trim() || "";
+      recordExpertReview(makeExpertReview(bidderId, itemId, "认可", null, note));
       saveState();
       render();
       return;
@@ -1828,7 +2138,6 @@
       const bidderId = save.getAttribute("data-bidder");
       const itemId = save.getAttribute("data-item");
       const item = itemById(itemId);
-      const key = reviewKeyFor(bidderId, itemId);
       const scoreRaw = document.getElementById("overrideScore")?.value.trim() || "";
       const score = Number(scoreRaw);
       const note = document.getElementById("overrideNote")?.value.trim() || "";
@@ -1836,7 +2145,7 @@
         window.alert("改判分数必须是 0 到 " + (item ? item.max_score.toFixed(1) : "满分") + " 之间的数字。");
         return;
       }
-      state.reviewOverrides[key] = { type: "人工改判", score: Math.round(score * 10) / 10, note };
+      recordExpertReview(makeExpertReview(bidderId, itemId, "改判", score, note));
       saveState();
       render();
     }
@@ -1914,6 +2223,45 @@
   document.addEventListener("input", (event) => {
     if (event.target && event.target.id === "projectSummary") {
       state.projectSummary = event.target.value;
+      saveState();
+      return;
+    }
+
+    const scoreItemId = event.target && event.target.getAttribute ? event.target.getAttribute("data-score-item") : "";
+    const scoreField = event.target && event.target.getAttribute ? event.target.getAttribute("data-score-field") : "";
+    if (scoreItemId && scoreField) {
+      const item = scoringItems().find((row) => row.id === scoreItemId);
+      if (item) {
+        if (scoreField === "name") {
+          item.name = event.target.value;
+        } else if (scoreField === "max_score") {
+          item.max_score = Math.max(0, finiteNumber(event.target.value, item.max_score));
+        }
+        saveState();
+      }
+      return;
+    }
+
+    const tierField = event.target && event.target.getAttribute ? event.target.getAttribute("data-tier-field") : "";
+    if (scoreItemId && tierField) {
+      const item = scoringItems().find((row) => row.id === scoreItemId);
+      const tierIndex = Math.max(0, Math.floor(finiteNumber(event.target.getAttribute("data-tier-index"), 0)));
+      const tier = item && item.tiers ? item.tiers[tierIndex] : null;
+      if (tier) {
+        if (tierField === "desc") {
+          tier.desc = event.target.value;
+        } else {
+          tier[tierField] = finiteNumber(event.target.value, tier[tierField]);
+        }
+        saveState();
+      }
+      return;
+    }
+
+    const ruleIndexRaw = event.target && event.target.getAttribute ? event.target.getAttribute("data-rule-index") : null;
+    if (ruleIndexRaw !== null) {
+      const ruleIndex = Math.max(0, Math.floor(finiteNumber(ruleIndexRaw, 0)));
+      scoringRules()[ruleIndex] = event.target.value;
       saveState();
     }
   });

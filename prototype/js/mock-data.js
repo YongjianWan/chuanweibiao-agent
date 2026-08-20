@@ -14,67 +14,600 @@
     { id: "shandongluqiao", name: "山东路桥集团有限公司8009083", short: "山东路桥", pdfCount: 20, chars: 2260000 }
   ];
 
-  const guids = [
-    "75bd5598-9f76-4e3b-8a0a-d494380d4d9d",
-    "108d538f-85b8-4c7d-b32c-f6acdaa187b9",
-    "7c2f86a9-21bb-4ea2-a55c-6c1f2b407b1d",
-    "123a9226-d66e-4ace-8dc4-65a76a8282fa",
-    "9d7303c2-f91b-4078-a3aa-61c29d72d6e1",
-    "4a348c28-6f7d-49d6-88f9-1af12ef35f71",
-    "842f52f7-1a6e-4f53-85ef-cad97ad7b520",
-    "5167466c-9ddf-4b1b-a589-f71e6e73b492",
-    "7f60614c-74a3-43a1-97c4-18837b1a89cb",
-    "969a7dd0-f36e-4907-a6e2-26c59cf02810",
-    "f4a0fc84-b5c0-4761-b2b7-f5d12999646b",
-    "a6ba629d-30e4-4334-bafd-eec7a962c01a",
-    "e36891df-6503-4b22-9cf5-7a6ac64c5aa0",
-    "617ee02f-8512-4e1c-87d6-6752e95cb853",
-    "1d9a7d7f-195d-4e31-94ff-a346320f7211",
-    "885bbcd1-922d-44e2-b9ab-c93f9b595f4f",
-    "23d9ccf8-8db4-427f-946a-c2b75d8c7bde",
-    "afc25aa4-38b8-4384-8e35-f81e63e69590",
-    "d9947cd4-a5cb-42f2-80ea-b2dd798d90da"
-  ];
-
   const itemDefs = [
-    ["T-01", "设计任务书优化", 20],
-    ["T-02", "进度管理方案", 4],
-    ["T-03", "费用及资金管理方案", 3],
-    ["T-04", "施工方案及技术措施", 8],
-    ["T-05", "服务采购管理方案", 3],
-    ["T-06", "质量管理体系与措施", 6],
-    ["T-07", "安全管理体系与措施", 6],
-    ["T-08", "文明施工及环境保护措施", 5],
-    ["T-09", "施工总进度计划及保证措施", 5],
-    ["T-10", "资源配备计划", 5],
-    ["T-11", "劳动力安排计划", 4],
-    ["T-12", "材料设备采购计划", 4],
-    ["T-13", "BIM 技术应用方案", 4],
-    ["T-14", "EPC 总承包管理方案", 4],
-    ["T-15", "各专业施工图设计的安排、协调、时间保证措施", 2, [
-      {
-        tier: "优",
-        min: 1.5,
-        max: 2,
-        desc: "安排完整，协调机制清楚，时间保证措施针对性强。"
-      },
-      {
-        tier: "良",
-        min: 0.7,
-        max: 1.5,
-        desc: "安排和协调措施基本完整，时间保证措施仍有细化空间。"
-      },
-      {
-        tier: "一般",
-        min: 0.2,
-        max: 0.7,
-        desc: "覆盖基本要求，但安排、协调和时间保证措施较概括。"
-      }
-    ]],
-    ["T-16", "工程重点难点分析", 4],
-    ["T-17", "应急处置预案", 4],
-    ["T-18", "成品保护及移交方案", 3],
-    ["T-19", "绿色建造与扬尘治理措施", 6]
+    {
+      "id": "T-01",
+      "guid": "75bd5598-9f76-4e3b-8a0a-d494380d4d9d",
+      "name": "设计任务书优化",
+      "max_score": 20.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 17.0,
+          "max": 20.0
+        },
+        {
+          "tier": "良",
+          "min": 14.0,
+          "max": 17.0
+        },
+        {
+          "tier": "一般",
+          "min": 10.0,
+          "max": 14.0
+        }
+      ],
+      "aspects": [
+        "设计需求深度解析与目标对齐",
+        "优化建议的具体性与可行性",
+        "工程设计要求满足度",
+        "设计质量保证措施"
+      ],
+      "criteria": "设计任务书优化：根据招标人提供的设计任务书进行优化，提出优化建议，满足工程设计要求，设计质量保证措施等具体、可行，评委根据投标文件情况分为一般、良、优，分别酌情得10-14 分、14-17 分、17-20分，内容不全酌情扣分，若此条缺项不得分。相关标书内容在设计任务书优化中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-02",
+      "guid": "108d538f-85b8-4c7d-b32c-f6acdaa187b9",
+      "name": "进度管理方案",
+      "max_score": 4.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 3.0,
+          "max": 4.0
+        },
+        {
+          "tier": "良",
+          "min": 2.0,
+          "max": 3.0
+        },
+        {
+          "tier": "一般",
+          "min": 1.0,
+          "max": 2.0
+        }
+      ],
+      "aspects": [
+        "施工进度计划编制与关键路径分析",
+        "设计进度管理与协同机制",
+        "进度保障措施与资源配置",
+        "进度监测、预警与纠偏机制"
+      ],
+      "criteria": "进度管理方案，包括施工进度和设计进度等各方面；评委根据投标文件情况分为一般、良、优，分别酌情得1-2 分、2-3 分、3-4 分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在进度管理方案中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-03",
+      "guid": "9e60551f-c8b5-4b2b-81aa-ceb4b4a86d2d",
+      "name": "费用及资金管理方案",
+      "max_score": 3.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 2.5,
+          "max": 3.0
+        },
+        {
+          "tier": "良",
+          "min": 1.7,
+          "max": 2.5
+        },
+        {
+          "tier": "一般",
+          "min": 1.2,
+          "max": 1.7
+        }
+      ],
+      "aspects": [
+        "费用预算编制与成本控制体系",
+        "资金筹措与使用计划",
+        "财务风险防控与应急预案",
+        "资金监管与审计配合机制"
+      ],
+      "criteria": "费用及资金管理方案；评委根据投标文件情况分为一般、良、优，分别酌情得1.2-1.7 分、1.7-2.5 分、2.5-3分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在费用及资金管理方案中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-04",
+      "guid": "255bb711-dc0e-4968-bf39-2a61b0abc8eb",
+      "name": "质量管理方案",
+      "max_score": 4.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 3.0,
+          "max": 4.0
+        },
+        {
+          "tier": "良",
+          "min": 2.0,
+          "max": 3.0
+        },
+        {
+          "tier": "一般",
+          "min": 1.0,
+          "max": 2.0
+        }
+      ],
+      "aspects": [
+        "工程整体质量管控体系",
+        "进场材料设备质量标准管控",
+        "材料设备品牌档次管控措施",
+        "规格型号一致性管控"
+      ],
+      "criteria": "质量管理方案；对工程整体质量及进场的材料设备质量标准、品牌档次、规格型号等的管控措施合理可行。评委根据投标文件情况分为一般、良、优，分别酌情得1-2 分、2-3 分、3-4 分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在质量管理方案中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-05",
+      "guid": "acabee9d-b7e9-4461-9491-1ee7dacefac3",
+      "name": "安全、职业健康和环境管理方案",
+      "max_score": 4.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 3.0,
+          "max": 4.0
+        },
+        {
+          "tier": "良",
+          "min": 2.0,
+          "max": 3.0
+        },
+        {
+          "tier": "一般",
+          "min": 1.0,
+          "max": 2.0
+        }
+      ],
+      "aspects": [
+        "安全管理体系与组织架构",
+        "安全风险管控与防护措施",
+        "职业健康管理方案",
+        "环境保护与文明施工措施"
+      ],
+      "criteria": "安全、职业健康和环境管理方案；评委根据投标文件情况分为一般、良、优，分别酌情得1-2 分、2-3 分、3-4 分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在安全、职业健康和环境管理方案中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-06",
+      "guid": "8dc6e95d-ae6a-4422-8ff7-b7b2939ff724",
+      "name": "调试、试运行与移交管理方案",
+      "max_score": 4.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 3.0,
+          "max": 4.0
+        },
+        {
+          "tier": "良",
+          "min": 2.0,
+          "max": 3.0
+        },
+        {
+          "tier": "一般",
+          "min": 1.0,
+          "max": 2.0
+        }
+      ],
+      "aspects": [
+        "调试组织与实施策略",
+        "多方协调与配合机制",
+        "试运行保障与应急预案",
+        "移交管理与资料归档"
+      ],
+      "criteria": "调试、试运行与移交管理方案；评委根据投标文件中调试、试运行与移交过程中协调、配合招标人移交措施等方案情况分为一般、良、优，分别酌情得1-2 分、2-3 分、3-4 分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在调试、试运行与移交管理方案中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-07",
+      "guid": "51f11a77-e946-4abd-ba0f-b5f47ceb9e04",
+      "name": "风险管理方案",
+      "max_score": 3.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 2.5,
+          "max": 3.0
+        },
+        {
+          "tier": "良",
+          "min": 1.7,
+          "max": 2.5
+        },
+        {
+          "tier": "一般",
+          "min": 1.2,
+          "max": 1.7
+        }
+      ],
+      "aspects": [
+        "风险识别与评估体系",
+        "风险应对策略与措施",
+        "应急响应与处置机制",
+        "风险监控与动态管理"
+      ],
+      "criteria": "风险管理方案；评委根据投标文件情况分为一般、良、优，分别酌情得1.2-1.7 分、1.7-2.5 分、2.5-3 分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在风险管理方案中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-08",
+      "guid": "83e39679-fabf-4dd1-ba31-224dc2d2d51f",
+      "name": "沟通协调方案",
+      "max_score": 3.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 2.5,
+          "max": 3.0
+        },
+        {
+          "tier": "良",
+          "min": 2.0,
+          "max": 2.5
+        },
+        {
+          "tier": "一般",
+          "min": 1.5,
+          "max": 2.0
+        }
+      ],
+      "aspects": [
+        "行政审批协助与手续办理机制",
+        "职能部门沟通策略与承诺办法",
+        "外部关系协调与冲突解决机制",
+        "信息反馈与闭环管理体系"
+      ],
+      "criteria": "沟通协调方案；评委根据投标文件中协助招标人办理各种手续、同职能部门的沟通协调承诺办法等情况分为一般、良、优，分别酌情得1.5-2 分、2-2.5 分、2.5-3分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在沟通协调方案中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-09",
+      "guid": "3a101949-3b00-4c83-a62a-fafe13ac376e",
+      "name": "合同管理与信息管理方案，有完善的信息管理系统",
+      "max_score": 3.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 2.0,
+          "max": 3.0
+        },
+        {
+          "tier": "良",
+          "min": 1.0,
+          "max": 2.0
+        },
+        {
+          "tier": "一般",
+          "min": 0.5,
+          "max": 1.0
+        }
+      ],
+      "aspects": [
+        "合同全生命周期管理体系",
+        "信息管理系统的功能完备性",
+        "信息安全与数据保障机制",
+        "系统实施运维与培训服务"
+      ],
+      "criteria": "合同管理与信息管理方案，有完善的信息管理系统；评委根据投标文件情况分为一般、良、优，分别酌情得0.5-1 分、1-2 分、2-3 分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在合同管理与信息管理方案，有完善的信息管理系统中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-10",
+      "guid": "ae93a6c8-1c01-4ab8-a43b-11f4cbc40a3c",
+      "name": "各专业施工图设计的安排、协调、时间保证措施",
+      "max_score": 2.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 1.5,
+          "max": 2.0
+        },
+        {
+          "tier": "良",
+          "min": 0.7,
+          "max": 1.5
+        },
+        {
+          "tier": "一般",
+          "min": 0.2,
+          "max": 0.7
+        }
+      ],
+      "aspects": [
+        "各专业施工图设计进度安排与计划管理",
+        "多专业协同设计与接口协调机制",
+        "设计进度延误预警与纠偏措施",
+        "现场平面管理与设计配合方案"
+      ],
+      "criteria": "各专业施工图设计的安排、协调、时间保证措施；现场平面管理方案；评委根据投标文件情况分为一般、良、优，分别酌情得0.2-0.7 分、0.7-1.5 分、1.5-2分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在各专业施工图设计的安排、协调、时间保证措施；中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-11",
+      "guid": "123a9226-d66e-4ace-8dc4-65a76a8282fa",
+      "name": "施工方案及技术措施",
+      "max_score": 8.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 6.0,
+          "max": 8.0
+        },
+        {
+          "tier": "良",
+          "min": 3.0,
+          "max": 6.0
+        },
+        {
+          "tier": "一般",
+          "min": 1.0,
+          "max": 3.0
+        }
+      ],
+      "aspects": [
+        "总体施工部署与流程规划",
+        "核心工程技术方案针对性",
+        "质量保证体系与控制措施",
+        "安全文明施工与环境保护",
+        "资源配备与进度保障机制"
+      ],
+      "criteria": "施工方案及技术措施；评委根据投标文件情况分为一般、良、优，分别酌情得1-3 分、3-6 分、6-8 分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在施工方案及技术措施中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-12",
+      "guid": "c105b81a-3fca-42a1-a0fa-c55332f11e62",
+      "name": "安全施工、文明施工和绿色施工措施",
+      "max_score": 8.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 6.0,
+          "max": 8.0
+        },
+        {
+          "tier": "良",
+          "min": 3.0,
+          "max": 6.0
+        },
+        {
+          "tier": "一般",
+          "min": 1.0,
+          "max": 3.0
+        }
+      ],
+      "aspects": [
+        "安全施工管理体系与风险防控",
+        "文明施工标准化与现场环境管理",
+        "绿色施工技术与资源节约措施"
+      ],
+      "criteria": "安全施工、文明施工和绿色施工措施；评委根据投标文件情况分为一般、良、优，分别酌情得1-3 分、3-6分、6-8 分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在安全施工、文明施工和绿色施工措施中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-13",
+      "guid": "80d2c3d4-2628-4f0c-88ed-77fbc129aa4c",
+      "name": "环境保护及防尘施工措施",
+      "max_score": 4.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 3.0,
+          "max": 4.0
+        },
+        {
+          "tier": "良",
+          "min": 2.0,
+          "max": 3.0
+        },
+        {
+          "tier": "一般",
+          "min": 1.0,
+          "max": 2.0
+        }
+      ],
+      "aspects": [
+        "扬尘控制专项方案",
+        "噪声与振动污染防治",
+        "水污染与固体废弃物管理",
+        "管理体系与应急响应"
+      ],
+      "criteria": "环境保护及防尘施工措施。评委根据投标文件情况分为一般、良、优，分别酌情得1-2 分,2-3 分,3-4 分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在环境保护及防尘施工措施中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-14",
+      "guid": "fafc867a-6a90-4765-b0d0-6ebfd818d218",
+      "name": "施工总进度计划及保证措施",
+      "max_score": 8.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 6.0,
+          "max": 8.0
+        },
+        {
+          "tier": "良",
+          "min": 3.0,
+          "max": 6.0
+        },
+        {
+          "tier": "一般",
+          "min": 1.0,
+          "max": 3.0
+        }
+      ],
+      "aspects": [
+        "施工进度计划编制科学性",
+        "进度保证组织管理体系",
+        "技术与资源保障措施",
+        "动态监控与纠偏机制"
+      ],
+      "criteria": "施工总进度计划及保证措施；评委根据投标文件情况分为一般、良、优，分别酌情得1-3 分、3-6 分、6-8分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在施工总进度计划及保证措施中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-15",
+      "guid": "4c62f8e4-d847-4cb9-bca0-9b4f78d9573e",
+      "name": "施工现场总平面布置",
+      "max_score": 4.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 3.0,
+          "max": 4.0
+        },
+        {
+          "tier": "良",
+          "min": 2.0,
+          "max": 3.0
+        },
+        {
+          "tier": "一般",
+          "min": 1.0,
+          "max": 2.0
+        }
+      ],
+      "aspects": [
+        "功能分区与空间布局合理性",
+        "交通组织与物流动线规划",
+        "临时设施配置与标准化建设",
+        "水电管网与环保消防设施",
+        "动态调整与图示表达质量"
+      ],
+      "criteria": "施工现场总平面布置；评委根据投标文件情况分为一般、良、优，分别酌情得1-2 分、2-3 分、3-4 分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在施工现场总平面布置中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-16",
+      "guid": "ffd783a2-78cf-4fd6-81ef-812298958298",
+      "name": "施工质量措施计划",
+      "max_score": 8.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 6.0,
+          "max": 8.0
+        },
+        {
+          "tier": "良",
+          "min": 3.0,
+          "max": 6.0
+        },
+        {
+          "tier": "一般",
+          "min": 1.0,
+          "max": 3.0
+        }
+      ],
+      "aspects": [
+        "质量管理体系与组织架构",
+        "关键工序与质量控制点措施",
+        "材料设备进场检验与管理",
+        "质量检测与验收管理计划",
+        "质量持续改进与应急处理"
+      ],
+      "criteria": "施工质量措施计划；评委根据投标文件情况分为一般、良、优，分别酌情得1-3 分、3-6 分、6-8 分内容不全酌情扣分，若此条缺项不得分；相关标书内容在施工质量措施计划中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-17",
+      "guid": "c43a82b9-31a1-4f6b-acf5-a9af954b6816",
+      "name": "材料采购管理方案",
+      "max_score": 4.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 2.0,
+          "max": 4.0
+        },
+        {
+          "tier": "良",
+          "min": 1.0,
+          "max": 2.0
+        },
+        {
+          "tier": "一般",
+          "min": 0.5,
+          "max": 1.0
+        }
+      ],
+      "aspects": [
+        "采购组织架构与职责分工",
+        "供应商管理与资源保障",
+        "采购流程控制与质量保证",
+        "成本控制与资金支付管理",
+        "仓储物流与现场管理"
+      ],
+      "criteria": "材料采购管理方案；评委根据投标文件情况分为一般、良、优，分别酌情得0.5-1 分、1-2 分、2-4 分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在材料采购管理方案中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-18",
+      "guid": "6c230e96-2e06-4c28-a648-0181e132707f",
+      "name": "货物采购管理方案",
+      "max_score": 3.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 2.0,
+          "max": 3.0
+        },
+        {
+          "tier": "良",
+          "min": 1.0,
+          "max": 2.0
+        },
+        {
+          "tier": "一般",
+          "min": 0.5,
+          "max": 1.0
+        }
+      ],
+      "aspects": [
+        "采购组织架构与职责分工",
+        "采购流程与控制措施",
+        "质量控制与验收标准",
+        "仓储物流与供应保障",
+        "成本控制与档案管理"
+      ],
+      "criteria": "货物采购管理方案；评委根据投标文件情况分为一般、良、优，分别酌情得0.5-1 分、1-2 分、2-3 分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在货物采购管理方案中体现。",
+      "synonyms": []
+    },
+    {
+      "id": "T-19",
+      "guid": "e1c9c784-0683-45a4-a123-08a7f4084f86",
+      "name": "服务采购管理方案",
+      "max_score": 3.0,
+      "tiers": [
+        {
+          "tier": "优",
+          "min": 2.0,
+          "max": 3.0
+        },
+        {
+          "tier": "良",
+          "min": 1.0,
+          "max": 2.0
+        },
+        {
+          "tier": "一般",
+          "min": 0.5,
+          "max": 1.0
+        }
+      ],
+      "aspects": [
+        "采购策划与需求分析",
+        "供应商管理与评价体系",
+        "采购过程控制与合规管理",
+        "合同管理与后续服务保障"
+      ],
+      "criteria": "服务采购管理方案；评委根据投标文件情况分为一般、良、优，分别酌情得0.5-1 分、1-2 分、2-3 分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在服务采购管理方案中体现。",
+      "synonyms": []
+    }
   ];
 
   function round1(value) {
@@ -91,76 +624,36 @@
 
   const LOW_CONFIDENCE_THRESHOLD = 0.85;
 
-  function makeDefaultMockTiers(maxScore) {
-    return [
-      {
-        tier: "优",
-        min: round1(maxScore * 0.75),
-        max: maxScore,
-        desc: "内容完整，措施明确，针对本项目特点提出可执行安排。"
-      },
-      {
-        tier: "良",
-        min: round1(maxScore * 0.5),
-        max: round1(maxScore * 0.75),
-        desc: "主要内容完整，关键措施基本可行，针对性仍有不足。"
-      },
-      {
-        tier: "一般",
-        min: round1(maxScore * 0.25),
-        max: round1(maxScore * 0.5),
-        desc: "覆盖基本要求，但内容较概括，细化程度不足。"
-      }
-    ];
-  }
-
   function scoreText(value) {
     return Number.isInteger(value) ? String(value) : value.toFixed(1);
   }
 
-  function buildTierQuote(tiers) {
+  function buildCriteria(name, tiers) {
     const general = tiers.find((tier) => tier.tier === "一般");
     const good = tiers.find((tier) => tier.tier === "良");
     const excellent = tiers.find((tier) => tier.tier === "优");
     if (!general || !good || !excellent) return "";
-    return "评委根据投标文件情况分为一般、良、优，分别酌情得 " +
+    return name + "；评委根据投标文件情况分为一般、良、优，分别酌情得" +
       scoreText(general.min) + "-" + scoreText(general.max) + " 分、" +
       scoreText(good.min) + "-" + scoreText(good.max) + " 分、" +
       scoreText(excellent.min) + "-" + scoreText(excellent.max) +
-      " 分，内容不全酌情扣分，若此条缺项不得分。";
+      " 分，内容不全酌情扣分，若此条缺项不得分；相关标书内容在" + name + "中体现。";
   }
 
-  function makeAspects(name) {
-    if (name === "进度管理方案") {
-      return [
-        "施工进度计划编制与关键路径分析",
-        "设计进度管理与协同机制",
-        "进度保障措施与资源配置",
-        "进度监测、预警与纠偏机制"
-      ];
-    }
-
-    return [
-      name + "完整性",
-      name + "针对性",
-      name + "可执行性"
-    ];
-  }
-
-  const items = itemDefs.map(([id, name, maxScore, explicitTiers], index) => {
-    const tiers = explicitTiers || makeDefaultMockTiers(maxScore);
+  const items = itemDefs.map((def) => {
+    const tiers = def.tiers.map((tier) => ({ ...tier, desc: "" }));
     return {
-      id,
-      guid: guids[index],
-      name,
-      max_score: maxScore,
+      id: def.id,
+      guid: def.guid,
+      name: def.name,
+      max_score: def.max_score,
       source: "招标文件.pdf 第 33~37 页",
       bound_count: 12,
       expected_bidders: 12,
       tiers,
-      tier_quote: buildTierQuote(tiers),
-      aspects: makeAspects(name),
-      synonyms: name === "进度管理方案" ? ["香蕉曲线", "S 曲线", "关键线路"] : []
+      criteria: def.criteria || buildCriteria(def.name, tiers),
+      aspects: def.aspects || [],
+      synonyms: def.synonyms || []
     };
   });
 
@@ -411,6 +904,11 @@
         attempts = 2;
       }
 
+      if (status === "rated" && item.id === "T-17") {
+        tier = item.tiers.find((row) => row.tier === "良");
+        rate = mockCompletionRate(bidderIndex, itemIndex, "良");
+      }
+
       const score = status === "unrated" ? null : scoreInTier(tier, rate);
       const evidencePackage = makeEvidencePackage(bidder, item, bidderIndex, itemIndex, status, score);
       const confidenceState = status === "unrated"
@@ -471,11 +969,38 @@
   const totals = {};
   bidders.forEach((bidder) => {
     const rows = reviewResults.filter((row) => row.bidder_id === bidder.id);
+    const score = round1(rows.reduce((sum, row) => sum + (typeof row.score === "number" ? row.score : 0), 0));
     totals[bidder.name] = {
-      score: round1(rows.reduce((sum, row) => sum + (typeof row.score === "number" ? row.score : 0), 0)),
-      unrated: rows.filter((row) => row.status === "unrated").length
+      score,
+      unrated: rows.filter((row) => row.status === "unrated").length,
+      expert_score: score,
+      expert_overrides: 0
     };
   });
+
+  function buildAuditRows() {
+    return items.flatMap((item) => {
+      const rows = bidders.map((bidder) => resultFor(bidder.id, item.id));
+      if (rows.some((row) => !row || row.status === "unrated")) return [];
+
+      const buckets = rows.map((row) => row.score === 0 ? "0分" : row.tier);
+      const firstBucket = buckets[0];
+      if (!firstBucket || !buckets.every((bucket) => bucket === firstBucket)) return [];
+
+      const tierDist = item.tiers.reduce((dist, tier) => {
+        dist[tier.tier] = buckets.filter((bucket) => bucket === tier.tier).length;
+        return dist;
+      }, {});
+      tierDist["0分"] = buckets.filter((bucket) => bucket === "0分").length;
+
+      return [{
+        item_id: item.id,
+        kind: "no_discrimination",
+        detail: bidders.length + " 家全部判「" + firstBucket + "」档",
+        tier_dist: tierDist
+      }];
+    });
+  }
 
   const reportData = {
     project: scoringTable.project,
@@ -500,6 +1025,8 @@
         confidence: row.confidence,
         why: confidenceWhy(row.confidence_factors)
       })),
+    audit: buildAuditRows(),
+    expert_reviews: [],
     perf: {
       wall_clock_sec: 582,
       concurrency: 8,
@@ -510,6 +1037,16 @@
       gpu: "未采集",
       vram_peak_gb: null,
       gpu_note: "模型为远程托管端点时，我方进程内无法采集显存；此处显示为未采集。"
+    },
+    compute_notes: {
+      owner: "我方自有算力",
+      spec: "未采集",
+      model: "远程托管模型端点，版本未采集",
+      method: [
+        "证据定位：IDF 加权 + 单锚点闸门，不依赖向量库",
+        "防幻觉：模型只选择证据编号，引用原文由系统从证据包截取",
+        "计时口径：页面①点击下一步后覆盖 S1-S4 全流程"
+      ]
     }
   };
 

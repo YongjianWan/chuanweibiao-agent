@@ -32,12 +32,12 @@ Mock 数据统一放在 `prototype/js/mock-data.js`，通过全局对象 `window
 
 `prototype/js/located-seed.js` 与 `data/interim/mock/review_results.json` 由 `scripts/build-prototype-mock.js` 从 `data/interim/located.json`、`data/interim/sections.json` 生成。当前 `located.json` 是早期软件标样例，缺少真实多投标人的 `bidder` / `item_id` / `item_guid` / PDF 页码，因此原型只取其 `section_id`、证据文件名、章节路径、命中词、截断状态和章节文本作为打底证据；`bidder`、`item_id`、`item_guid` 仍由当前 19 项评分表 Mock 映射补齐。T8 产出真实证据包后，应重新运行脚本生成。
 
-低置信度阈值统一为 `confidence < 0.85`。Mock 评分逻辑按 README §4：先由模型侧判定 `tier`，再用 `score = tier.min + 得分率 × (tier.max - tier.min)` 生成档内连续分；`confidence` 从 1.0 起按降级、截断、重试、打架四个因素相乘，不再使用随机低基线。
+低置信度阈值统一为 `confidence < 0.85`。Mock 评分逻辑按 README §4：先由模型侧判定 `tier`，再用 `score = tier.min + 得分率 × (tier.max - tier.min)` 生成档内连续分；`confidence` 从 1.0 起按降级、截断、重试三个因素相乘，不再使用随机低基线。
 
 `sectionBlocks` 提供章节块层级 Mock 数据。早期软件标样例没有 PDF 页码，页面⑤会显示“页码未采集”；T0/T8 真实 PDF 链路产出 `picked[].page` 后会透传展示。`section_id` 按 README §4 使用 `文件序号#块顺序号`，`#` 后保持纯整数。
 
-当前仓库尚无 `config/projects/济阳区实验高级中学.yaml`，因此评分表仍是原型用 Mock 数据；已按 `docs/findings-招标文件核对.md` 修正确定有误的 T-15 名称、满分和三档区间。等 T1 产出项目 YAML 后，应整体替换 `mock-data.js` 内的评分表定义。
+当前仓库已有 `config/projects/济阳区实验高级中学.yaml`；静态原型仍使用 `mock-data.js` 内置评分表作为可离线演示数据，评分项、分值、三档区间、`criteria` 与 `aspects` 已按该项目 YAML 同步。页面②的档位说明 `desc` 是评审专家补充说明，默认空，不是招标文件原文；后续接入真实链路时，应改为从项目 YAML 生成或注入评分表，而不是手工维护 Mock。
 
-页面④的“导出报告”会在浏览器本地生成静态 HTML，内容包含并排表、未评定单列、建议人工复核清单和性能数据。评审未完成时页面④仅作为运行快照查看，导出按钮禁用，避免生成半成品报告。
+页面④的“导出报告”会在浏览器本地生成静态 HTML，内容包含系统判分 / 专家判分并列表、未评定单列、建议人工复核清单、无区分度审计、专家复核记录、性能数据和 `compute_notes`。评审未完成时页面④仅作为运行快照查看，导出按钮禁用，避免生成半成品报告。
 
 所有分数、耗时、token、显存相关内容均为 Mock / 占位示例，不代表真实评审结果或真实硬件配置；12 家字数合计按 README §1 的实测口径校准为 1047.0 万字。
