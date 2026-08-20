@@ -38,11 +38,25 @@ BUDGET = 3000
 MAX_SEC = 6
 
 
+def _match_text(text):
+    """返回仅供检索的文本副本，不改动章节块里的原始 ``text``。
+
+    PyMuPDF 抽取的是视觉行，S1 会把每一行用 ``\\n`` 拼进章节块；
+    Windows/其他来源还可能带 ``\\r\\n``。S2 的短语、词和锚点都是
+    子串匹配，换行会把本来连续的中文词拆开，进而造成 DF=0、分数下降，
+    甚至把已有内容误判成未命中。
+
+    这里只在匹配副本中移除换行符：证据包最终仍按原始 ``text`` 截取，
+    因而不会改变引用原文、``char_len`` 或页面定位。
+    """
+    return text.replace("\r", "").replace("\n", "")
+
+
 def build_idf(sections, vocab):
     """在本次文档集内计算 DF -> IDF。词表只算评审点用到的词，不做全量。"""
     df = defaultdict(int)
     for sec in sections:
-        blob = sec["text"] + " " + " ".join(sec["path"])
+        blob = _match_text(sec["text"]) + " " + " ".join(sec["path"])
         for w in vocab:
             if w in blob:
                 df[w] += 1
@@ -52,7 +66,8 @@ def build_idf(sections, vocab):
 
 def score_section(sec, phrases, terms, idf, df, n):
     title = " ".join(sec["path"])
-    body = sec["text"]
+    # 匹配副本去掉 PDF 视觉折行（文本内部可能含 \r\n 或 \n）；原始 text 保留给证据引用。
+    body = sec["text"].replace("\r", "").replace("\n", "")
     s, hit = 0.0, []
 
     for ph in phrases:                       # 完整短语命中：强信号，按其最罕见成分计权
@@ -114,7 +129,7 @@ def _rank(sections, phrases, terms, idf, df, df_n=None):
     out = []
     for sec in sections:
         if anc:  # 领域锚点没出现 -> 这章根本不是在讲这件事
-            if anc not in sec["text"] and anc not in " ".join(sec["path"]):
+            if anc not in _match_text(sec["text"]) and anc not in " ".join(sec["path"]):
                 continue
         s, hit = score_section(sec, phrases, terms, idf, df, n)
         if s >= MIN_SCORE:
