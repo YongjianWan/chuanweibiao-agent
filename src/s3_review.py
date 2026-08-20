@@ -436,12 +436,63 @@ def build_messages(
     ]
 
 
+def _balance_json(text: str) -> str:
+    """给被截断的 JSON 补上缺失的 ``}`` 与 ``]``，字符串内的括号与转义不计入。
+
+    参考「可信空间数据产品」前端 `js/app.js` 的 `balanceJson()`，那边是实测出来的：
+    模型长输出被 token 截断时末尾缺闭合括号。本项目 76 次调用尚未复现该情形
+    （单次 out_tokens 仅约 150，离截断阈值很远），但补全零损失、成本极低，先备着。
+
+    **刻意不补未闭合的字符串。** 断在字符串中间时，补一个引号能让 JSON 变合法，
+    但换来的是一条半句话的 `reason` ——它会静默通过 `_validate_model_output()`，
+    交付一个看起来合法、内容却是残的判分理由。本项目有 README §3.6 的重试兜底，
+    失败重来只花 2 秒，**宁可失败重来，也不要合法的残缺结果**。
+    """
+    stack: list[str] = []
+    in_string = False
+    escaped = False
+    for char in text:
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\" and in_string:
+            escaped = True
+            continue
+        if char == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if char == "{":
+            stack.append("}")
+        elif char == "[":
+            stack.append("]")
+        elif char in "}]":
+            if stack and stack[-1] == char:
+                stack.pop()
+    if in_string:
+        # 断在字符串中间，见上方说明：不抢救，交给重试。
+        return text
+    return text + "".join(reversed(stack))
+
+
+def _repair_json(text: str) -> str:
+    """修复模型常犯的两类毛病，均为零损失（只补不删）。
+
+    - 中文顿号当数组分隔符（``"a"、"b"`` → ``"a","b"``），实测来源同 `_balance_json`。
+    - 括号未闭合，见 `_balance_json`。
+    """
+    return _balance_json(text.replace('"\u3001"', '","'))
+
+
 def _extract_json_object(text: str) -> "str | None":
     """从夹带自然语言的文本里抠出第一个花括号平衡的 JSON 对象。
 
     有些端点（如智能体工厂）会在正式答案前吐一段思考过程，或把 JSON 裹进
     ``` 代码块且围栏前后还有文字，此时整段既不是 JSON 也不以 ``` 开头。
-    字符串内的花括号与转义要跳过，否则 reason 里出现 "}" 会截错位置。
+    字符串内的花括号与转义要跳过，否则 "reason" 里出现 "}" 会截错位置。
+
+    括号始终没配平时返回从第一个 ``{`` 起的全部剩余文本，交给 `_repair_json` 补全。
     """
     start = text.find("{")
     if start < 0:
@@ -467,11 +518,23 @@ def _extract_json_object(text: str) -> "str | None":
             depth -= 1
             if depth == 0:
                 return text[start : index + 1]
-    return None
+    return text[start:]
 
 
 def _parse_json_object(content: str) -> dict[str, Any]:
-    """解析 JSON，兼容 Markdown ```json 代码块与正文前后夹带的思考过程。"""
+    """宽松解析模型输出，按**数据损失从小到大**逐级降级。
+
+    1. 剥 ``</think>`` 之后的正文、剥 ``` 代码块围栏 —— 零损失
+    2. 直接解析 —— 零损失
+    3. `_repair_json`（顿号 + 括号补全）后解析 —— 零损失，只补不删
+    4. 抠出第一个 JSON 对象后解析，仍失败则再修一次 —— 零损失，只削外围噪声
+
+    **不做「逐段砍尾」那一级。** 参考实现（`js/app.js` 的 `parseJSON`）有第五级：
+    从末尾一个个砍掉不完整的片段直到能解析。那是**有损**的——评审结果只有
+    tier/score/cite/reason 四个字段，砍掉任何一个都不是「少显示一点」而是判分失效。
+    该前端没有重试、用户在页面上等着，才必须有损抢救；本项目有 §3.6 的重试，
+    直接失败重来更便宜也更安全。
+    """
     text = content.strip()
     # 部分端点把思考过程与正答用 </think> 分隔，取最后一段。
     if "</think>" in text:
@@ -482,17 +545,27 @@ def _parse_json_object(content: str) -> dict[str, Any]:
             text = "\n".join(lines[1:-1])
             if text.lstrip().lower().startswith("json"):
                 text = text.lstrip()[4:].lstrip()
-    try:
-        payload = json.loads(text)
-    except json.JSONDecodeError as exc:
-        # 整段不是 JSON 时，退而求其次抠出其中第一个 JSON 对象再试一次。
-        candidate = _extract_json_object(text)
-        if candidate is None:
-            raise ReviewError(f"JSON 解析失败：{exc.msg}") from exc
+
+    payload: Any = None
+    for candidate in (text, _repair_json(text)):
         try:
             payload = json.loads(candidate)
-        except json.JSONDecodeError as inner:
-            raise ReviewError(f"JSON 解析失败：{inner.msg}") from inner
+            break
+        except json.JSONDecodeError:
+            continue
+    else:
+        extracted = _extract_json_object(text)
+        if extracted is None:
+            raise ReviewError("JSON 解析失败：输出中找不到 JSON 对象")
+        for candidate in (extracted, _repair_json(extracted)):
+            try:
+                payload = json.loads(candidate)
+                break
+            except json.JSONDecodeError as exc:
+                last = exc
+        else:
+            raise ReviewError(f"JSON 解析失败：{last.msg}") from last
+
     if not isinstance(payload, dict):
         raise ReviewError("模型输出必须是 JSON 对象")
     return payload
