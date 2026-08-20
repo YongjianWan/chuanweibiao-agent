@@ -266,7 +266,7 @@ def build_messages(
     previous_error: str = "",
 ) -> list[dict[str, str]]:
     """构造一次评审调用的 Prompt：固定系统约束 + 当前评分项和证据。"""
-    # User Prompt 使用结构化 JSON，方便模型准确区分项目规则、档位描述和证据。
+    # User Prompt 使用结构化 JSON，方便模型准确区分项目规则、评审标准和证据。
     request = {
         "project_summary": project_summary,
         "project_rules": list(project_rules),
@@ -274,7 +274,11 @@ def build_messages(
             "id": item["id"],
             "name": item["name"],
             "max_score": item["max_score"],
-            "tiers": item["tiers"],
+            "criteria": item["criteria"],
+            "tiers": [
+                {"tier": tier["tier"], "min": tier["min"], "max": tier["max"]}
+                for tier in item["tiers"]
+            ],
         },
         "evidence": _evidence_with_text(evidence, section_index),
     }
@@ -284,9 +288,9 @@ def build_messages(
 
     # ===== 固定 System Prompt：模型侧调优时优先检查和修改这里 =====
     # 模型只返回引用编号，原文由系统从 evidence 回填，避免模型改写或编造引用。
-    # 档位判定以 tiers[].desc 原文为主要依据；score 必须落在该档位区间内。
+    # 档位判定以 item.criteria 原文为唯一依据；score 必须落在该档位区间内。
     system = (
-        "你是工程建设技术标辅助评审模型。严格对照评分档位描述和项目事实评审。"
+        "你是工程建设技术标辅助评审模型。严格对照招标文件评审标准和项目事实评审。"
         "只能引用 evidence 中已有的 index，不得生成或改写原文。"
         "只输出一个 JSON 对象，字段为 tier、score、cite、reason。"
         "tier 必须是评分档位之一；score 必须是一个数字，且落在 tier 对应的分值区间内；"
@@ -381,10 +385,12 @@ def _validate_model_output(
 
 def _validate_scoring_item(item: Mapping[str, Any]) -> None:
     """在调用模型前校验人工确认的评分配置，错误配置直接失败而不是产生错误分数。"""
-    required = ("id", "name", "max_score", "tiers")
+    required = ("id", "name", "max_score", "tiers", "criteria")
     missing = [key for key in required if key not in item]
     if missing:
         raise ValueError(f"评分项缺少字段：{', '.join(missing)}")
+    if not isinstance(item.get("criteria"), str) or not item["criteria"].strip():
+        raise ValueError(f"评分项 {item['id']} 的 criteria 必须是非空字符串")
     tiers = item["tiers"]
     if not isinstance(tiers, list) or not tiers:
         raise ValueError(f"评分项 {item['id']} 的 tiers 不能为空")
@@ -392,7 +398,7 @@ def _validate_scoring_item(item: Mapping[str, Any]) -> None:
         raise ValueError(f"评分项 {item['id']} 的 tier 名称必须唯一")
     previous_max: float | None = None
     for tier in tiers:
-        if not all(key in tier for key in ("tier", "min", "max", "desc")):
+        if not all(key in tier for key in ("tier", "min", "max")):
             raise ValueError(f"评分项 {item['id']} 的 tier 字段不完整")
         tier_min, tier_max = float(tier["min"]), float(tier["max"])
         if tier_min > tier_max:
