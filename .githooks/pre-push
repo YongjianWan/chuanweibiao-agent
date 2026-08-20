@@ -3,6 +3,13 @@
 
 while read local_ref local_sha remote_ref remote_sha
 do
+    # 删除分支（local_sha 全 0）：没有本地提交可比，非快进检查不适用，放行。
+    # 原先漏了这一支，git 会把全零 SHA 交给 merge-base 解析，报
+    # 「fatal: Not a valid commit name 0000...」并连带误报成「远程有本地没有的提交」。
+    if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
+        continue
+    fi
+
     # 如果是新建分支（remote_sha 全 0），跳过检查
     if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
         continue
