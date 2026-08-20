@@ -662,9 +662,9 @@
     items
   };
 
-  const BASE_EVIDENCE_BUDGET = 3000;
+  const BASE_EVIDENCE_BUDGET = 4500;
   const MIN_EVIDENCE_BUDGET = 1500;
-  const MAX_EVIDENCE_BUDGET = 6000;
+  const MAX_EVIDENCE_BUDGET = 9000;
   const TOTAL_SCORE = items.reduce((sum, item) => sum + item.max_score, 0);
 
   function evidenceBudgetFor(item) {
