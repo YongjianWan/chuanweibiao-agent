@@ -159,6 +159,10 @@ button:disabled {
   gap: 10px;
 }
 
+.upload-actions {
+  align-items: center;
+}
+
 .layout-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) 360px;
@@ -476,6 +480,26 @@ tr:last-child td {
   border-radius: 50%;
   background: #3a9b70;
   box-shadow: 0 0 0 3px #e9f7ef;
+}
+
+.upload-warning {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #f0c48a;
+  border-radius: 8px;
+  background: var(--warning-soft);
+}
+
+.upload-filter-note {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .rule-list {

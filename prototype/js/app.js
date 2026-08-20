@@ -1,12 +1,18 @@
 (function () {
-  const DATA = applyRealResults(window.PROTOTYPE_DATA, window.REAL_RESULTS);
   const SCORING_REFERENCE = window.SCORING_REFERENCE || null;
+  const PROJECT_CONFIG = window.PROJECT_CONFIG || null;
+  const TOKEN_NOTE = "端点 usage 恒为 null，token 由中文约 1.5 字/token 本地估算。";
+  const DATA = applyProjectConfig(
+    applyRealResults(window.PROTOTYPE_DATA, window.REAL_RESULTS),
+    PROJECT_CONFIG,
+    SCORING_REFERENCE
+  );
   const DEMO_MODE = false;
   const app = document.getElementById("app");
   const TOTAL_REVIEWS = DATA.bidders.length * DATA.scoringTable.items.length;
   const LOW_CONFIDENCE_THRESHOLD = DATA.lowConfidenceThreshold || 0.85;
   const stageNames = ["PDF 入库", "证据定位", "逐项评审", "结果汇总"];
-  const STORAGE_KEY = "technical-review-state-v5";
+  const STORAGE_KEY = "technical-review-state-v7";
   const LOG_BOTTOM_GAP = 16;
   const BIDDER_RECOGNITION_MS = 420;
   const REVIEW_EVENT_KEYS = DATA.runEvents
@@ -58,6 +64,83 @@
     };
   }
 
+  function applyProjectConfig(data, projectConfig, scoringReference) {
+    if (!data || !projectConfig) return data;
+
+    const scoringTable = buildProjectScoringTable(data.scoringTable, projectConfig, scoringReference);
+    const perfOverride = projectConfig.perf_override && typeof projectConfig.perf_override === "object"
+      ? projectConfig.perf_override
+      : {};
+    const baseReportData = data.reportData || {};
+    const basePerf = baseReportData.perf || {};
+    const reportData = {
+      ...baseReportData,
+      project: projectConfig.project || baseReportData.project || scoringTable.project,
+      perf: {
+        ...basePerf,
+        ...perfOverride,
+        token_note: perfOverride.token_note || basePerf.token_note || TOKEN_NOTE
+      }
+    };
+
+    return {
+      ...data,
+      configSource: {
+        scoring: projectConfig.source_config || "",
+        summary: projectConfig.source_summary || "",
+        generated_from: scoringReference && Array.isArray(scoringReference.items)
+          ? "prototype/js/scoring-reference.js"
+          : ""
+      },
+      scoringTable,
+      projectSummary: projectConfig.project_summary || data.projectSummary,
+      reportData
+    };
+  }
+
+  function buildProjectScoringTable(baseTable, projectConfig, scoringReference) {
+    const base = baseTable || { items: [], rules: [] };
+    const fallbackById = new Map((base.items || []).map((item) => [item.id, item]));
+    const referenceItems = scoringReference && Array.isArray(scoringReference.items)
+      ? scoringReference.items
+      : [];
+    const items = referenceItems.length
+      ? referenceItems.map((row) => {
+        const id = row.item_id || row.id;
+        const fallback = fallbackById.get(id) || {};
+        const tiers = Array.isArray(row.system_tiers) && row.system_tiers.length
+          ? row.system_tiers.map((tier) => ({ ...tier, desc: "" }))
+          : (fallback.tiers || []).map((tier) => ({ ...tier }));
+        return {
+          ...fallback,
+          id,
+          guid: row.guid || fallback.guid || "",
+          name: row.name || fallback.name || id,
+          max_score: typeof row.max_score === "number" ? row.max_score : fallback.max_score,
+          source: row.source_page || projectConfig.scoring_source || base.source,
+          expected_bidders: fallback.expected_bidders || 0,
+          bound_count: fallback.bound_count || 0,
+          tiers,
+          criteria: row.pdf_criteria || fallback.criteria || "",
+          aspects: fallback.aspects || [],
+          synonyms: fallback.synonyms || []
+        };
+      })
+      : (base.items || []).map((item) => ({ ...item }));
+
+    return {
+      ...base,
+      project: projectConfig.project || base.project,
+      source: projectConfig.source_config || base.source,
+      prepared: true,
+      prepared_label: projectConfig.prepared_label || base.prepared_label || "评分规则已加载",
+      rules: Array.isArray(projectConfig.scoring_rules) && projectConfig.scoring_rules.length
+        ? projectConfig.scoring_rules
+        : base.rules,
+      items
+    };
+  }
+
   function createRunState() {
     return {
       eventIndex: 0,
@@ -93,9 +176,15 @@
     return {
       selected: false,
       parsed: false,
+      recognitionComplete: false,
       recognizedCount: 0,
       totalFiles: 0,
+      pdfFiles: 0,
+      totalBytes: 0,
       sourceLabel: "",
+      recognizedBidders: [],
+      unmatchedFiles: [],
+      ignoredFiles: [],
       startedAt: null,
       finishedAt: null,
       timer: null
@@ -211,30 +300,40 @@
     if (saved && typeof saved === "object") {
       upload.selected = Boolean(saved.selected);
       upload.parsed = Boolean(saved.parsed);
+      upload.recognitionComplete = Boolean(saved.recognitionComplete || saved.parsed);
       upload.recognizedCount = Math.min(
         DATA.bidders.length,
         Math.max(0, Math.floor(finiteNumber(saved.recognizedCount, 0)))
       );
       upload.totalFiles = Math.max(0, Math.floor(finiteNumber(saved.totalFiles, 0)));
+      upload.pdfFiles = Math.max(0, Math.floor(finiteNumber(saved.pdfFiles, saved.totalFiles || 0)));
+      upload.totalBytes = Math.max(0, Math.floor(finiteNumber(saved.totalBytes, 0)));
       upload.sourceLabel = typeof saved.sourceLabel === "string" ? saved.sourceLabel : "";
+      upload.recognizedBidders = Array.isArray(saved.recognizedBidders) ? saved.recognizedBidders : [];
+      upload.unmatchedFiles = Array.isArray(saved.unmatchedFiles) ? saved.unmatchedFiles : [];
+      upload.ignoredFiles = Array.isArray(saved.ignoredFiles) ? saved.ignoredFiles : [];
       upload.startedAt = finiteNumber(saved.startedAt, 0) || null;
       upload.finishedAt = finiteNumber(saved.finishedAt, 0) || null;
     } else if (run && (run.started || run.reviewStarted || run.finished || run.completedReviews)) {
       upload.selected = true;
       upload.parsed = true;
+      upload.recognitionComplete = true;
       upload.recognizedCount = DATA.bidders.length;
       upload.totalFiles = totalBidderPdfCount();
+      upload.pdfFiles = upload.totalFiles;
       upload.sourceLabel = "已选择投标文件";
       upload.startedAt = run.startedAt;
       upload.finishedAt = run.startedAt;
     }
     if (upload.parsed) {
       upload.selected = true;
-      upload.recognizedCount = DATA.bidders.length;
-      upload.totalFiles = upload.totalFiles || totalBidderPdfCount();
+      upload.recognitionComplete = true;
+      upload.recognizedCount = upload.recognizedBidders.length || DATA.bidders.length;
+      upload.totalFiles = upload.totalFiles || upload.pdfFiles || totalBidderPdfCount();
+      upload.pdfFiles = upload.pdfFiles || upload.totalFiles;
       upload.sourceLabel = upload.sourceLabel || "已选择投标文件";
     }
-    if (upload.recognizedCount >= DATA.bidders.length) {
+    if (upload.recognizedCount >= DATA.bidders.length && upload.recognitionComplete) {
       upload.parsed = true;
       upload.finishedAt = upload.finishedAt || Date.now();
     }
@@ -272,6 +371,25 @@
 
   function chars(value) {
     return (value / 10000).toFixed(1) + " 万字";
+  }
+
+  function bytes(value) {
+    const size = Math.max(0, Number(value) || 0);
+    if (size >= 1024 * 1024 * 1024) return (size / 1024 / 1024 / 1024).toFixed(2) + " GB";
+    if (size >= 1024 * 1024) return (size / 1024 / 1024).toFixed(1) + " MB";
+    if (size >= 1024) return (size / 1024).toFixed(1) + " KB";
+    return size + " B";
+  }
+
+  function normalizeForMatch(value) {
+    return String(value || "")
+      .normalize("NFKC")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, "");
+  }
+
+  function compactGuid(value) {
+    return normalizeForMatch(value).replace(/[^a-z0-9]/g, "");
   }
 
   function pad(value) {
@@ -345,6 +463,162 @@
 
   function bidderById(id) {
     return DATA.bidders.find((bidder) => bidder.id === id);
+  }
+
+  function bidderByName(name) {
+    return DATA.bidders.find((bidder) => bidder.name === name);
+  }
+
+  function uploadFilePath(file) {
+    return file.webkitRelativePath || file.name || "";
+  }
+
+  function uploadFileRow(file) {
+    const path = uploadFilePath(file);
+    return {
+      name: file.name || path,
+      path,
+      size: file.size || 0
+    };
+  }
+
+  function isPdfFile(file) {
+    return /\.pdf$/i.test(file.name || uploadFilePath(file));
+  }
+
+  function hasTechnicalBidFolder(filePath) {
+    return String(filePath || "")
+      .split(/[\\/]+/)
+      .some((part) => normalizeForMatch(part).includes("技术标"));
+  }
+
+  function isTechnicalBidPdf(file) {
+    if (!isPdfFile(file)) return false;
+    const relativePath = file.webkitRelativePath || "";
+    return !relativePath || hasTechnicalBidFolder(relativePath);
+  }
+
+  function matchBidderForPath(filePath) {
+    const normalizedPath = normalizeForMatch(filePath);
+    return DATA.bidders.find((bidder) => {
+      const names = [bidder.name, bidder.short, bidder.id].filter(Boolean);
+      return names.some((name) => {
+        const normalizedName = normalizeForMatch(name);
+        return normalizedName && normalizedPath.includes(normalizedName);
+      });
+    }) || null;
+  }
+
+  function matchItemForPath(filePath) {
+    const normalizedPath = normalizeForMatch(filePath);
+    const guidPath = compactGuid(filePath);
+    return scoringItems().find((item) => {
+      const guid = compactGuid(item.guid);
+      const name = normalizeForMatch(item.name);
+      const id = normalizeForMatch(item.id);
+      return (guid && guidPath.includes(guid)) ||
+        (name && normalizedPath.includes(name)) ||
+        (id && normalizedPath.includes(id));
+    }) || null;
+  }
+
+  function analyzeSelectedFiles(fileList) {
+    const files = Array.from(fileList || []);
+    const pdfFiles = files.filter(isPdfFile);
+    const technicalPdfFiles = pdfFiles.filter(isTechnicalBidPdf);
+    const technicalPdfSet = new Set(technicalPdfFiles);
+    const ignoredFiles = files
+      .filter((file) => !technicalPdfSet.has(file))
+      .map(uploadFileRow);
+    const groups = new Map(DATA.bidders.map((bidder) => [bidder.id, {
+      bidder_id: bidder.id,
+      bidder: bidder.name,
+      short: bidder.short,
+      pdfCount: 0,
+      sizeBytes: 0,
+      matchedItemIds: new Set(),
+      samples: []
+    }]));
+    const unmatchedFiles = [];
+
+    technicalPdfFiles.forEach((file) => {
+      const path = uploadFilePath(file);
+      const bidder = matchBidderForPath(path);
+      const item = matchItemForPath(path);
+      const row = uploadFileRow(file);
+      if (!bidder) {
+        unmatchedFiles.push(row);
+        return;
+      }
+      const group = groups.get(bidder.id);
+      group.pdfCount += 1;
+      group.sizeBytes += file.size || 0;
+      if (item) group.matchedItemIds.add(item.id);
+      if (group.samples.length < 3) group.samples.push(path);
+    });
+
+    const recognizedBidders = DATA.bidders
+      .map((bidder) => groups.get(bidder.id))
+      .filter((group) => group && group.pdfCount > 0)
+      .map((group) => ({
+        ...group,
+        matchedItemIds: [...group.matchedItemIds].sort()
+      }));
+    const totalBytes = technicalPdfFiles.reduce((sum, file) => sum + (file.size || 0), 0);
+    return {
+      totalFiles: technicalPdfFiles.length,
+      pdfFiles: technicalPdfFiles.length,
+      totalBytes,
+      recognizedBidders,
+      unmatchedFiles,
+      ignoredFiles,
+      sourceLabel: recognizedBidders.length + "/" + DATA.bidders.length +
+        " 家，" + technicalPdfFiles.length + " 个技术标 PDF，" + bytes(totalBytes) +
+        (ignoredFiles.length ? " · 已过滤 " + ignoredFiles.length + " 个非技术标/非 PDF 文件" : "")
+    };
+  }
+
+  function uploadRecognizedBidders() {
+    const rows = Array.isArray(state.upload.recognizedBidders) ? state.upload.recognizedBidders : [];
+    const rowById = new Map(rows.map((row) => [row.bidder_id, row]));
+    return DATA.bidders
+      .filter((bidder) => rowById.has(bidder.id))
+      .map((bidder) => {
+        const row = rowById.get(bidder.id);
+        return {
+          ...bidder,
+          pdfCount: row.pdfCount,
+          chars: null,
+          sizeBytes: row.sizeBytes || 0,
+          matchedItemIds: Array.isArray(row.matchedItemIds) ? row.matchedItemIds : [],
+          samples: Array.isArray(row.samples) ? row.samples : []
+        };
+      });
+  }
+
+  function bindingItemsForUpload() {
+    const recognized = uploadRecognizedBidders();
+    const expected = DATA.bidders.length;
+    return scoringItems().map((item) => {
+      const bound = recognized.filter((bidder) => bidder.matchedItemIds.includes(item.id)).length;
+      const status = bound >= expected
+        ? "matched"
+        : bound > 0
+          ? "partial"
+          : "unverified";
+      const note = status === "matched"
+        ? "文件名 GUID/评分项名称已匹配"
+        : status === "partial"
+          ? "仅部分投标人文件名匹配，需补齐或等待 S1/S2 定位确认"
+          : "文件名未匹配到 GUID/评分项名称，需等待 S1/S2 定位确认";
+      return {
+        ...item,
+        expected_bidders: expected,
+        bound_count: bound,
+        binding_status: status,
+        binding_note: note
+      };
+    });
   }
 
   function normalizeReviewResult(result) {
@@ -563,12 +837,18 @@
   function renderCreate() {
     const upload = state.upload;
     const items = scoringItems();
-    const recognizedBidders = DATA.bidders.slice(0, upload.recognizedCount);
-    const recognizedChars = recognizedBidders.reduce((sum, bidder) => sum + bidder.chars, 0);
+    const uploadedBidders = uploadRecognizedBidders();
+    const recognizedBidders = uploadedBidders.slice(0, upload.recognizedCount);
     const expectedFiles = totalBidderPdfCount();
-    const shownFiles = upload.selected ? (upload.totalFiles || expectedFiles) : 0;
-    const uploadStatus = !upload.selected ? "等待选择" : upload.parsed ? "识别完成" : "识别中";
-    const uploadBadge = !upload.selected ? "neutral" : upload.parsed ? "success" : "primary";
+    const shownFiles = upload.selected ? (upload.pdfFiles || upload.totalFiles || expectedFiles) : 0;
+    const uploadStatus = !upload.selected
+      ? "等待选择"
+      : upload.parsed
+        ? "识别完成"
+        : upload.recognitionComplete
+          ? "缺少投标人"
+          : "识别中";
+    const uploadBadge = !upload.selected ? "neutral" : upload.parsed ? "success" : upload.recognitionComplete ? "danger" : "primary";
     const nextClass = upload.parsed ? "btn primary" : "btn primary disabled";
     const nextAttrs = upload.parsed ? `href="#/confirm"` : `href="#/create" aria-disabled="true"`;
     return `
@@ -576,10 +856,12 @@
         <section class="page-header">
           <div>
             <h2 class="page-title">新建评审任务</h2>
-            <p class="page-desc">选择招标文件与各投标人的技术标 PDF。文件清单识别完成后，点击下一步启动现场解析与计时。</p>
+            <p class="page-desc">选择投标文件目录或技术标 PDF。选择目录时仅纳入各投标人“技术标”目录下的 PDF；PDF 正文解析和 S1-S4 真实运行由后端链路负责。</p>
           </div>
-          <div class="toolbar">
-            <label class="btn primary" for="bidFileInput">选择投标文件</label>
+          <div class="toolbar upload-actions">
+            <label class="btn primary" for="bidDirInput">选择投标文件目录</label>
+            <input id="bidDirInput" class="file-input" type="file" accept="application/pdf,.pdf" webkitdirectory directory multiple data-file-input>
+            <label class="btn" for="bidFileInput">补充选择 PDF</label>
             <input id="bidFileInput" class="file-input" type="file" accept="application/pdf,.pdf" multiple data-file-input>
             <a class="${nextClass}" ${nextAttrs} data-start-parse>下一步：解析</a>
           </div>
@@ -588,8 +870,8 @@
         <section class="summary-strip" aria-label="任务概览">
           ${metric("评分规则", "已加载", items.length + " 个评分项 / 总分 " + totalScore().toFixed(1) + " 分")}
           ${metric("投标人", recognizedBidders.length + " / " + DATA.bidders.length + " 家", uploadStatus)}
-          ${metric("逐项评审", TOTAL_REVIEWS + " 项", "12 家投标人 × 19 个评分项")}
-          ${metric("语料体量", recognizedBidders.length ? chars(recognizedChars) : "待解析", shownFiles ? shownFiles + " 个 PDF" : "等待文件选择")}
+          ${metric("逐项评审", TOTAL_REVIEWS + " 项", DATA.bidders.length + " 家投标人 × " + items.length + " 个评分项")}
+          ${metric("文件体量", upload.selected ? bytes(upload.totalBytes) : "待选择", shownFiles ? shownFiles + " 个技术标 PDF" : "等待文件选择")}
         </section>
 
         <section class="layout-grid" style="margin-top: 18px;">
@@ -610,7 +892,7 @@
                 </div>
                 <div class="field">
                   <label>评分规则状态</label>
-                  <div class="select-like">已加载 · ${items.length} 个评分项 · 总分 ${totalScore().toFixed(1)} 分</div>
+                  <div class="select-like">${html(DATA.scoringTable.prepared_label || "已加载")} · ${items.length} 个评分项 · 总分 ${totalScore().toFixed(1)} 分</div>
                 </div>
                 <div class="field">
                   <label>投标文件</label>
@@ -628,7 +910,7 @@
             <div class="panel-body">
               <div class="info-box">
                 <strong>合法离线准备</strong>
-                <span class="muted">评分表、要素、项目特征摘要只依赖招标文件，可提前准备；投标文件处理和评审结果必须现场运行。</span>
+                <span class="muted">评分表和项目特征摘要来自前端注入的项目配置；投标文件正文解析、证据定位和评审结果不在静态前端内伪造。</span>
               </div>
             </div>
           </aside>
@@ -640,14 +922,15 @@
             <span class="badge ${uploadBadge}">${recognizedBidders.length}/${DATA.bidders.length} 已识别</span>
           </div>
           <div class="panel-body">
-            <p class="panel-note">文件选择后只做投标人和 PDF 清单识别；点击“下一步：解析”后才开始 S1 入库和现场计时。</p>
+            <p class="panel-note">识别依据为本次选择文件的目录名、文件名、GUID 和评分项名称；不读取 PDF 正文，不估算文字数。</p>
+            ${renderUploadFilterNote()}
             ${recognizedBidders.length ? `
               <div class="bidder-compact-list">
                 ${recognizedBidders.map((bidder) => `
                   <div class="bidder-compact-item">
                     <div>
                       <div class="bidder-name" title="${html(bidder.name)}">${html(bidder.name)}</div>
-                      <div class="bidder-meta">${bidder.pdfCount} 个 PDF / ${chars(bidder.chars)}</div>
+                      <div class="bidder-meta">${bidder.pdfCount} 个技术标 PDF / ${bytes(bidder.sizeBytes)} / ${bidder.matchedItemIds.length}/${items.length} 项文件名匹配</div>
                     </div>
                     <span class="status-dot" title="已识别" aria-label="识别状态：已识别"></span>
                   </div>
@@ -656,47 +939,90 @@
             ` : `
               <div class="empty">请选择投标文件，解析结果会逐家进入列表。</div>
             `}
+            ${renderUploadWarnings()}
           </div>
         </section>
       </main>
     `;
   }
 
+  function renderUploadFilterNote() {
+    const upload = state.upload;
+    if (!upload.selected || !Array.isArray(upload.ignoredFiles) || !upload.ignoredFiles.length) return "";
+    const samples = upload.ignoredFiles
+      .slice(0, 4)
+      .map((file) => html(file.path || file.name))
+      .join("；");
+    return `
+      <div class="upload-filter-note">
+        已按“技术标”目录筛选，忽略 ${upload.ignoredFiles.length} 个非技术标/非 PDF 文件${samples ? "，例如：" + samples : ""}${upload.ignoredFiles.length > 4 ? "；..." : ""}
+      </div>
+    `;
+  }
+
+  function renderUploadWarnings() {
+    const upload = state.upload;
+    if (!upload.selected) return "";
+    const recognizedIds = new Set(uploadRecognizedBidders().map((bidder) => bidder.id));
+    const missing = DATA.bidders.filter((bidder) => !recognizedIds.has(bidder.id));
+    const unmatched = Array.isArray(upload.unmatchedFiles) ? upload.unmatchedFiles : [];
+    if (!missing.length && !unmatched.length) return "";
+    return `
+      <div class="upload-warning">
+        ${missing.length ? `
+          <div>
+            <strong>未识别投标人 ${missing.length} 家</strong>
+            <div class="small muted">${missing.map((bidder) => html(bidder.name)).join("、")}</div>
+          </div>
+        ` : ""}
+        ${unmatched.length ? `
+          <div>
+            <strong>未归属技术标 PDF ${unmatched.length} 个</strong>
+            <div class="small muted">${unmatched.slice(0, 6).map((file) => html(file.path || file.name)).join("；")}${unmatched.length > 6 ? "；..." : ""}</div>
+          </div>
+        ` : ""}
+      </div>
+    `;
+  }
+
   function renderConfirm() {
     const route = getRoute();
     const bindingIssueDemo = DEMO_MODE && route.query.get("binding") === "issue";
-    const confirmItems = scoringItems().map((item) => (
+    const confirmItems = bindingItemsForUpload().map((item) => (
       bindingIssueDemo && item.id === "T-15"
         ? { ...item, bound_count: item.expected_bidders - 1 }
         : item
     ));
-    const mismatchItem = confirmItems.find((item) => item.bound_count < item.expected_bidders);
+    const mismatchItem = confirmItems.find((item) => item.binding_status !== "matched");
     const mismatch = Boolean(mismatchItem);
     const elapsed = runElapsedMs();
     const scoringTotal = totalScore();
     const scoringTotalNote = scoringTotal === 100 ? "来自招标文件" : modeText("待评分规则确认", "Mock 尚未完整替换");
+    const bindingNote = mismatch
+      ? mismatchItem.id + " " + mismatchItem.bound_count + "/" + mismatchItem.expected_bidders + " · " + mismatchItem.binding_note
+      : confirmItems.length + " 项均为 " + DATA.bidders.length + "/" + DATA.bidders.length;
     return `
       <main class="page">
         <section class="page-header">
           <div>
             <h2 class="page-title">确认招标信息</h2>
-            <p class="page-desc">评分表已从招标文件第 33~37 页离线抽出并人工确认。本页用于核对评分项、分值、档位区间和投标文件绑定状态。</p>
+            <p class="page-desc">评分表和项目摘要来自项目配置覆盖层。本页用于核对评分项、分值、档位区间，以及本次上传文件名/GUID 的绑定预检结果。</p>
           </div>
           <div class="toolbar">
             <a class="btn" href="#/create">上一步</a>
             <button class="btn" data-toggle-reference>${state.showScoringReference ? "收起对照" : "打开对照"}</button>
             ${state.run.started ? `<a class="btn" href="#/running">查看运行监视</a>` : ""}
             ${DEMO_MODE ? `<a class="btn" href="${bindingIssueDemo ? "#/confirm" : "#/confirm?binding=issue"}">${bindingIssueDemo ? "恢复正常绑定" : "演示绑定异常"}</a>` : ""}
-            <button class="btn primary" data-start-run ${mismatch ? "disabled" : ""}>确认并开始评审</button>
+            <button class="btn primary" data-start-run ${mismatch ? "disabled" : ""}>确认并播放结果</button>
           </div>
         </section>
 
         <section class="summary-strip">
           ${metric("评分项", confirmItems.length + " 项", "技术标评分项")}
           ${metric("总分", scoringTotal.toFixed(1) + " 分", scoringTotalNote)}
-          ${metric("投标文件绑定", mismatch ? "存在异常" : "全部匹配", mismatch ? mismatchItem.id + " 为 " + mismatchItem.bound_count + "/" + mismatchItem.expected_bidders : "19 项均为 12/12")}
-          ${metric("现场计时", `<span data-run-elapsed>${state.run.startedAt ? formatDuration(elapsed) : "未开始"}</span>`, "页面①下一步：解析起算")}
-          ${metric("人工介入", "本页一次", "确认后进入现场评审")}
+          ${metric("投标文件绑定", mismatch ? "待确认" : "全部匹配", bindingNote)}
+          ${metric("前端计时", `<span data-run-elapsed>${state.run.startedAt ? formatDuration(elapsed) : "未开始"}</span>`, "页面①下一步：解析起算")}
+          ${metric("人工介入", "本页一次", "确认后播放已落盘结果")}
         </section>
 
         ${state.showScoringReference ? renderScoringReference(confirmItems) : ""}
@@ -704,7 +1030,7 @@
         <section class="layout-grid" style="margin-top: 18px;">
           <div class="panel">
             <div class="panel-header">
-              <h3 class="panel-title">解析结果（可核对）</h3>
+              <h3 class="panel-title">文件绑定预检（可核对）</h3>
               <span class="badge ${mismatch ? "danger" : "success"}">${mismatch ? "存在缺项" : "可开始"}</span>
             </div>
             <div class="panel-body">
@@ -730,7 +1056,10 @@
                           ${item.max_score.toFixed(1)}
                         </td>
                         <td>${html(tierSummary(item))}</td>
-                        <td><span class="badge ${item.bound_count === item.expected_bidders ? "success" : "danger"}">${item.bound_count}/${item.expected_bidders} 家已匹配</span></td>
+                        <td>
+                          <span class="badge ${item.binding_status === "matched" ? "success" : item.binding_status === "partial" ? "warning" : "danger"}">${item.bound_count}/${item.expected_bidders} 家已匹配</span>
+                          <div class="small muted">${html(item.binding_note)}</div>
+                        </td>
                       </tr>
                     `).join("")}
                   </tbody>
@@ -832,18 +1161,22 @@
     const percent = Math.min(100, (run.completedReviews / TOTAL_REVIEWS) * 100);
     const avgLatency = run.completedReviews ? Math.round(run.latencyTotal / run.completedReviews) : 0;
     const remainingReviews = Math.max(0, TOTAL_REVIEWS - run.completedReviews);
-    const estimatedMs = run.completedReviews ? remainingReviews * Math.max(avgLatency, 2400) / DATA.reportData.perf.concurrency : 0;
+    const concurrency = numericConcurrency();
+    const estimatedMs = run.completedReviews && concurrency ? remainingReviews * Math.max(avgLatency, 2400) / concurrency : 0;
     const waitingMs = run.lastEventAt ? runTimestampNow(run) - run.lastEventAt : 0;
     const resultButton = isResultsAccessible()
       ? `<a class="btn primary" href="#/results">查看已完成结果</a>`
       : `<span class="btn primary disabled" aria-disabled="true" title="逐项评审开始后才会产生结果">查看已完成结果</span>`;
+    const runSourceText = DATA.dataSource && DATA.dataSource.kind === "real"
+      ? "已落盘真实结果回放"
+      : "前端演示事件流";
 
     return `
       <main class="page">
         <section class="page-header">
           <div>
             <h2 class="page-title">${run.finished ? "评审完成" : "评审进行中"}</h2>
-            <p class="page-desc">逐项评审进度单独统计，分母为 228 = 12 家投标人 × 19 个评分项；S1-S4 用步骤条展示。</p>
+            <p class="page-desc">静态 prototype 不发起 fetch、WebSocket 或后端任务；本页按已加载的真实评审产物播放 S1-S4 事件流，分母为 ${TOTAL_REVIEWS} = ${DATA.bidders.length} 家投标人 × ${DATA.scoringTable.items.length} 个评分项。</p>
           </div>
           <div class="toolbar">
             <button class="btn" data-toggle-run>${run.paused ? "继续" : "暂停"}</button>
@@ -854,7 +1187,7 @@
         <section class="panel">
           <div class="panel-header">
             <h3 class="panel-title">阶段状态</h3>
-            <span class="badge ${run.finished ? "success" : "primary"}">${run.finished ? "报告数据已生成" : "现场运行中"}</span>
+            <span class="badge ${run.finished ? "success" : "primary"}">${run.finished ? "报告数据已生成" : runSourceText}</span>
           </div>
           <div class="panel-body">
             <div class="stage-stepper" aria-label="S1-S4 运行阶段">
@@ -889,10 +1222,10 @@
               <div class="summary-strip" style="margin-top: 18px;">
                 ${metric("已用时间", formatDuration(elapsed), "预计剩余 " + formatDuration(estimatedMs) + " · 按当前吞吐估算")}
                 ${metric("当前处理状态", html(run.currentLabel), "已等待 " + formatDuration(waitingMs))}
-                ${metric("当前并发", DATA.reportData.perf.concurrency + " 路", "逐项评审并发")}
+                ${metric("当前并发", concurrencyLabel(), "逐项评审并发")}
                 ${metric("GPU / 显存", "未采集", "不伪造硬件数据")}
-                ${metric("累计输入", number(run.inTokens) + " tokens", "实时累加")}
-                ${metric("累计输出", number(run.outTokens) + " tokens", "实时累加")}
+                ${metric("累计输入", number(run.inTokens) + " tokens", "本地估算")}
+                ${metric("累计输出", number(run.outTokens) + " tokens", "本地估算")}
                 ${metric("重试", run.retries + " 次", "失败先重试")}
                 ${metric("未评定", run.unrated + " 项", "不计入合计")}
               </div>
@@ -906,12 +1239,12 @@
             </div>
             <div class="panel-body">
               <div class="info-box">
-                <strong>实时标准</strong>
-                <span class="muted">每完成一个评分项，1 秒内进入滚动区；如果连续等待，当前处理项和等待时长保持可见。</span>
+                <strong>前端口径</strong>
+                <span class="muted">本页播放已落盘的 S3/S4 结果事件，不能替代现场后端调用；真正现场跑需由后端 CLI 或服务触发。</span>
               </div>
               <div class="info-box" style="margin-top: 12px;">
-                <strong>未命中与未评定</strong>
-                <span class="muted">0 分表示投标文件未写；“—”表示系统重试后仍未能给出判断，两者不会合并。</span>
+                <strong>token 口径</strong>
+                <span class="muted">${html((DATA.reportData.perf && DATA.reportData.perf.token_note) || TOKEN_NOTE)}</span>
               </div>
               <div class="secondary-actions">
                 <button class="btn ghost" data-reset-run>${html(modeText("重置流程", "重置演示"))}</button>
@@ -971,11 +1304,11 @@
         <section class="page-header">
           <div>
             <h2 class="page-title">评审结果并排</h2>
-            <p class="page-desc">并排展示 12 家投标人的逐项结果，供专家查看和比较；系统不输出跨家优劣判断。</p>
+            <p class="page-desc">并排展示 ${DATA.bidders.length} 家投标人的逐项结果，供专家查看和比较；数据来自已加载评审产物，导出为前端 HTML 快照。</p>
           </div>
           <div class="toolbar">
             <a class="btn" href="#/running">返回运行监视</a>
-            <button class="btn primary" data-export-report ${canExportReport ? "" : "disabled"} title="${canExportReport ? "导出完整静态 HTML 报告" : "评审完成后才能导出正式报告"}">导出报告</button>
+            <button class="btn primary" data-export-report ${canExportReport ? "" : "disabled"} title="${canExportReport ? "导出前端 HTML 快照" : "评审完成后才能导出报告快照"}">导出报告快照</button>
           </div>
         </section>
 
@@ -1180,7 +1513,7 @@
             <aside class="panel source-viewer">
               <div class="panel-header">
                 <h3 class="panel-title">原文定位</h3>
-                <span class="badge primary">PDF 页定位模拟</span>
+                <span class="badge primary">S2 证据页码</span>
               </div>
               <div class="panel-body">
                 ${renderSourceViewer(citedEntries, activeSection)}
@@ -1282,7 +1615,7 @@
             <div class="evidence-title">[${index}] ${html(row.file)}</div>
             <div class="evidence-path">${html(row.path.join(" › "))} · ${pageLabel(row)}</div>
           </div>
-          <button class="btn link" data-locate-section="${html(row.section_id)}">在原文中定位</button>
+          <button class="btn link" data-locate-section="${html(row.section_id)}">定位摘录</button>
         </div>
         <div class="quote">“${html(row.text)}”</div>
         ${row.parse_hint ? `<span class="badge warning">${html(row.parse_hint)}</span>` : ""}
@@ -1418,7 +1751,18 @@
   }
 
   function reportElapsedMs() {
-    return state.run.startedAt ? runElapsedMs() : DATA.reportData.perf.wall_clock_sec * 1000;
+    const wallClock = DATA.reportData && DATA.reportData.perf ? DATA.reportData.perf.wall_clock_sec : null;
+    return state.run.startedAt ? runElapsedMs() : typeof wallClock === "number" ? wallClock * 1000 : 0;
+  }
+
+  function numericConcurrency() {
+    const value = DATA.reportData && DATA.reportData.perf ? Number(DATA.reportData.perf.concurrency) : NaN;
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }
+
+  function concurrencyLabel() {
+    const value = numericConcurrency();
+    return value ? value + " 路" : html((DATA.reportData.perf && DATA.reportData.perf.concurrency) || "未采集");
   }
 
   function ensureRunStarted(message) {
@@ -1437,7 +1781,7 @@
   }
 
   function startReview() {
-    ensureRunStarted("确认完成，进入逐项评审");
+    ensureRunStarted("确认完成，开始播放评审事件流");
     const run = state.run;
     if (run.paused) {
       toggleRunPaused();
@@ -1445,12 +1789,12 @@
     if (!run.reviewStarted) {
       run.reviewStarted = true;
       run.paused = false;
-      run.currentLabel = "确认完成，进入逐项评审";
+      run.currentLabel = "确认完成，开始播放评审事件流";
       run.logs.push({
         time: clock(),
         kind: "system",
-        message: "人工确认完成，逐项评审事件流已放行",
-        result: "开始评审"
+        message: "人工确认完成，已落盘评审事件流开始播放",
+        result: "开始回放"
       });
       saveState();
     }
@@ -1494,7 +1838,8 @@
     }
   }
 
-  function beginUploadRecognition(fileCount) {
+  function beginUploadRecognition(fileList) {
+    const analysis = analyzeSelectedFiles(fileList);
     clearRunTimer();
     clearUploadRecognitionTimer();
     state.run = createRunState();
@@ -1504,10 +1849,21 @@
     state.activeSectionId = "";
     state.showScoringReference = false;
     state.upload.selected = true;
-    state.upload.totalFiles = fileCount || totalBidderPdfCount();
-    state.upload.sourceLabel = state.upload.totalFiles + " 个文件已选择";
+    state.upload.totalFiles = analysis.totalFiles;
+    state.upload.pdfFiles = analysis.pdfFiles;
+    state.upload.totalBytes = analysis.totalBytes;
+    state.upload.sourceLabel = analysis.sourceLabel;
+    state.upload.recognizedBidders = analysis.recognizedBidders;
+    state.upload.unmatchedFiles = analysis.unmatchedFiles;
+    state.upload.ignoredFiles = analysis.ignoredFiles;
     state.upload.startedAt = Date.now();
-    startUploadRecognitionTimer();
+    if (!analysis.recognizedBidders.length) {
+      state.upload.recognitionComplete = true;
+      state.upload.parsed = false;
+      state.upload.finishedAt = Date.now();
+    } else {
+      startUploadRecognitionTimer();
+    }
     saveState();
     render();
   }
@@ -1521,11 +1877,13 @@
         clearUploadRecognitionTimer();
         return;
       }
-      upload.recognizedCount = Math.min(DATA.bidders.length, upload.recognizedCount + 1);
-      if (upload.recognizedCount >= DATA.bidders.length) {
-        upload.parsed = true;
+      const target = Array.isArray(upload.recognizedBidders) ? upload.recognizedBidders.length : 0;
+      upload.recognizedCount = Math.min(target, upload.recognizedCount + 1);
+      if (upload.recognizedCount >= target) {
+        upload.recognitionComplete = true;
+        upload.parsed = target >= DATA.bidders.length;
         upload.finishedAt = Date.now();
-        upload.sourceLabel = (upload.totalFiles || totalBidderPdfCount()) + " 个文件已识别";
+        upload.sourceLabel = (upload.sourceLabel || "") + (upload.parsed ? " · 可进入解析" : " · 缺少投标人");
         clearUploadRecognitionTimer();
       }
       saveState();
@@ -1913,6 +2271,15 @@
     const generatedAt = new Date().toLocaleString("zh-CN", { hour12: false });
     const perf = DATA.reportData.perf;
     const computeNotes = DATA.reportData.compute_notes || {};
+    const dataSource = DATA.dataSource || {};
+    const configSource = DATA.configSource || {};
+    const reportSourceText = dataSource.kind === "real"
+      ? "真实评审结果：" + (dataSource.source || "已加载 real-results.js")
+      : "前端演示数据";
+    const configSourceText = configSource.scoring
+      ? "评分配置：" + configSource.scoring + "；项目摘要：" + (configSource.summary || "未标注")
+      : "评分配置来源未标注";
+    const tokenNote = perf.token_note || TOKEN_NOTE;
     const reportWallClock = typeof perf.wall_clock_sec === "number"
       ? formatDuration(perf.wall_clock_sec * 1000)
       : "未采集";
@@ -2056,6 +2423,7 @@
 <body>
   <h1>${html(DATA.reportData.project)} - 技术标辅助评审报告</h1>
   <p class="meta">生成时间：${html(generatedAt)}；页面计时：${formatDuration(reportElapsedMs())}；低置信度阈值：confidence &lt; ${LOW_CONFIDENCE_THRESHOLD}</p>
+  <p class="meta">数据源：${html(reportSourceText)}；${html(configSourceText)}。本文件由前端按当前页面状态导出，含当前专家复核记录；后端 S4 原始产物以 pipeline 输出目录为准。</p>
 
   <h2>并排表</h2>
   <div class="table-wrap">
@@ -2108,10 +2476,12 @@
       <tr><th>并发</th><td>${concurrencyText}</td></tr>
       <tr><th>调用数</th><td>${number(perf.calls)}</td></tr>
       <tr><th>重试数</th><td>${number(perf.retries)}</td></tr>
-      <tr><th>输入 tokens</th><td>${number(perf.in_tokens)}</td></tr>
-      <tr><th>输出 tokens</th><td>${number(perf.out_tokens)}</td></tr>
+      <tr><th>输入 tokens（本地估算）</th><td>${number(perf.in_tokens)}</td></tr>
+      <tr><th>输出 tokens（本地估算）</th><td>${number(perf.out_tokens)}</td></tr>
+      <tr><th>token 说明</th><td>${html(tokenNote)}</td></tr>
       <tr><th>GPU / 显存</th><td>${html(perf.gpu)} / ${perf.vram_peak_gb == null ? "未采集" : perf.vram_peak_gb + " GB"}</td></tr>
       <tr><th>说明</th><td>${html(perf.gpu_note)}</td></tr>
+      <tr><th>耗时说明</th><td>${html(perf.wall_clock_note || "未采集")}</td></tr>
     </tbody>
   </table>
 
@@ -2133,7 +2503,7 @@
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "技术标辅助评审报告-" + new Date().toISOString().replace(/[:.]/g, "-") + ".html";
+    link.download = "技术标辅助评审报告快照-" + new Date().toISOString().replace(/[:.]/g, "-") + ".html";
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -2145,11 +2515,11 @@
     if (parse) {
       event.preventDefault();
       if (!isUploadParsed()) {
-        window.alert("请先选择投标文件，并等待识别完成。");
+        window.alert("请先选择投标文件，并确认已识别到全部投标人。");
         return;
       }
       if (!state.run.started) {
-        ensureRunStarted("页面①点击下一步：解析，开始 PDF 入库和现场计时");
+        ensureRunStarted("页面①点击下一步：解析，开始前端计时和事件流播放准备");
       }
       setRoute("#/confirm");
       return;
@@ -2158,7 +2528,7 @@
     const start = event.target.closest("[data-start-run]");
     if (start) {
       if (!isUploadParsed()) {
-        window.alert("请先完成投标文件解析。");
+        window.alert("请先完成投标文件识别和绑定预检。");
         return;
       }
       startReview();
@@ -2176,7 +2546,7 @@
     const exportReport = event.target.closest("[data-export-report]");
     if (exportReport) {
       if (!state.run.finished) {
-        window.alert("评审完成后才能导出正式报告。当前结果页仅作为运行快照查看。");
+        window.alert("评审事件流播放完成后才能导出报告快照。当前结果页仅作为运行快照查看。");
         return;
       }
       downloadReport();
@@ -2241,8 +2611,7 @@
     const input = event.target && event.target.closest ? event.target.closest("[data-file-input]") : null;
     if (!input) return;
     if (input.files && input.files.length === 0) return;
-    const fileCount = input.files && input.files.length ? input.files.length : totalBidderPdfCount();
-    beginUploadRecognition(fileCount);
+    beginUploadRecognition(input.files);
   });
 
   function toggleRunPaused() {

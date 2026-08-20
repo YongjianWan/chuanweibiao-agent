@@ -30,7 +30,7 @@ prototype/index.html
 
 - `#/create`
 - `#/confirm`（需先在页面①点击“下一步：解析”，计时从该按钮起算）
-- `#/running`（页面①解析后即可查看，包含 S1/S2/S3/S4 事件流）
+- `#/running`（页面①解析后即可查看，播放已加载的 S1/S2/S3/S4 事件流）
 - `#/results`（逐项评审产生结果后可查看）
 - `#/detail?bidder=...&item=T-02`（对应单元格评审完成后可查看）
 
@@ -38,7 +38,9 @@ prototype/index.html
 
 ## 数据说明
 
-Mock 数据统一放在 `prototype/js/mock-data.js`，通过全局对象 `window.PROTOTYPE_DATA` 提供；证据种子由 `prototype/js/located-seed.js` 提供。真实评审分数由 `prototype/js/real-results.js` 提供，页面启动时检测到 `window.REAL_RESULTS` 就优先使用真实结果，缺失时自动回退到 Mock。
+`prototype/js/mock-data.js` 只作为离线兜底数据，通过全局对象 `window.PROTOTYPE_DATA` 提供；证据种子由 `prototype/js/located-seed.js` 提供。真实评审分数由 `prototype/js/real-results.js` 提供，页面启动时检测到 `window.REAL_RESULTS` 就优先使用真实结果，缺失时自动回退到 Mock。
+
+项目级前端配置由 `prototype/js/project-config.js` 注入，来源标注为 `config/projects/济阳区实验高级中学.yaml` 与 `config/projects/项目特征摘要.md`。它覆盖项目摘要、评分规则来源、最终性能口径和 token 说明；评分项展示优先使用 `prototype/js/scoring-reference.js` 的招标文件核对结果生成，不再把 `mock-data.js` 的评分表当正式入口。
 
 数据字段尽量贴近 README §4 的数据契约，保留了 `item_guid`、`section_id`、`page`、`match_score`、`hit`、`tier`、`aspects` 等后续对接字段；界面默认不向用户暴露这些内部技术字段。
 
@@ -48,8 +50,8 @@ Mock 数据统一放在 `prototype/js/mock-data.js`，通过全局对象 `window
 
 `sectionBlocks` 提供章节块层级数据。真实 PDF 链路产出 `picked[].page` 后会透传展示；回退到早期样例时，没有页码的证据会显示“页码未采集”。`section_id` 按 README §4 使用 `文件序号#块顺序号`，`#` 后保持纯整数。
 
-当前仓库已有 `config/projects/济阳区实验高级中学.yaml`；静态原型仍使用 `mock-data.js` 内置评分表作为可离线演示数据，评分项、分值、三档区间、`criteria` 与 `aspects` 已按该项目 YAML 同步。页面②的档位说明 `desc` 是评审专家补充说明，默认空，不是招标文件原文；后续接入真实链路时，应改为从项目 YAML 生成或注入评分表，而不是手工维护 Mock。
+页面①的文件识别基于本次选择的 `File.name` / `File.webkitRelativePath` / `File.size`，按投标人目录、评分项 GUID 和评分项名称做前端预检；静态前端不读取 PDF 正文，也不估算 PDF 文字数。页面②的绑定状态来自本次上传文件名/GUID 预检，匹配不到会显示“待 S1/S2 定位确认”，不会固定显示 `12/12`。
 
-页面④的“导出报告”会在浏览器本地生成静态 HTML，内容包含系统判分 / 专家判分并列表、未评定单列、建议人工复核清单、无区分度审计、专家复核记录、性能数据和 `compute_notes`。评审未完成时页面④仅作为运行快照查看，导出按钮禁用，避免生成半成品报告。
+页面③是静态前端事件流播放，不发起 `fetch` / `FormData` / `WebSocket` 调用后端；现场真实运行仍需后端 CLI 或服务触发。页面④的“导出报告快照”会在浏览器本地生成静态 HTML，内容包含系统判分 / 专家判分并列表、未评定单列、建议人工复核清单、无区分度审计、专家复核记录、性能数据和 `compute_notes`。评审未完成时页面④仅作为运行快照查看，导出按钮禁用，避免生成半成品快照。
 
-所有分数、耗时、token、显存相关内容均为 Mock / 占位示例，不代表真实评审结果或真实硬件配置；12 家字数合计按 README §1 的实测口径校准为 1047.0 万字。
+当前 `real-results.js` 的 228 条分数来自已落盘真实评审结果；前端性能口径覆盖为第三轮真实端点并发全量实测 186 秒、12 路并发。token 必须标注“本地估算”：智能体工厂端点 `usage` 恒为 `null`，现按中文约 1.5 字/token 估算。GPU / 显存采集不到时显示“未采集”，不填估算值。
