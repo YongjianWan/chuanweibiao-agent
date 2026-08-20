@@ -45,6 +45,51 @@ class TestManifest:
         assert m.completed == set()
         assert m.errored == set()
 
+    def test_replace_retries_transient_permission_error(self, tmp_path: Path, monkeypatch):
+        """Windows 上 Defender/索引器瞬时占用 tmp 文件，os.replace 抛 PermissionError 应重试。"""
+        import scheduler as sched
+
+        m = Manifest(completed={JobKey("A", "T-01")}, errored=set(), in_flight=set())
+        target = tmp_path / "manifest.json"
+
+        real_replace = os.replace
+        attempts = {"n": 0}
+
+        def flaky_replace(src, dst):
+            attempts["n"] += 1
+            if attempts["n"] <= 2:
+                raise PermissionError(5, "拒绝访问", str(src))
+            return real_replace(src, dst)
+
+        monkeypatch.setattr(os, "replace", flaky_replace)
+        monkeypatch.setattr(sched.time, "sleep", lambda _: None)  # 退避不真睡
+
+        save_manifest(target, m)
+        assert attempts["n"] == 3
+        loaded = load_manifest(target)
+        assert loaded.completed == m.completed
+
+    def test_replace_gives_up_after_max_attempts(self, tmp_path: Path, monkeypatch):
+        """PermissionError 持续超过重试上限时必须照常抛出，不能静默吞掉。"""
+        import scheduler as sched
+
+        monkeypatch.setattr(os, "replace", MagicMock(side_effect=PermissionError(5, "拒绝访问")))
+        monkeypatch.setattr(sched.time, "sleep", lambda _: None)
+
+        with pytest.raises(PermissionError):
+            save_manifest(tmp_path / "manifest.json", Manifest(set(), set(), set()))
+        assert os.replace.call_count == 5
+
+    def test_replace_non_permission_error_not_retried(self, tmp_path: Path, monkeypatch):
+        """非 PermissionError（如磁盘满）不是瞬时占用，必须立即抛出。"""
+        import scheduler as sched
+
+        monkeypatch.setattr(os, "replace", MagicMock(side_effect=OSError(28, "磁盘已满")))
+
+        with pytest.raises(OSError):
+            save_manifest(tmp_path / "manifest.json", Manifest(set(), set(), set()))
+        assert os.replace.call_count == 1
+
 
 class TestGenerateJobs:
     def test_dedup(self):
@@ -183,6 +228,93 @@ class TestRunBatch:
             assert target.exists(), f"Missing file: {target}"
             content = json.loads(target.read_text(encoding="utf-8"))
             assert content['status'] == 'rated'
+
+
+class TestResumeAfterCrash:
+    """断点续跑：第一批跑完一部分 → 进程死掉 → 第二批续跑，聚合必须覆盖全部 key。"""
+
+    def _make_jobs(self):
+        item_base = {
+            "name": "资质",
+            "max_score": 10,
+            "tiers": [
+                {"tier": "优", "min": 8, "max": 10},
+                {"tier": "中", "min": 4, "max": 8},
+                {"tier": "差", "min": 0, "max": 4},
+            ],
+            "criteria": "评审资质",
+        }
+        items_by_id = {
+            "T-01": {"id": "T-01", **item_base},
+            "T-02": {"id": "T-02", "name": "业绩", **{k: v for k, v in item_base.items() if k != "name"}},
+        }
+        jobs = []
+        for bidder in ("甲公司", "乙公司"):
+            for item_id in ("T-01", "T-02"):
+                pkg = {
+                    "bidder": bidder,
+                    "item_id": item_id,
+                    "picked": [{"section_id": "S1", "text": "投标响应正文"}],
+                }
+                jobs.append((JobKey(bidder, item_id), pkg))
+        return jobs, items_by_id
+
+    def test_resume_aggregates_full_results(self, tmp_path: Path):
+        from s3_review import MockModelClient
+        import scheduler as sched
+
+        jobs, items_by_id = self._make_jobs()
+        all_keys = {k for k, _ in jobs}
+        assert len(all_keys) == 4
+
+        work_dir = tmp_path / "reviews"
+        work_dir.mkdir()
+
+        async def mock_factory():
+            return MockModelClient()
+
+        kwargs = dict(
+            items_by_id=items_by_id,
+            project_summary="项目摘要",
+            project_rules=[],
+            section_index={},
+            client_factory=mock_factory,
+            work_dir=work_dir,
+            concurrency=2,
+            max_attempts=1,
+        )
+
+        # 第一批：manifest 记满 2 个 completed 后模拟进程被杀（manifest 已落盘）
+        real_save = sched.save_manifest
+
+        def crashing_save(path, manifest):
+            real_save(path, manifest)
+            if len(manifest.completed) >= 2:
+                raise RuntimeError("模拟进程被杀")
+
+        with patch.object(sched, "save_manifest", crashing_save):
+            with pytest.raises(RuntimeError, match="模拟进程被杀"):
+                asyncio.run(run_batch(jobs=jobs, **kwargs))
+
+        # 崩溃现场：manifest 有 2 个 completed，且它们的 per-item 文件必须已落盘
+        crashed_manifest = load_manifest(work_dir / "manifest.json")
+        assert len(crashed_manifest.completed) == 2
+        for key in crashed_manifest.completed:
+            assert (work_dir / key.bidder / f"{key.item_id}.json").exists(), (
+                f"作业完成时 per-item 文件必须当场落盘，缺失：{key}"
+            )
+
+        # 第二批：续跑，只应新跑剩下的 2 个
+        resumed = asyncio.run(run_batch(jobs=jobs, **kwargs))
+        assert resumed["completed"] == 2
+        assert set(resumed["results_by_key"]) == all_keys - crashed_manifest.completed
+
+        # 聚合：已存在的 per-item 文件 + 本次新跑的，必须覆盖全部 4 个 key
+        from scheduler import load_all_results
+        all_results = load_all_results(work_dir)
+        assert set(all_results) == all_keys
+        for key, result in all_results.items():
+            assert result["status"] == "rated", f"{key} 的结果缺失或非 rated"
 
 
 if __name__ == "__main__":
