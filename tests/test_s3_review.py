@@ -21,6 +21,7 @@ from s3_review import (
     review_one,
     AgentFactoryClient,
     _parse_json_object,
+    ReviewError,
 )
 
 
@@ -336,3 +337,42 @@ def test_parse_json_object_survives_prose_and_fences():
         "reason": "含 } 括号",
     }
     assert _parse_json_object('<think>推理</think>{"tier": "一般"}') == {"tier": "一般"}
+
+
+def test_parse_json_object_balances_truncated_output():
+    """输出被 token 截断、末尾缺闭合括号时补全。
+
+    来源：「可信空间数据产品」前端 js/app.js 的 balanceJson()，那边实测出现过。
+    本项目 76 次调用未复现（单次 out_tokens 约 150），补全零损失故先备着。
+    """
+    assert _parse_json_object('{"tier":"优","cite":[0,1') == {"tier": "优", "cite": [0, 1]}
+    assert _parse_json_object('{"a":{"b":[1,2') == {"a": {"b": [1, 2]}}
+
+
+def test_parse_json_object_fixes_chinese_enumeration_comma():
+    """模型用中文顿号当数组分隔符，属非法 JSON，零损失修复。"""
+    assert _parse_json_object('{"cite":["a"、"b"]}') == {"cite": ["a", "b"]}
+
+
+def test_parse_json_object_refuses_truncation_inside_string():
+    """断在字符串中间时必须失败，不得抢救成一条半句话的 reason。
+
+    补一个引号能让 JSON 变合法，但那会静默通过 _validate_model_output()，
+    交付看起来合法、内容却是残的判分理由。本项目有 §3.6 重试，失败重来更安全。
+    参考实现（前端）没有重试、用户在页面等着，才必须有损抢救——约束不同，选择不同。
+    """
+    with pytest.raises(ReviewError):
+        _parse_json_object('{"reason":"理由写到一半就被截')
+
+
+def test_parse_json_object_does_not_truncate_to_salvage():
+    """不做「逐段砍尾」：砍掉 score 或 cite 是判分失效，不是少显示一点。
+
+    ``{"tier":"优","score":` 这种断在键值对的冒号之后，括号补全救不回来
+    （补出 ``:}`` 仍非法）。参考实现会从最后一个完整的 ``}`` 处砍尾，退化成
+    ``{"tier":"优"}`` —— 一个丢了 score 的「合法」结果。本项目必须失败并重试。
+    """
+    with pytest.raises(ReviewError):
+        _parse_json_object('{"tier":"优","score":')
+    with pytest.raises(ReviewError):
+        _parse_json_object('{"tier":"优","cite":[0],"reason":')
