@@ -91,17 +91,6 @@
 
   const LOW_CONFIDENCE_THRESHOLD = 0.85;
 
-  function normalizeFactors(factors) {
-    const total = factors.reduce((sum, factor) => sum + factor.weight, 0);
-    let used = 0;
-    return factors.map((factor, index) => {
-      const isLast = index === factors.length - 1;
-      const weight = isLast ? round2(1 - used) : round2(factor.weight / total);
-      used += weight;
-      return { ...factor, weight };
-    });
-  }
-
   function makeDefaultMockTiers(maxScore) {
     return [
       {
@@ -141,76 +130,21 @@
       " 分，内容不全酌情扣分，若此条缺项不得分。";
   }
 
-  function makeFactors(name, idx) {
+  function makeAspects(name) {
     if (name === "进度管理方案") {
-      return normalizeFactors([
-        {
-          name: "施工进度计划编制与关键路径分析",
-          weight: 0.35,
-          sub: [
-            { name: "总体进度计划合理性", weight: 0.4, desc: "计划是否覆盖设计、采购、施工关键节点。" },
-            { name: "关键路径与里程碑节点控制", weight: 0.35, desc: "是否识别制约工期的关键线路。" },
-            { name: "工序衔接与流水施工组织", weight: 0.25, desc: "工序穿插和流水节拍是否清楚。" }
-          ]
-        },
-        {
-          name: "设计进度管理与协同机制",
-          weight: 0.25,
-          sub: [
-            { name: "设计出图计划", weight: 0.5, desc: "设计成果提交与审查节点是否明确。" },
-            { name: "设计施工协同", weight: 0.5, desc: "是否说明 EPC 模式下协同机制。" }
-          ]
-        },
-        {
-          name: "进度保障措施与资源配置",
-          weight: 0.25,
-          sub: [
-            { name: "劳动力保障", weight: 0.34, desc: "劳动力配置是否匹配工期。" },
-            { name: "材料设备保障", weight: 0.33, desc: "材料设备供应是否有保障。" },
-            { name: "赶工措施", weight: 0.33, desc: "风险情况下是否有赶工预案。" }
-          ]
-        },
-        {
-          name: "进度监测、预警与纠偏机制",
-          weight: 0.15,
-          sub: [
-            { name: "动态监测", weight: 0.5, desc: "是否建立进度跟踪机制。" },
-            { name: "预警纠偏", weight: 0.5, desc: "是否说明偏差处理办法。" }
-          ]
-        }
-      ]);
+      return [
+        "施工进度计划编制与关键路径分析",
+        "设计进度管理与协同机制",
+        "进度保障措施与资源配置",
+        "进度监测、预警与纠偏机制"
+      ];
     }
 
-    const factors = [
-      {
-        name: name + "完整性",
-        weight: 0.34,
-        sub: [
-          { name: "内容覆盖", weight: 0.5, desc: "是否覆盖招标文件要求的主要内容。" },
-          { name: "章节组织", weight: 0.5, desc: "结构是否完整清楚。" }
-        ]
-      },
-      {
-        name: name + "针对性",
-        weight: 0.33,
-        sub: [
-          { name: "项目特征响应", weight: 0.5, desc: "是否结合本项目工程特点。" },
-          { name: "关键风险识别", weight: 0.5, desc: "是否识别关键难点。" }
-        ]
-      },
-      {
-        name: name + "可执行性",
-        weight: 0.33,
-        sub: [
-          { name: "责任与节点", weight: 0.5, desc: "责任分工和时间节点是否明确。" },
-          { name: "保障措施", weight: 0.5, desc: "措施是否具备落地条件。" }
-        ]
-      }
-    ].map((factor, factorIndex) => ({
-      ...factor,
-      weight: idx % 4 === factorIndex ? round1(factor.weight + 0.02) : factor.weight
-    }));
-    return normalizeFactors(factors);
+    return [
+      name + "完整性",
+      name + "针对性",
+      name + "可执行性"
+    ];
   }
 
   const items = itemDefs.map(([id, name, maxScore, explicitTiers], index) => {
@@ -225,7 +159,7 @@
       expected_bidders: 12,
       tiers,
       tier_quote: buildTierQuote(tiers),
-      factors: makeFactors(name, index),
+      aspects: makeAspects(name),
       synonyms: name === "进度管理方案" ? ["香蕉曲线", "S 曲线", "关键线路"] : []
     };
   });
@@ -238,6 +172,16 @@
     rules: ["内容不全酌情扣分", "若此条缺项不得分"],
     items
   };
+
+  const BASE_EVIDENCE_BUDGET = 3000;
+  const MIN_EVIDENCE_BUDGET = 1500;
+  const MAX_EVIDENCE_BUDGET = 6000;
+  const TOTAL_SCORE = items.reduce((sum, item) => sum + item.max_score, 0);
+
+  function evidenceBudgetFor(item) {
+    const raw = BASE_EVIDENCE_BUDGET * items.length * item.max_score / TOTAL_SCORE;
+    return Math.round(Math.min(MAX_EVIDENCE_BUDGET, Math.max(MIN_EVIDENCE_BUDGET, raw)));
+  }
 
   const projectSummary = "本项目为济阳区实验高级中学工程总承包（EPC），建设内容包含设计、施工及相关总承包管理工作。评审重点关注投标文件是否围绕房建工程特点、工期组织、质量安全、资源保障、专业协同与可追溯证据展开。该摘要用于评审上下文展示，接入后由 S0 抽取结果替换。";
 
@@ -256,20 +200,6 @@
     return 0;
   }
 
-  function factorScores(item, bidderIndex, itemIndex, targetRate) {
-    if (item.id === "T-05" || item.id === "T-18") return null;
-    return item.factors.map((factor, factorIndex) => ({
-      name: factor.name,
-      weight: factor.weight,
-      value: round2(Math.min(0.95, Math.max(0.05, targetRate + ((((bidderIndex + itemIndex + factorIndex) % 3) - 1) * 0.04))))
-    }));
-  }
-
-  function weightedRate(factors, fallbackRate) {
-    if (!factors || !factors.length) return fallbackRate;
-    return round2(factors.reduce((sum, factor) => sum + factor.weight * factor.value, 0));
-  }
-
   function scoreInTier(tier, rate) {
     if (!tier) return 0;
     const score = round1(tier.min + rate * (tier.max - tier.min));
@@ -279,15 +209,7 @@
     return score;
   }
 
-  function isTierRateConflict(item, tier, rate) {
-    if (!tier) return false;
-    const topTier = item.tiers[0];
-    const bottomTier = item.tiers[item.tiers.length - 1];
-    return (tier.tier === topTier.tier && rate < 0.3) ||
-      (tier.tier === bottomTier.tier && rate > 0.7);
-  }
-
-  function confidenceFromFactors({ fallback, truncated, retried, conflict }) {
+  function confidenceFromFactors({ fallback, truncated, retried }) {
     let confidence = 1;
     const factors = [];
     if (fallback) {
@@ -301,10 +223,6 @@
     if (retried) {
       confidence *= 0.9;
       factors.push("重试");
-    }
-    if (conflict) {
-      confidence *= 0.7;
-      factors.push("打架");
     }
     return {
       confidence: round3(confidence),
@@ -396,10 +314,35 @@
     }));
   }
 
+  function fitPickedRowsToBudget(rows, budget) {
+    const fitted = [];
+    let remaining = budget;
+    rows.forEach((row) => {
+      if (remaining <= 0) return;
+      const chars = typeof row.chars === "number" ? row.chars : String(row.text || "").length;
+      if (chars <= remaining) {
+        fitted.push(row);
+        remaining -= chars;
+        return;
+      }
+      fitted.push({
+        ...row,
+        chars: remaining,
+        truncated: true,
+        parse_hint: "解析提示：该证据因本评分项 budget 用尽被截断，建议人工复核。",
+        text: String(row.text || "").slice(0, Math.max(0, remaining)) + "..."
+      });
+      remaining = 0;
+    });
+    return fitted;
+  }
+
   function makeEvidencePackage(bidder, item, bidderIndex, itemIndex, resultStatus, score) {
     const noEvidence = resultStatus === "unrated" || score === 0;
     const seed = seedForItem(itemIndex);
-    const picked = noEvidence ? [] : (seedPickedRows(seed, bidder, item) || fallbackPickedRows(bidder, item, bidderIndex, itemIndex));
+    const budget = evidenceBudgetFor(item);
+    const rawPicked = noEvidence ? [] : (seedPickedRows(seed, bidder, item) || fallbackPickedRows(bidder, item, bidderIndex, itemIndex));
+    const picked = fitPickedRowsToBudget(rawPicked, budget);
 
     picked.forEach((row) => {
       sectionBlocks.push({
@@ -429,7 +372,7 @@
       units: noEvidence ? 0 : picked.length,
       fallback: (item.id === "T-02" && bidder.id === "jinan1") || Boolean(seed && seed.fallback),
       evidence_chars: noEvidence ? 0 : picked.reduce((sum, row) => sum + row.chars, 0),
-      budget: 3000,
+      budget,
       picked
     };
   }
@@ -443,14 +386,12 @@
       let status = "rated";
       let tier = mockModelTier(item, bidderIndex, itemIndex);
       let rate = mockCompletionRate(bidderIndex, itemIndex, tier ? tier.tier : null);
-      let factors = tier ? factorScores(item, bidderIndex, itemIndex, rate) : null;
       let attempts = 1;
       let last_error = "";
 
       if (bidder.id === "zhongjian1" && item.id === "T-05") {
         status = "unrated";
         tier = null;
-        factors = null;
         attempts = 3;
         last_error = "JSON 解析失败";
       }
@@ -458,30 +399,26 @@
       if (status === "rated" && bidder.id === "jinan1" && item.id === "T-02") {
         tier = item.tiers.find((row) => row.tier === "良");
         rate = 0.1;
-        factors = factorScores(item, bidderIndex, itemIndex, rate);
         attempts = 2;
       }
 
       if (status === "rated" && bidder.id === "dezhou" && item.id === "T-16") {
         tier = item.tiers.find((row) => row.tier === "优");
         rate = 0.18;
-        factors = factorScores(item, bidderIndex, itemIndex, rate);
       }
 
       if (status === "rated" && bidder.id === "zhongjian2" && item.id === "T-06") {
         attempts = 2;
       }
 
-      const scoringRate = weightedRate(factors, rate);
-      const score = status === "unrated" ? null : scoreInTier(tier, scoringRate);
+      const score = status === "unrated" ? null : scoreInTier(tier, rate);
       const evidencePackage = makeEvidencePackage(bidder, item, bidderIndex, itemIndex, status, score);
       const confidenceState = status === "unrated"
         ? { confidence: 0, factors: ["未评定"] }
         : confidenceFromFactors({
           fallback: evidencePackage.fallback,
           truncated: evidencePackage.picked.some((row) => row.truncated),
-          retried: attempts > 1,
-          conflict: isTierRateConflict(item, tier, scoringRate)
+          retried: attempts > 1
         });
 
       const result = {
@@ -508,10 +445,6 @@
           latency_ms: status === "unrated" ? 23600 : 6200 + ((bidderIndex * 421 + itemIndex * 317) % 6800)
         }
       };
-
-      if (status === "rated" && score !== 0 && factors) {
-        result.factor_scores = factors;
-      }
 
       reviewResults.push(result);
       evidencePackages[key] = evidencePackage;

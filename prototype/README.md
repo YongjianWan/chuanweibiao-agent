@@ -28,7 +28,7 @@ prototype/index.html
 
 Mock 数据统一放在 `prototype/js/mock-data.js`，通过全局对象 `window.PROTOTYPE_DATA` 提供；证据种子由 `prototype/js/located-seed.js` 提供。
 
-数据字段尽量贴近 README §4 的数据契约，保留了 `item_guid`、`section_id`、`page`、`match_score`、`hit`、`tier`、`factor_scores` 等后续对接字段；界面默认不向用户暴露这些内部技术字段。
+数据字段尽量贴近 README §4 的数据契约，保留了 `item_guid`、`section_id`、`page`、`match_score`、`hit`、`tier`、`aspects` 等后续对接字段；界面默认不向用户暴露这些内部技术字段。
 
 `prototype/js/located-seed.js` 与 `data/interim/mock/review_results.json` 由 `scripts/build-prototype-mock.js` 从 `data/interim/located.json`、`data/interim/sections.json` 生成。当前 `located.json` 是早期软件标样例，缺少真实多投标人的 `bidder` / `item_id` / `item_guid` / PDF 页码，因此原型只取其 `section_id`、证据文件名、章节路径、命中词、截断状态和章节文本作为打底证据；`bidder`、`item_id`、`item_guid` 仍由当前 19 项评分表 Mock 映射补齐。T8 产出真实证据包后，应重新运行脚本生成。
 
