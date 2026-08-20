@@ -2,7 +2,7 @@
   "source_located_json": "data/projects/jiyang-epc/evidence/*/located.json",
   "source_sections_json": "data/projects/jiyang-epc/sections/*/sections.json",
   "generated_by": "scripts/build-prototype-mock.js",
-  "generated_at": "2026-08-20T09:51:29.155Z",
+  "generated_at": "2026-08-20T10:06:13.748Z",
   "note": "S3 mock: evidence fields are seeded from S2 located evidence; score, tier, reason and confidence are mock values.",
   "review_results": [
     {
@@ -13,6 +13,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 10.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -36,6 +37,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -59,6 +61,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.4,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -82,6 +85,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -105,6 +109,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -128,6 +133,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -151,6 +157,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -174,6 +181,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -199,6 +207,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 0.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -222,6 +231,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.1,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -245,6 +255,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -268,6 +279,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -291,6 +303,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -314,6 +327,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.4,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -337,6 +351,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -360,6 +375,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -383,6 +399,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -406,6 +423,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -429,10 +447,13 @@
       "status": "rated",
       "tier": null,
       "score": 0,
+      "miss_reason": "not_found",
       "cite": [],
-      "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-      "confidence": 1,
-      "confidence_factors": [],
+      "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+      "confidence": 0.5,
+      "confidence_factors": [
+        "检索未命中"
+      ],
       "attempts": 1,
       "last_error": "",
       "perf": {
@@ -449,6 +470,7 @@
       "status": "rated",
       "tier": "优",
       "score": 19.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -472,6 +494,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -495,6 +518,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -518,6 +542,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -541,6 +566,7 @@
       "status": "unrated",
       "tier": null,
       "score": null,
+      "miss_reason": null,
       "cite": [],
       "reason": "模型连续返回无效结果，系统按未评定处理。",
       "confidence": 0,
@@ -563,6 +589,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -586,6 +613,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -609,6 +637,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -632,6 +661,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -657,6 +687,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 0.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -680,6 +711,7 @@
       "status": "rated",
       "tier": "优",
       "score": 7.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -703,6 +735,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -726,6 +759,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -749,6 +783,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -772,6 +807,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -795,6 +831,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -818,6 +855,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -841,6 +879,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 0.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -864,10 +903,13 @@
       "status": "rated",
       "tier": null,
       "score": 0,
+      "miss_reason": "not_found",
       "cite": [],
-      "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-      "confidence": 1,
-      "confidence_factors": [],
+      "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+      "confidence": 0.5,
+      "confidence_factors": [
+        "检索未命中"
+      ],
       "attempts": 1,
       "last_error": "",
       "perf": {
@@ -884,6 +926,7 @@
       "status": "rated",
       "tier": "良",
       "score": 15.4,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -905,17 +948,14 @@
       "bidder": "济南一建集团有限公司8008754",
       "bidder_id": "jinan1",
       "status": "rated",
-      "tier": "良",
-      "score": 2.1,
-      "cite": [
-        0,
-        1
-      ],
-      "reason": "投标文件覆盖了主要评审要求，能够说明组织安排、节点控制和保障措施；部分内容仍偏概括，与本项目 EPC 协同和现场条件结合不够充分。",
-      "confidence": 0.63,
+      "tier": null,
+      "score": 0,
+      "miss_reason": "not_found",
+      "cite": [],
+      "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+      "confidence": 0.5,
       "confidence_factors": [
-        "降级",
-        "重试"
+        "检索未命中"
       ],
       "attempts": 2,
       "last_error": "",
@@ -933,6 +973,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.1,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -956,6 +997,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -979,6 +1021,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1002,6 +1045,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1025,6 +1069,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.1,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1048,6 +1093,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1071,6 +1117,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1094,6 +1141,7 @@
       "status": "rated",
       "tier": "优",
       "score": 1.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1117,6 +1165,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.4,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1140,6 +1189,7 @@
       "status": "rated",
       "tier": "优",
       "score": 7.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1163,6 +1213,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1186,6 +1237,7 @@
       "status": "rated",
       "tier": "优",
       "score": 7.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1209,6 +1261,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1232,6 +1285,7 @@
       "status": "rated",
       "tier": "优",
       "score": 7.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1255,6 +1309,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1278,6 +1333,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1301,10 +1357,13 @@
       "status": "rated",
       "tier": null,
       "score": 0,
+      "miss_reason": "not_found",
       "cite": [],
-      "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-      "confidence": 1,
-      "confidence_factors": [],
+      "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+      "confidence": 0.5,
+      "confidence_factors": [
+        "检索未命中"
+      ],
       "attempts": 1,
       "last_error": "",
       "perf": {
@@ -1321,6 +1380,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 11.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1344,6 +1404,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1367,6 +1428,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1390,6 +1452,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.4,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1413,6 +1476,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1436,6 +1500,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1461,6 +1526,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1484,6 +1550,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1507,6 +1574,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 0.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1532,6 +1600,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.1,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1555,6 +1624,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1578,6 +1648,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.4,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1601,6 +1672,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1624,6 +1696,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1647,6 +1720,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1670,6 +1744,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1693,6 +1768,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1716,6 +1792,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1739,10 +1816,13 @@
       "status": "rated",
       "tier": null,
       "score": 0,
+      "miss_reason": "not_found",
       "cite": [],
-      "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-      "confidence": 1,
-      "confidence_factors": [],
+      "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+      "confidence": 0.5,
+      "confidence_factors": [
+        "检索未命中"
+      ],
       "attempts": 1,
       "last_error": "",
       "perf": {
@@ -1759,6 +1839,7 @@
       "status": "rated",
       "tier": "优",
       "score": 19.4,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1782,6 +1863,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1805,6 +1887,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1828,6 +1911,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1851,6 +1935,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1874,6 +1959,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1897,6 +1983,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1920,6 +2007,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1943,6 +2031,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1966,6 +2055,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -1989,6 +2079,7 @@
       "status": "rated",
       "tier": "优",
       "score": 7.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2012,6 +2103,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2035,6 +2127,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2058,6 +2151,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2081,6 +2175,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2104,6 +2199,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2127,6 +2223,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2150,6 +2247,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2173,10 +2271,13 @@
       "status": "rated",
       "tier": null,
       "score": 0,
+      "miss_reason": "not_found",
       "cite": [],
-      "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-      "confidence": 1,
-      "confidence_factors": [],
+      "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+      "confidence": 0.5,
+      "confidence_factors": [
+        "检索未命中"
+      ],
       "attempts": 1,
       "last_error": "",
       "perf": {
@@ -2193,6 +2294,7 @@
       "status": "rated",
       "tier": "良",
       "score": 15.4,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2216,6 +2318,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2239,6 +2342,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2262,6 +2366,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2285,6 +2390,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2308,6 +2414,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2331,6 +2438,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.1,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2354,6 +2462,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2377,6 +2486,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2402,6 +2512,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 0.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2425,6 +2536,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2448,6 +2560,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2471,6 +2584,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2494,6 +2608,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.4,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2517,6 +2632,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2540,6 +2656,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2563,6 +2680,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2586,6 +2704,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 0.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2609,10 +2728,13 @@
       "status": "rated",
       "tier": null,
       "score": 0,
+      "miss_reason": "not_found",
       "cite": [],
-      "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-      "confidence": 1,
-      "confidence_factors": [],
+      "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+      "confidence": 0.5,
+      "confidence_factors": [
+        "检索未命中"
+      ],
       "attempts": 1,
       "last_error": "",
       "perf": {
@@ -2629,6 +2751,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 11.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2652,6 +2775,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2675,6 +2799,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2698,6 +2823,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2721,6 +2847,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2744,6 +2871,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2767,6 +2895,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2790,6 +2919,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2813,6 +2943,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 0.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2838,6 +2969,7 @@
       "status": "rated",
       "tier": "优",
       "score": 1.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2861,6 +2993,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2884,6 +3017,7 @@
       "status": "rated",
       "tier": "优",
       "score": 7.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2907,6 +3041,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2930,6 +3065,7 @@
       "status": "rated",
       "tier": "优",
       "score": 7.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2953,6 +3089,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2976,6 +3113,7 @@
       "status": "rated",
       "tier": "优",
       "score": 7.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -2999,6 +3137,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3022,6 +3161,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3045,10 +3185,13 @@
       "status": "rated",
       "tier": null,
       "score": 0,
+      "miss_reason": "not_found",
       "cite": [],
-      "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-      "confidence": 1,
-      "confidence_factors": [],
+      "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+      "confidence": 0.5,
+      "confidence_factors": [
+        "检索未命中"
+      ],
       "attempts": 1,
       "last_error": "",
       "perf": {
@@ -3065,6 +3208,7 @@
       "status": "rated",
       "tier": "优",
       "score": 19.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3088,6 +3232,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3111,6 +3256,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3134,6 +3280,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3157,6 +3304,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3180,6 +3328,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3203,6 +3352,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3226,6 +3376,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3249,6 +3400,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3274,6 +3426,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3297,6 +3450,7 @@
       "status": "rated",
       "tier": "优",
       "score": 7.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3320,6 +3474,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3343,6 +3498,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3366,6 +3522,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3389,6 +3546,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3412,6 +3570,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.4,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3435,6 +3594,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3458,6 +3618,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3481,10 +3642,13 @@
       "status": "rated",
       "tier": null,
       "score": 0,
+      "miss_reason": "not_found",
       "cite": [],
-      "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-      "confidence": 1,
-      "confidence_factors": [],
+      "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+      "confidence": 0.5,
+      "confidence_factors": [
+        "检索未命中"
+      ],
       "attempts": 1,
       "last_error": "",
       "perf": {
@@ -3501,6 +3665,7 @@
       "status": "rated",
       "tier": "良",
       "score": 15.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3524,6 +3689,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3547,6 +3713,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.1,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3570,6 +3737,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3593,6 +3761,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3616,6 +3785,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3639,6 +3809,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.1,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3662,6 +3833,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3685,6 +3857,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.4,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3710,6 +3883,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 0.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3733,6 +3907,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3756,6 +3931,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.4,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3779,6 +3955,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3802,6 +3979,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3825,6 +4003,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3848,6 +4027,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3871,6 +4051,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3894,6 +4075,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 0.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3917,10 +4099,13 @@
       "status": "rated",
       "tier": null,
       "score": 0,
+      "miss_reason": "not_found",
       "cite": [],
-      "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-      "confidence": 1,
-      "confidence_factors": [],
+      "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+      "confidence": 0.5,
+      "confidence_factors": [
+        "检索未命中"
+      ],
       "attempts": 1,
       "last_error": "",
       "perf": {
@@ -3937,6 +4122,7 @@
       "status": "rated",
       "tier": "良",
       "score": 15.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3960,6 +4146,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -3983,6 +4170,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.1,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4006,6 +4194,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4029,6 +4218,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4052,6 +4242,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4075,6 +4266,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4098,6 +4290,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4121,6 +4314,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4146,6 +4340,7 @@
       "status": "rated",
       "tier": "优",
       "score": 1.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4169,6 +4364,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4192,6 +4388,7 @@
       "status": "rated",
       "tier": "优",
       "score": 7.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4215,6 +4412,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4238,6 +4436,7 @@
       "status": "rated",
       "tier": "优",
       "score": 7.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4261,6 +4460,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4284,6 +4484,7 @@
       "status": "rated",
       "tier": "优",
       "score": 7.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4307,6 +4508,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4330,6 +4532,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4353,10 +4556,13 @@
       "status": "rated",
       "tier": null,
       "score": 0,
+      "miss_reason": "not_found",
       "cite": [],
-      "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-      "confidence": 1,
-      "confidence_factors": [],
+      "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+      "confidence": 0.5,
+      "confidence_factors": [
+        "检索未命中"
+      ],
       "attempts": 1,
       "last_error": "",
       "perf": {
@@ -4373,6 +4579,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 10.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4396,6 +4603,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4419,6 +4627,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.4,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4442,6 +4651,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4465,6 +4675,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4488,6 +4699,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4511,6 +4723,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4534,6 +4747,7 @@
       "status": "rated",
       "tier": "良",
       "score": 2.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4557,6 +4771,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 0.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4582,6 +4797,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.1,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4605,6 +4821,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.4,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4628,6 +4845,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4651,6 +4869,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4674,6 +4893,7 @@
       "status": "rated",
       "tier": "良",
       "score": 4.4,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4697,6 +4917,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4718,15 +4939,15 @@
       "bidder": "德州建设集团有限公司8007782",
       "bidder_id": "dezhou",
       "status": "rated",
-      "tier": "优",
-      "score": 6.4,
-      "cite": [
-        0,
-        1
-      ],
-      "reason": "投标文件覆盖了主要评审要求，能够说明组织安排、节点控制和保障措施；部分内容仍偏概括，与本项目 EPC 协同和现场条件结合不够充分。",
+      "tier": null,
+      "score": 0,
+      "miss_reason": "no_file",
+      "cite": [],
+      "reason": "该投标人未提交本评分项对应的投标文件，按招标文件规则“若此条缺项不得分”处理为 0 分。",
       "confidence": 1,
-      "confidence_factors": [],
+      "confidence_factors": [
+        "缺文件"
+      ],
       "attempts": 1,
       "last_error": "",
       "perf": {
@@ -4743,6 +4964,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.5,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4766,6 +4988,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4789,10 +5012,13 @@
       "status": "rated",
       "tier": null,
       "score": 0,
+      "miss_reason": "not_found",
       "cite": [],
-      "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-      "confidence": 1,
-      "confidence_factors": [],
+      "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+      "confidence": 0.5,
+      "confidence_factors": [
+        "检索未命中"
+      ],
       "attempts": 1,
       "last_error": "",
       "perf": {
@@ -4809,6 +5035,7 @@
       "status": "rated",
       "tier": "优",
       "score": 19.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4832,6 +5059,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.2,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4855,6 +5083,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4878,6 +5107,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4901,6 +5131,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4924,6 +5155,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4947,6 +5179,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4970,6 +5203,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -4993,6 +5227,7 @@
       "status": "rated",
       "tier": "优",
       "score": 2.9,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -5018,6 +5253,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 0.3,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -5041,6 +5277,7 @@
       "status": "rated",
       "tier": "优",
       "score": 7.7,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -5064,6 +5301,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.4,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -5087,6 +5325,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -5110,6 +5349,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -5133,6 +5373,7 @@
       "status": "rated",
       "tier": "优",
       "score": 3.8,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -5156,6 +5397,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -5179,6 +5421,7 @@
       "status": "rated",
       "tier": "良",
       "score": 1.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -5202,6 +5445,7 @@
       "status": "rated",
       "tier": "一般",
       "score": 0.6,
+      "miss_reason": null,
       "cite": [
         0,
         1
@@ -5225,10 +5469,13 @@
       "status": "rated",
       "tier": null,
       "score": 0,
+      "miss_reason": "not_found",
       "cite": [],
-      "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-      "confidence": 1,
-      "confidence_factors": [],
+      "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+      "confidence": 0.5,
+      "confidence_factors": [
+        "检索未命中"
+      ],
       "attempts": 1,
       "last_error": "",
       "perf": {
@@ -8979,119 +9226,12 @@
       "source_item_id": "T-02",
       "source_bidder": "济南一建集团有限公司8008754",
       "source_name": "进度管理方案",
-      "candidates": 31,
-      "units": 4,
+      "candidates": 0,
+      "units": 0,
       "fallback": true,
-      "evidence_chars": 832,
+      "evidence_chars": 0,
       "budget": 3420,
-      "picked": [
-        {
-          "section_id": "19#18",
-          "file": "进度管理方案108D538F-85B8-4C7D-B32C-F6ACDAA187B9.pdf",
-          "item_id": "T-02",
-          "item_guid": "108d538f-85b8-4c7d-b32c-f6acdaa187b9",
-          "bidder": "济南一建集团有限公司8008754",
-          "bidder_id": "jinan1",
-          "page": 5,
-          "level": 5,
-          "path": [
-            "第二章、进度管理方案",
-            "2.3具体措施",
-            "（3）定期对设计进度监测，使进度始终在计划的控制之内。"
-          ],
-          "unit": [
-            "第二章、进度管理方案",
-            "2.3具体措施"
-          ],
-          "match_score": 21.3,
-          "hit": [
-            "T:设计进度",
-            "t:设计",
-            "t:进度"
-          ],
-          "chars": 195,
-          "truncated": false,
-          "parse_hint": "",
-          "text": "（4）管理人员和专业设计人员一步安排到位，加强技术人员和设备的调配和技 术协调。 （5）根据以往经验，在施工图设计信往往影响设计工期。本项目将加大人员力 量的投入，加强图纸设计工作的管理。 （6）进一步做好做细致的设计工作，在设计中从各角度科学安排工作进度，详 细制订设计工作计划并严格按照计划进行，加强各专业间的工序、工作时间交接； 在控制设计质量的同时达到加快设计进度。 3施工进度管理"
-        },
-        {
-          "section_id": "19#1",
-          "file": "进度管理方案108D538F-85B8-4C7D-B32C-F6ACDAA187B9.pdf",
-          "item_id": "T-02",
-          "item_guid": "108d538f-85b8-4c7d-b32c-f6acdaa187b9",
-          "bidder": "济南一建集团有限公司8008754",
-          "bidder_id": "jinan1",
-          "page": 1,
-          "level": 1,
-          "path": [
-            "第二章、进度管理方案"
-          ],
-          "unit": [
-            "第二章、进度管理方案"
-          ],
-          "match_score": 21.2,
-          "hit": [
-            "t:预警",
-            "t:进度"
-          ],
-          "chars": 171,
-          "truncated": false,
-          "parse_hint": "",
-          "text": "为了提高该EPC建设工程的总承包管理水平、达到建设工程项目管理的科学化、 规范化、制度化，必须要贯彻好制订的进度管理方案。 1进度管理主要内容 济阳区实验高级中学项目工程总承包（EPC），计划开工日期：2026 年8月30日 （以建设单位通知为准），计划竣工日期：2029年6月15日，工期总日历天数：1020 天（计划开工日期至竣工日期）。"
-        },
-        {
-          "section_id": "19#2",
-          "file": "进度管理方案108D538F-85B8-4C7D-B32C-F6ACDAA187B9.pdf",
-          "item_id": "T-02",
-          "item_guid": "108d538f-85b8-4c7d-b32c-f6acdaa187b9",
-          "bidder": "济南一建集团有限公司8008754",
-          "bidder_id": "jinan1",
-          "page": 1,
-          "level": 4,
-          "path": [
-            "第二章、进度管理方案",
-            "1.1项目进度管理方案"
-          ],
-          "unit": [
-            "第二章、进度管理方案"
-          ],
-          "match_score": 21.2,
-          "hit": [
-            "t:预警",
-            "t:进度"
-          ],
-          "chars": 176,
-          "truncated": false,
-          "parse_hint": "",
-          "text": "项目进度管理是为实现预定的进度目标而进行的计划、组织、实施、协调和控 制等活动。通过建立项目进度管理制度，制订进度管理目标，对项目的建设实施进 行有效的控制。项目进度管理目标应按项目实施过程、专业、阶段或实施周期进行 分解。通过制定进度计划；落实进度计划责任；实施进度计划跟踪、检查、纠偏、 调整；编制进度报告，报送监理、业主审查等措施来实施进度管理。"
-        },
-        {
-          "section_id": "19#3",
-          "file": "进度管理方案108D538F-85B8-4C7D-B32C-F6ACDAA187B9.pdf",
-          "item_id": "T-02",
-          "item_guid": "108d538f-85b8-4c7d-b32c-f6acdaa187b9",
-          "bidder": "济南一建集团有限公司8008754",
-          "bidder_id": "jinan1",
-          "page": 1,
-          "level": 4,
-          "path": [
-            "第二章、进度管理方案",
-            "1.1.1项目进度计划的编制"
-          ],
-          "unit": [
-            "第二章、进度管理方案"
-          ],
-          "match_score": 21.2,
-          "hit": [
-            "t:预警",
-            "t:进度"
-          ],
-          "chars": 290,
-          "truncated": false,
-          "parse_hint": "",
-          "text": "进度计划的编制是进度管理工作的核心，保证项目进度满足项目目标的要求就 要编制切实可行的进度计划。 根据管理的层次和工程的实际情况，EPC总承包项目部根据招标文件提供的进度 目标编制项目执行计划，各分包商根据项目执行计划编制项目实施计划，编制后的 项目实施计划需通过EPC总承包项目部审核后方可执行。 项目计划包括总体和分阶段的计划，并随着工程的进展逐步完善和更新。本工 程EPC总承包项目部按照业主的相关要求编制项目总体计划，其中应包括不同阶段的 计划。在计划执行过程中随着工作的进展和细化，尤其是在不同阶段项目阶段授权 明确后，分阶段的计划可以在一个阶段的开始大大降低不确定性。"
-        }
-      ]
+      "picked": []
     },
     "jinan1__T-03": {
       "item_id": "T-03",
@@ -22581,68 +22721,12 @@
       "source_item_id": null,
       "source_bidder": null,
       "source_name": null,
-      "candidates": 28,
-      "units": 2,
+      "candidates": 0,
+      "units": 0,
       "fallback": false,
-      "evidence_chars": 1600,
+      "evidence_chars": 0,
       "budget": 6840,
-      "picked": [
-        {
-          "section_id": "16#1077",
-          "file": "施工质量措施计划FFD783A2-78CF-4FD6-81EF-812298958298.pdf",
-          "item_id": "T-16",
-          "item_guid": "ffd783a2-78cf-4fd6-81ef-812298958298",
-          "bidder": "德州建设集团有限公司8007782",
-          "bidder_id": "dezhou",
-          "page": 21,
-          "level": 3,
-          "path": [
-            "第二章 施工组织",
-            "2.1 总体部署",
-            "2.1.4 施工段划分"
-          ],
-          "unit": [
-            "第二章 施工组织",
-            "2.1 总体部署"
-          ],
-          "match_score": 24.8,
-          "hit": [
-            "t:总体部署",
-            "b:关键节点",
-            "b:本项目"
-          ],
-          "chars": 860,
-          "truncated": false,
-          "text": "本工程按教学区、配套用房及室外工程分区组织施工，结合现场移交条件设置流水作业段，并对关键节点、材料进场和专业穿插进行动态控制。"
-        },
-        {
-          "section_id": "16#1078",
-          "file": "施工质量措施计划FFD783A2-78CF-4FD6-81EF-812298958298.pdf",
-          "item_id": "T-16",
-          "item_guid": "ffd783a2-78cf-4fd6-81ef-812298958298",
-          "bidder": "德州建设集团有限公司8007782",
-          "bidder_id": "dezhou",
-          "page": 21,
-          "level": 2,
-          "path": [
-            "第二章 施工组织",
-            "2.2 阶段目标"
-          ],
-          "unit": [
-            "第二章 施工组织",
-            "2.2 阶段目标"
-          ],
-          "match_score": 14.1,
-          "hit": [
-            "b:里程碑",
-            "b:EPC 协同"
-          ],
-          "chars": 740,
-          "truncated": false,
-          "parse_hint": "",
-          "text": "设计、采购、施工各阶段设置里程碑节点，项目部按周检查完成情况。对可能影响工期的审批、材料供应和专业交叉问题建立预警纠偏机制。"
-        }
-      ]
+      "picked": []
     },
     "dezhou__T-17": {
       "item_id": "T-17",
@@ -24161,7 +24245,7 @@
         "scores": {
           "中冶建工集团有限公司8010856": 2.5,
           "中国建筑一局（集团）有限公司8004216": 1.2,
-          "济南一建集团有限公司8008754": 2.1,
+          "济南一建集团有限公司8008754": 0,
           "中国建筑第二工程局有限公司8001968": 2.5,
           "中国建筑第五工程局有限公司8002423": 2.6,
           "中铁建工集团有限公司8010219": 1.3,
@@ -24435,7 +24519,7 @@
           "青建集团股份公司8006620": 4.4,
           "天齐置业集团股份有限公司8007234": 1.6,
           "中青建安建设集团有限公司8005591": 7.6,
-          "德州建设集团有限公司8007782": 6.4,
+          "德州建设集团有限公司8007782": 0,
           "山东路桥集团有限公司8009083": 1.6
         }
       },
@@ -24511,9 +24595,9 @@
         "expert_overrides": 0
       },
       "济南一建集团有限公司8008754": {
-        "score": 74.8,
+        "score": 72.7,
         "unrated": 0,
-        "expert_score": 74.8,
+        "expert_score": 72.7,
         "expert_overrides": 0
       },
       "中国建筑第二工程局有限公司8001968": {
@@ -24559,9 +24643,9 @@
         "expert_overrides": 0
       },
       "德州建设集团有限公司8007782": {
-        "score": 48.7,
+        "score": 42.3,
         "unrated": 0,
-        "expert_score": 48.7,
+        "expert_score": 42.3,
         "expert_overrides": 0
       },
       "山东路桥集团有限公司8009083": {
@@ -24580,6 +24664,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 10.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24603,6 +24688,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24626,6 +24712,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.4,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24649,6 +24736,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24672,6 +24760,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24695,6 +24784,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24718,6 +24808,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24741,6 +24832,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24766,6 +24858,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 0.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24789,6 +24882,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.1,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24812,6 +24906,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24835,6 +24930,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24858,6 +24954,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24881,6 +24978,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.4,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24904,6 +25002,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24927,6 +25026,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24950,6 +25050,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24973,6 +25074,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -24996,10 +25098,13 @@
         "status": "rated",
         "tier": null,
         "score": 0,
+        "miss_reason": "not_found",
         "cite": [],
-        "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-        "confidence": 1,
-        "confidence_factors": [],
+        "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+        "confidence": 0.5,
+        "confidence_factors": [
+          "检索未命中"
+        ],
         "attempts": 1,
         "last_error": "",
         "perf": {
@@ -25016,6 +25121,7 @@
         "status": "rated",
         "tier": "优",
         "score": 19.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25039,6 +25145,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25062,6 +25169,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25085,6 +25193,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25108,6 +25217,7 @@
         "status": "unrated",
         "tier": null,
         "score": null,
+        "miss_reason": null,
         "cite": [],
         "reason": "模型连续返回无效结果，系统按未评定处理。",
         "confidence": 0,
@@ -25130,6 +25240,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25153,6 +25264,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25176,6 +25288,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25199,6 +25312,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25224,6 +25338,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 0.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25247,6 +25362,7 @@
         "status": "rated",
         "tier": "优",
         "score": 7.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25270,6 +25386,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25293,6 +25410,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25316,6 +25434,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25339,6 +25458,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25362,6 +25482,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25385,6 +25506,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25408,6 +25530,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 0.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25431,10 +25554,13 @@
         "status": "rated",
         "tier": null,
         "score": 0,
+        "miss_reason": "not_found",
         "cite": [],
-        "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-        "confidence": 1,
-        "confidence_factors": [],
+        "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+        "confidence": 0.5,
+        "confidence_factors": [
+          "检索未命中"
+        ],
         "attempts": 1,
         "last_error": "",
         "perf": {
@@ -25451,6 +25577,7 @@
         "status": "rated",
         "tier": "良",
         "score": 15.4,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25472,17 +25599,14 @@
         "bidder": "济南一建集团有限公司8008754",
         "bidder_id": "jinan1",
         "status": "rated",
-        "tier": "良",
-        "score": 2.1,
-        "cite": [
-          0,
-          1
-        ],
-        "reason": "投标文件覆盖了主要评审要求，能够说明组织安排、节点控制和保障措施；部分内容仍偏概括，与本项目 EPC 协同和现场条件结合不够充分。",
-        "confidence": 0.63,
+        "tier": null,
+        "score": 0,
+        "miss_reason": "not_found",
+        "cite": [],
+        "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+        "confidence": 0.5,
         "confidence_factors": [
-          "降级",
-          "重试"
+          "检索未命中"
         ],
         "attempts": 2,
         "last_error": "",
@@ -25500,6 +25624,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.1,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25523,6 +25648,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25546,6 +25672,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25569,6 +25696,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25592,6 +25720,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.1,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25615,6 +25744,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25638,6 +25768,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25661,6 +25792,7 @@
         "status": "rated",
         "tier": "优",
         "score": 1.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25684,6 +25816,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.4,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25707,6 +25840,7 @@
         "status": "rated",
         "tier": "优",
         "score": 7.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25730,6 +25864,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25753,6 +25888,7 @@
         "status": "rated",
         "tier": "优",
         "score": 7.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25776,6 +25912,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25799,6 +25936,7 @@
         "status": "rated",
         "tier": "优",
         "score": 7.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25822,6 +25960,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25845,6 +25984,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25868,10 +26008,13 @@
         "status": "rated",
         "tier": null,
         "score": 0,
+        "miss_reason": "not_found",
         "cite": [],
-        "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-        "confidence": 1,
-        "confidence_factors": [],
+        "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+        "confidence": 0.5,
+        "confidence_factors": [
+          "检索未命中"
+        ],
         "attempts": 1,
         "last_error": "",
         "perf": {
@@ -25888,6 +26031,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 11.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25911,6 +26055,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25934,6 +26079,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25957,6 +26103,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.4,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -25980,6 +26127,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26003,6 +26151,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26028,6 +26177,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26051,6 +26201,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26074,6 +26225,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 0.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26099,6 +26251,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.1,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26122,6 +26275,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26145,6 +26299,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.4,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26168,6 +26323,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26191,6 +26347,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26214,6 +26371,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26237,6 +26395,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26260,6 +26419,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26283,6 +26443,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26306,10 +26467,13 @@
         "status": "rated",
         "tier": null,
         "score": 0,
+        "miss_reason": "not_found",
         "cite": [],
-        "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-        "confidence": 1,
-        "confidence_factors": [],
+        "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+        "confidence": 0.5,
+        "confidence_factors": [
+          "检索未命中"
+        ],
         "attempts": 1,
         "last_error": "",
         "perf": {
@@ -26326,6 +26490,7 @@
         "status": "rated",
         "tier": "优",
         "score": 19.4,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26349,6 +26514,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26372,6 +26538,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26395,6 +26562,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26418,6 +26586,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26441,6 +26610,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26464,6 +26634,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26487,6 +26658,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26510,6 +26682,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26533,6 +26706,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26556,6 +26730,7 @@
         "status": "rated",
         "tier": "优",
         "score": 7.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26579,6 +26754,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26602,6 +26778,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26625,6 +26802,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26648,6 +26826,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26671,6 +26850,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26694,6 +26874,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26717,6 +26898,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26740,10 +26922,13 @@
         "status": "rated",
         "tier": null,
         "score": 0,
+        "miss_reason": "not_found",
         "cite": [],
-        "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-        "confidence": 1,
-        "confidence_factors": [],
+        "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+        "confidence": 0.5,
+        "confidence_factors": [
+          "检索未命中"
+        ],
         "attempts": 1,
         "last_error": "",
         "perf": {
@@ -26760,6 +26945,7 @@
         "status": "rated",
         "tier": "良",
         "score": 15.4,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26783,6 +26969,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26806,6 +26993,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26829,6 +27017,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26852,6 +27041,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26875,6 +27065,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26898,6 +27089,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.1,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26921,6 +27113,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26944,6 +27137,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26969,6 +27163,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 0.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -26992,6 +27187,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27015,6 +27211,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27038,6 +27235,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27061,6 +27259,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.4,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27084,6 +27283,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27107,6 +27307,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27130,6 +27331,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27153,6 +27355,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 0.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27176,10 +27379,13 @@
         "status": "rated",
         "tier": null,
         "score": 0,
+        "miss_reason": "not_found",
         "cite": [],
-        "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-        "confidence": 1,
-        "confidence_factors": [],
+        "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+        "confidence": 0.5,
+        "confidence_factors": [
+          "检索未命中"
+        ],
         "attempts": 1,
         "last_error": "",
         "perf": {
@@ -27196,6 +27402,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 11.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27219,6 +27426,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27242,6 +27450,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27265,6 +27474,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27288,6 +27498,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27311,6 +27522,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27334,6 +27546,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27357,6 +27570,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27380,6 +27594,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 0.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27405,6 +27620,7 @@
         "status": "rated",
         "tier": "优",
         "score": 1.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27428,6 +27644,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27451,6 +27668,7 @@
         "status": "rated",
         "tier": "优",
         "score": 7.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27474,6 +27692,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27497,6 +27716,7 @@
         "status": "rated",
         "tier": "优",
         "score": 7.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27520,6 +27740,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27543,6 +27764,7 @@
         "status": "rated",
         "tier": "优",
         "score": 7.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27566,6 +27788,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27589,6 +27812,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27612,10 +27836,13 @@
         "status": "rated",
         "tier": null,
         "score": 0,
+        "miss_reason": "not_found",
         "cite": [],
-        "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-        "confidence": 1,
-        "confidence_factors": [],
+        "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+        "confidence": 0.5,
+        "confidence_factors": [
+          "检索未命中"
+        ],
         "attempts": 1,
         "last_error": "",
         "perf": {
@@ -27632,6 +27859,7 @@
         "status": "rated",
         "tier": "优",
         "score": 19.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27655,6 +27883,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27678,6 +27907,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27701,6 +27931,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27724,6 +27955,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27747,6 +27979,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27770,6 +28003,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27793,6 +28027,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27816,6 +28051,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27841,6 +28077,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27864,6 +28101,7 @@
         "status": "rated",
         "tier": "优",
         "score": 7.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27887,6 +28125,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27910,6 +28149,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27933,6 +28173,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27956,6 +28197,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -27979,6 +28221,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.4,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28002,6 +28245,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28025,6 +28269,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28048,10 +28293,13 @@
         "status": "rated",
         "tier": null,
         "score": 0,
+        "miss_reason": "not_found",
         "cite": [],
-        "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-        "confidence": 1,
-        "confidence_factors": [],
+        "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+        "confidence": 0.5,
+        "confidence_factors": [
+          "检索未命中"
+        ],
         "attempts": 1,
         "last_error": "",
         "perf": {
@@ -28068,6 +28316,7 @@
         "status": "rated",
         "tier": "良",
         "score": 15.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28091,6 +28340,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28114,6 +28364,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.1,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28137,6 +28388,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28160,6 +28412,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28183,6 +28436,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28206,6 +28460,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.1,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28229,6 +28484,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28252,6 +28508,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.4,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28277,6 +28534,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 0.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28300,6 +28558,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28323,6 +28582,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.4,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28346,6 +28606,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28369,6 +28630,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28392,6 +28654,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28415,6 +28678,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28438,6 +28702,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28461,6 +28726,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 0.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28484,10 +28750,13 @@
         "status": "rated",
         "tier": null,
         "score": 0,
+        "miss_reason": "not_found",
         "cite": [],
-        "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-        "confidence": 1,
-        "confidence_factors": [],
+        "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+        "confidence": 0.5,
+        "confidence_factors": [
+          "检索未命中"
+        ],
         "attempts": 1,
         "last_error": "",
         "perf": {
@@ -28504,6 +28773,7 @@
         "status": "rated",
         "tier": "良",
         "score": 15.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28527,6 +28797,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28550,6 +28821,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.1,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28573,6 +28845,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28596,6 +28869,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28619,6 +28893,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28642,6 +28917,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28665,6 +28941,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28688,6 +28965,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28713,6 +28991,7 @@
         "status": "rated",
         "tier": "优",
         "score": 1.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28736,6 +29015,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28759,6 +29039,7 @@
         "status": "rated",
         "tier": "优",
         "score": 7.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28782,6 +29063,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28805,6 +29087,7 @@
         "status": "rated",
         "tier": "优",
         "score": 7.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28828,6 +29111,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28851,6 +29135,7 @@
         "status": "rated",
         "tier": "优",
         "score": 7.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28874,6 +29159,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28897,6 +29183,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28920,10 +29207,13 @@
         "status": "rated",
         "tier": null,
         "score": 0,
+        "miss_reason": "not_found",
         "cite": [],
-        "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-        "confidence": 1,
-        "confidence_factors": [],
+        "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+        "confidence": 0.5,
+        "confidence_factors": [
+          "检索未命中"
+        ],
         "attempts": 1,
         "last_error": "",
         "perf": {
@@ -28940,6 +29230,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 10.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28963,6 +29254,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -28986,6 +29278,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.4,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29009,6 +29302,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29032,6 +29326,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29055,6 +29350,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29078,6 +29374,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29101,6 +29398,7 @@
         "status": "rated",
         "tier": "良",
         "score": 2.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29124,6 +29422,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 0.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29149,6 +29448,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.1,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29172,6 +29472,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.4,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29195,6 +29496,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29218,6 +29520,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29241,6 +29544,7 @@
         "status": "rated",
         "tier": "良",
         "score": 4.4,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29264,6 +29568,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29285,15 +29590,15 @@
         "bidder": "德州建设集团有限公司8007782",
         "bidder_id": "dezhou",
         "status": "rated",
-        "tier": "优",
-        "score": 6.4,
-        "cite": [
-          0,
-          1
-        ],
-        "reason": "投标文件覆盖了主要评审要求，能够说明组织安排、节点控制和保障措施；部分内容仍偏概括，与本项目 EPC 协同和现场条件结合不够充分。",
+        "tier": null,
+        "score": 0,
+        "miss_reason": "no_file",
+        "cite": [],
+        "reason": "该投标人未提交本评分项对应的投标文件，按招标文件规则“若此条缺项不得分”处理为 0 分。",
         "confidence": 1,
-        "confidence_factors": [],
+        "confidence_factors": [
+          "缺文件"
+        ],
         "attempts": 1,
         "last_error": "",
         "perf": {
@@ -29310,6 +29615,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.5,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29333,6 +29639,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29356,10 +29663,13 @@
         "status": "rated",
         "tier": null,
         "score": 0,
+        "miss_reason": "not_found",
         "cite": [],
-        "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-        "confidence": 1,
-        "confidence_factors": [],
+        "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+        "confidence": 0.5,
+        "confidence_factors": [
+          "检索未命中"
+        ],
         "attempts": 1,
         "last_error": "",
         "perf": {
@@ -29376,6 +29686,7 @@
         "status": "rated",
         "tier": "优",
         "score": 19.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29399,6 +29710,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.2,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29422,6 +29734,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29445,6 +29758,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29468,6 +29782,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29491,6 +29806,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29514,6 +29830,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29537,6 +29854,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29560,6 +29878,7 @@
         "status": "rated",
         "tier": "优",
         "score": 2.9,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29585,6 +29904,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 0.3,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29608,6 +29928,7 @@
         "status": "rated",
         "tier": "优",
         "score": 7.7,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29631,6 +29952,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.4,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29654,6 +29976,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29677,6 +30000,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29700,6 +30024,7 @@
         "status": "rated",
         "tier": "优",
         "score": 3.8,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29723,6 +30048,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29746,6 +30072,7 @@
         "status": "rated",
         "tier": "良",
         "score": 1.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29769,6 +30096,7 @@
         "status": "rated",
         "tier": "一般",
         "score": 0.6,
+        "miss_reason": null,
         "cite": [
           0,
           1
@@ -29792,10 +30120,13 @@
         "status": "rated",
         "tier": null,
         "score": 0,
+        "miss_reason": "not_found",
         "cite": [],
-        "reason": "证据定位未检索到与该评分项直接相关的合格章节，按招标文件规则“若此条缺项不得分”处理为 0 分。",
-        "confidence": 1,
-        "confidence_factors": [],
+        "reason": "本评分项对应的投标文件存在，但证据定位未检索到相关章节，按招标文件规则“若此条缺项不得分”处理为 0 分。检索未命中不等于投标人未写，建议人工复核。",
+        "confidence": 0.5,
+        "confidence_factors": [
+          "检索未命中"
+        ],
         "attempts": 1,
         "last_error": "",
         "perf": {
@@ -29815,10 +30146,82 @@
     ],
     "review_flags": [
       {
+        "bidder": "中冶建工集团有限公司8010856",
+        "item_id": "T-19",
+        "confidence": 0.5,
+        "why": "置信度减分：检索未命中"
+      },
+      {
+        "bidder": "中国建筑一局（集团）有限公司8004216",
+        "item_id": "T-19",
+        "confidence": 0.5,
+        "why": "置信度减分：检索未命中"
+      },
+      {
         "bidder": "济南一建集团有限公司8008754",
         "item_id": "T-02",
-        "confidence": 0.63,
-        "why": "置信度减分：降级 + 重试"
+        "confidence": 0.5,
+        "why": "置信度减分：检索未命中"
+      },
+      {
+        "bidder": "济南一建集团有限公司8008754",
+        "item_id": "T-19",
+        "confidence": 0.5,
+        "why": "置信度减分：检索未命中"
+      },
+      {
+        "bidder": "中国建筑第二工程局有限公司8001968",
+        "item_id": "T-19",
+        "confidence": 0.5,
+        "why": "置信度减分：检索未命中"
+      },
+      {
+        "bidder": "中国建筑第五工程局有限公司8002423",
+        "item_id": "T-19",
+        "confidence": 0.5,
+        "why": "置信度减分：检索未命中"
+      },
+      {
+        "bidder": "中铁建工集团有限公司8010219",
+        "item_id": "T-19",
+        "confidence": 0.5,
+        "why": "置信度减分：检索未命中"
+      },
+      {
+        "bidder": "山东三箭建设工程股份有限公司8003180",
+        "item_id": "T-19",
+        "confidence": 0.5,
+        "why": "置信度减分：检索未命中"
+      },
+      {
+        "bidder": "青建集团股份公司8006620",
+        "item_id": "T-19",
+        "confidence": 0.5,
+        "why": "置信度减分：检索未命中"
+      },
+      {
+        "bidder": "天齐置业集团股份有限公司8007234",
+        "item_id": "T-19",
+        "confidence": 0.5,
+        "why": "置信度减分：检索未命中"
+      },
+      {
+        "bidder": "中青建安建设集团有限公司8005591",
+        "item_id": "T-19",
+        "confidence": 0.5,
+        "why": "置信度减分：检索未命中"
+      },
+      {
+        "bidder": "德州建设集团有限公司8007782",
+        "item_id": "T-19",
+        "confidence": 0.5,
+        "why": "置信度减分：检索未命中"
+      },
+      {
+        "bidder": "山东路桥集团有限公司8009083",
+        "item_id": "T-19",
+        "confidence": 0.5,
+        "why": "置信度减分：检索未命中"
       }
     ],
     "audit": [

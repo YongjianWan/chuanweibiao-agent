@@ -258,7 +258,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     """
     import argparse
     import yaml
-    from s3_review import _index_sections, _extract_sections, _extract_evidence_packages, MockModelClient, OpenAICompatibleClient
+    from s3_review import _index_sections, _extract_sections, _extract_evidence_packages, MockModelClient, OpenAICompatibleClient, AgentFactoryClient
 
     parser = argparse.ArgumentParser(description="T3: 并发调度器")
     parser.add_argument("--evidence", type=Path, required=True, help="单家或全项目's evidence 目录")
@@ -268,6 +268,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, required=True, help="输出目录：每个 item 一个 JSON")
     parser.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY, help="并发路数")
     parser.add_argument("--mock", action="store_true", help="使用 Mock 模型")
+    parser.add_argument("--agent-factory", action="store_true", help="使用智能体工厂端点（读 AF_BASE_URL / AF_API_KEY / AF_AGENT_ID）")
     parser.add_argument("--max-attempts", type=int, default=4, help="最大重试次数")
     args = parser.parse_args(argv)
 
@@ -282,9 +283,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     sections = _extract_sections(sections_data)
     section_index = _index_sections(sections)
 
-    # 客户端工厂
+    # 客户端工厂：mock > agent-factory > 默认 OpenAI 兼容端点
     if args.mock:
         client_factory = lambda: MockModelClient()
+    elif args.agent_factory:
+        client_factory = lambda: AgentFactoryClient.from_env()
     else:
         client_factory = lambda: OpenAICompatibleClient.from_env()
 
