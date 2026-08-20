@@ -108,6 +108,32 @@ def test_锚点DF0直接未命中():
     assert not pkg.picked, "锚点词「盾构法」DF=0，应判未命中，不能换词继续找"
 
 
+def test_跨换行锚点不误判为DF0():
+    """回归 2026-08-20 修复：S1 抽出的 PDF text 保留视觉折行（\\n），
+    跨换行的词会被误判为「锚点 DF=0 → 直接未命中」，导致全文件失配。
+
+    修复：匹配时对 text 做 replace("\\n", "")（text 字段本身保留供证据引用）。
+
+    构造：锚点词「路径」被折行拆成「路\\n径」。修复前该词 DF=0 → 该项直接未命中；
+    修复后 DF=1 且完整短语「关键路径分析」命中。
+    """
+    sections = [
+        sec("1#1", "进度管理方案AAA.pdf", "aaa", ["第1章"],
+            "本工程采用关键路\n径分析安排工期，施工进度计划编制细致。"),
+    ] + 普通语料(30)
+    it = item(guid="aaa", name="进度管理方案", aspects=["关键路径分析"])
+    pkg = S.locate_item(sections, it)
+    # 修复前：这一项必然全文件失配（锚点 DF=0 直接判未命中）
+    # 修复后：去换行副本能匹配 -> 检索到证据
+    assert pkg.picked, "跨换行的完整短语应能命中（匹配时去换行）"
+    assert all(p["file"].endswith("AAA.pdf") for p in pkg.picked), \
+        "证据只能来自匹配 GUID 的那一个 PDF"
+    raw = next(s for s in sections if s["id"] == pkg.picked[0]["section_id"])["text"]
+    assert "关键路径分析" not in raw, "原始 text 上短语确实被折行打断，匹配必须去换行"
+    assert "关键路径分析" in raw.replace("\r", "").replace("\n", ""), \
+        "去换行副本上应能命中，且匹配同时处理 \\r 与 \\n"
+
+
 # ── 输出字段齐全 ────────────────────────────────────────────────────────
 
 def test_输出字段齐全():
