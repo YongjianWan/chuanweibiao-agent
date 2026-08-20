@@ -1,5 +1,6 @@
 (function () {
   const DATA = window.PROTOTYPE_DATA;
+  const SCORING_REFERENCE = window.SCORING_REFERENCE || null;
   const DEMO_MODE = false;
   const app = document.getElementById("app");
   const TOTAL_REVIEWS = DATA.bidders.length * DATA.scoringTable.items.length;
@@ -697,41 +698,104 @@
   }
 
   function renderScoringReference(items) {
+    const referenceItems = SCORING_REFERENCE && Array.isArray(SCORING_REFERENCE.items)
+      ? SCORING_REFERENCE.items
+      : [];
+    const referenceByGuid = new Map(referenceItems.map((row) => [row.guid, row]));
+    const summary = SCORING_REFERENCE && SCORING_REFERENCE.summary ? SCORING_REFERENCE.summary : null;
+    const summaryText = summary
+      ? "PDF/XLSX 档位 " + summary.pdf_vs_xlsx_tiers_match + "/" + summary.items
+      : "未加载独立核对数据";
     return `
       <section class="panel reference-panel" aria-label="招标文件评标办法对照">
         <div class="panel-header">
           <h3 class="panel-title">招标文件评标办法对照</h3>
-          <span class="badge primary">第 33~37 页</span>
+          <span class="badge primary">${html(summaryText)}</span>
         </div>
         <div class="panel-body reference-grid">
           <aside class="reference-page">
-            <div class="reference-page-title">技术标评审办法摘录</div>
-            <p>评委根据投标文件对各评分项的响应情况，在一般、良、优三个区间内酌情定分；内容不全酌情扣分，若对应评分项缺项不得分。</p>
-            <p>本页用于人工核对评分项名称、满分、三档区间与投标文件绑定状态，确认后才进入逐项评审。</p>
+            <div class="reference-page-title">招标文件第 33~37 页</div>
+            <p>核对数据由 scripts/verify_scoring_table.py 从招标文件与拆分评审项.xlsx 生成。</p>
+            <p>清洗记录：剔除水印 ${number(SCORING_REFERENCE?.cleanup?.watermark_lines_dropped || 0)} 行，左列跨页续行 ${number((SCORING_REFERENCE?.cleanup?.contaminated_fragments || []).length)} 处。</p>
           </aside>
           <div class="table-wrap">
             <table class="table-compact">
               <thead>
                 <tr>
                   <th>评分项</th>
-                  <th>满分</th>
-                  <th>招标文件评审标准原文</th>
+                  <th>招标文件原文</th>
+                  <th>当前评分表</th>
+                  <th>核对</th>
                 </tr>
               </thead>
               <tbody>
-                ${items.map((item) => `
-                  <tr>
-                    <td><strong>${html(item.name)}</strong></td>
-                    <td>${item.max_score.toFixed(1)}</td>
-                    <td>${html(item.criteria || tierSummary(item))}</td>
-                  </tr>
-                `).join("")}
+                ${items.map((item) => {
+                  const ref = referenceByGuid.get(item.guid);
+                  const refTiers = ref && Array.isArray(ref.pdf_tiers) ? ref.pdf_tiers : [];
+                  const itemTiers = tierRanges(item.tiers);
+                  const criteriaOk = ref ? compactReferenceText(ref.pdf_criteria) === compactReferenceText(item.criteria) : false;
+                  const tiersOk = sameTierRanges(refTiers, itemTiers);
+                  const ok = criteriaOk && tiersOk;
+                  return `
+                    <tr>
+                      <td>
+                        <strong>${html(item.name)}</strong>
+                        <div class="small muted">${html(item.id)} · ${item.max_score.toFixed(1)} 分</div>
+                      </td>
+                      <td>
+                        <div>${html(ref ? ref.pdf_criteria : "未找到独立核对数据")}</div>
+                        <div class="small muted">区间：${html(tierRangeText(refTiers))}</div>
+                      </td>
+                      <td>
+                        <div>${html(item.criteria || tierSummary(item))}</div>
+                        <div class="small muted">区间：${html(tierRangeText(itemTiers))}</div>
+                      </td>
+                      <td>
+                        <span class="badge ${ok ? "success" : "danger"}">${ok ? "一致" : "待核"}</span>
+                      </td>
+                    </tr>
+                  `;
+                }).join("")}
               </tbody>
             </table>
           </div>
         </div>
       </section>
     `;
+  }
+
+  function compactReferenceText(value) {
+    return String(value || "").replace(/\s+/g, "");
+  }
+
+  function trimScore(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return String(value ?? "");
+    return Number.isInteger(numeric) ? String(numeric) : String(numeric).replace(/0+$/, "").replace(/\.$/, "");
+  }
+
+  function tierRanges(tiers) {
+    if (!Array.isArray(tiers)) return [];
+    return tiers
+      .map((tier) => ({ min: Number(tier.min), max: Number(tier.max) }))
+      .filter((tier) => Number.isFinite(tier.min) && Number.isFinite(tier.max))
+      .sort((a, b) => a.min - b.min || a.max - b.max);
+  }
+
+  function tierRangeText(tiers) {
+    const ranges = tierRanges(tiers);
+    return ranges.length
+      ? ranges.map((tier) => trimScore(tier.min) + "-" + trimScore(tier.max)).join(" / ")
+      : "未匹配";
+  }
+
+  function sameTierRanges(left, right) {
+    const leftRanges = tierRanges(left);
+    const rightRanges = tierRanges(right);
+    if (leftRanges.length !== rightRanges.length) return false;
+    return leftRanges.every((tier, index) =>
+      tier.min === rightRanges[index].min && tier.max === rightRanges[index].max
+    );
   }
 
   function renderTierEditors(item) {
