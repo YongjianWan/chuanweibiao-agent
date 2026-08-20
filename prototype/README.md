@@ -4,7 +4,19 @@
 
 ## 打开方式
 
-直接用现代浏览器打开：
+建议用本地 HTTP 服务打开，避免 Chrome 对 `file://` 本地文件路由的安全限制影响 Hash 跳转：
+
+```powershell
+python -m http.server 8000 --directory prototype
+```
+
+然后访问：
+
+```text
+http://localhost:8000/
+```
+
+也可以直接用现代浏览器打开，但部分 Chrome 版本可能在控制台提示 `file://` 安全限制：
 
 ```text
 prototype/index.html

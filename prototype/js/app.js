@@ -1,5 +1,6 @@
 (function () {
   const DATA = window.PROTOTYPE_DATA;
+  const SCORING_REFERENCE = window.SCORING_REFERENCE || null;
   const DEMO_MODE = false;
   const app = document.getElementById("app");
   const TOTAL_REVIEWS = DATA.bidders.length * DATA.scoringTable.items.length;
@@ -268,6 +269,33 @@
     return DATA.scoringTable.rules;
   }
 
+  function tierSummary(item) {
+    if (!item || !Array.isArray(item.tiers) || !item.tiers.length) return "未配置";
+    return item.tiers
+      .map((tier) => {
+        const min = Number.isFinite(Number(tier.min)) ? Number(tier.min).toFixed(1) : "-";
+        const max = Number.isFinite(Number(tier.max)) ? Number(tier.max).toFixed(1) : "-";
+        return (tier.tier || "档位") + " " + min + "-" + max + " 分";
+      })
+      .join(" / ");
+  }
+
+  function rangeSummary(tiers) {
+    if (!Array.isArray(tiers) || !tiers.length) return "未配置";
+    return tiers
+      .map((tier) => {
+        const min = Number.isFinite(Number(tier.min)) ? Number(tier.min).toFixed(1) : "-";
+        const max = Number.isFinite(Number(tier.max)) ? Number(tier.max).toFixed(1) : "-";
+        return min + "-" + max + " 分";
+      })
+      .join(" / ");
+  }
+
+  function referenceByItemId(itemId) {
+    const rows = SCORING_REFERENCE && Array.isArray(SCORING_REFERENCE.items) ? SCORING_REFERENCE.items : [];
+    return rows.find((row) => row.item_id === itemId) || null;
+  }
+
   function itemById(id) {
     return scoringItems().find((item) => item.id === id);
   }
@@ -276,12 +304,69 @@
     return DATA.bidders.find((bidder) => bidder.id === id);
   }
 
+  function normalizeReviewResult(result) {
+    if (!result || typeof result !== "object") return null;
+    const rawStatus = result.status;
+    const score = typeof result.score === "number" ? result.score : null;
+    const isRated = rawStatus === "rated" && score !== null;
+    const status = isRated ? "rated" : "unrated";
+    const attempts = Number.isFinite(Number(result.attempts)) ? Number(result.attempts) : 0;
+    const lastError = result.last_error || result.error || (rawStatus && rawStatus !== status ? "未知评审状态：" + rawStatus : "");
+
+    return {
+      ...result,
+      status,
+      score: isRated ? score : null,
+      cite: Array.isArray(result.cite) ? result.cite : [],
+      reason: result.reason || (status === "unrated" ? "评审结果异常，前端按未评定处理。" : ""),
+      confidence: typeof result.confidence === "number" ? result.confidence : 0,
+      attempts,
+      last_error: lastError,
+      miss_reason: result.miss_reason || null,
+      perf: result.perf && typeof result.perf === "object" ? result.perf : { in_tokens: 0, out_tokens: 0, latency_ms: 0 }
+    };
+  }
+
   function resultBy(bidderId, itemId) {
-    return DATA.reviewResults.find((row) => row.bidder_id === bidderId && row.item_id === itemId);
+    return normalizeReviewResult(DATA.reviewResults.find((row) => row.bidder_id === bidderId && row.item_id === itemId));
   }
 
   function isLowConfidence(result) {
-    return result.status === "rated" && result.score !== 0 && result.confidence < LOW_CONFIDENCE_THRESHOLD;
+    if (!result || result.status !== "rated" || typeof result.confidence !== "number") return false;
+    if (result.score === 0 && result.miss_reason === "no_file") return false;
+    return result.confidence < LOW_CONFIDENCE_THRESHOLD;
+  }
+
+  function zeroMissLabel(result) {
+    if (result && result.miss_reason === "no_file") return "缺文件";
+    if (result && result.miss_reason === "not_found") return "检索未命中";
+    return "未命中";
+  }
+
+  function zeroMissDetail(result) {
+    if (result && result.miss_reason === "no_file") return "该投标人未提交对应文件，按缺项不得分处理";
+    if (result && result.miss_reason === "not_found") return "文件存在但证据定位未命中，建议人工复核";
+    return "按缺项不得分处理";
+  }
+
+  function reviewFlagWhy(result) {
+    if (result && result.miss_reason === "not_found") return "证据定位未命中，检索未命中不等于投标人未写";
+    if (result && result.reason) return result.reason;
+    return "confidence 低于阈值";
+  }
+
+  function reviewFlagRows(completedKeys = completedReviewKeySet()) {
+    return completedReviewResults(completedKeys)
+      .filter(isLowConfidence)
+      .map((row) => {
+        const bidder = bidderById(row.bidder_id);
+        return {
+          bidder: row.bidder || (bidder ? bidder.name : row.bidder_id),
+          item_id: row.item_id,
+          confidence: row.confidence,
+          why: reviewFlagWhy(row)
+        };
+      });
   }
 
   function evidenceBy(bidderId, itemId) {
@@ -339,9 +424,11 @@
     return completedKeys.has(reviewKeyFor(bidderId, itemId));
   }
 
-  function completedReviewResults() {
-    const completedKeys = completedReviewKeySet();
-    return DATA.reviewResults.filter((row) => completedKeys.has(reviewKeyFor(row.bidder_id, row.item_id)));
+  function completedReviewResults(completedKeys = completedReviewKeySet()) {
+    return DATA.reviewResults
+      .filter((row) => completedKeys.has(reviewKeyFor(row.bidder_id, row.item_id)))
+      .map(normalizeReviewResult)
+      .filter(Boolean);
   }
 
   function fallbackRouteHash() {
@@ -466,7 +553,7 @@
               <div class="field-grid">
                 <div class="field">
                   <label for="projectName">项目名称</label>
-                  <input id="projectName" class="input" value="${html(DATA.scoringTable.project)}">
+                  <input id="projectName" class="input" value="${html(DATA.scoringTable.project)}" readonly aria-readonly="true">
                 </div>
                 <div class="field">
                   <label>招标文件</label>
@@ -629,17 +716,25 @@
   }
 
   function renderScoringReference(items) {
+    const hasReference = SCORING_REFERENCE && Array.isArray(SCORING_REFERENCE.items);
+    const sourcePdf = hasReference ? SCORING_REFERENCE.source_pdf : "招标文件.pdf";
+    const sourceXlsx = hasReference ? SCORING_REFERENCE.source_xlsx : "拆分评审项.xlsx";
+    const pages = hasReference ? SCORING_REFERENCE.pages : "33-37";
+    const matched = hasReference && SCORING_REFERENCE.summary
+      ? SCORING_REFERENCE.summary.pdf_vs_xlsx_tiers_match + " / " + SCORING_REFERENCE.summary.items
+      : "未加载";
     return `
       <section class="panel reference-panel" aria-label="招标文件评标办法对照">
         <div class="panel-header">
           <h3 class="panel-title">招标文件评标办法对照</h3>
-          <span class="badge primary">第 33~37 页</span>
+          <span class="badge primary">第 ${html(pages)} 页</span>
         </div>
         <div class="panel-body reference-grid">
           <aside class="reference-page">
             <div class="reference-page-title">技术标评审办法摘录</div>
-            <p>评委根据投标文件对各评分项的响应情况，在一般、良、优三个区间内酌情定分；内容不全酌情扣分，若对应评分项缺项不得分。</p>
-            <p>本页用于人工核对评分项名称、满分、三档区间与投标文件绑定状态，确认后才进入逐项评审。</p>
+            <p>PDF：${html(sourcePdf)}</p>
+            <p>XLSX：${html(sourceXlsx)}</p>
+            <p>PDF/XLSX 档位匹配：${html(matched)}</p>
           </aside>
           <div class="table-wrap">
             <table class="table-compact">
@@ -647,17 +742,33 @@
                 <tr>
                   <th>评分项</th>
                   <th>满分</th>
-                  <th>招标文件评审标准原文</th>
+                  <th>PDF 原文</th>
+                  <th>XLSX 对照</th>
+                  <th>系统档位</th>
                 </tr>
               </thead>
               <tbody>
-                ${items.map((item) => `
-                  <tr>
-                    <td><strong>${html(item.name)}</strong></td>
-                    <td>${item.max_score.toFixed(1)}</td>
-                    <td>${item.criteria ? html(item.criteria) : `<span class="muted">评审标准原文缺失，需回招标文件补</span>`}</td>
-                  </tr>
-                `).join("")}
+                ${items.map((item) => {
+                  const reference = referenceByItemId(item.id);
+                  return `
+                    <tr>
+                      <td><strong>${html(item.name)}</strong></td>
+                      <td>${item.max_score.toFixed(1)}</td>
+                      <td>
+                        ${html(reference ? reference.pdf_criteria : item.criteria || "")}
+                        <div class="small muted">${html(reference ? rangeSummary(reference.pdf_tiers) : tierSummary(item))}</div>
+                      </td>
+                      <td>
+                        ${reference && reference.xlsx_desc ? html(reference.xlsx_desc) : `<span class="muted">未加载 XLSX 对照</span>`}
+                        <div class="small muted">${html(reference ? rangeSummary(reference.xlsx_tiers) : "未加载")}</div>
+                      </td>
+                      <td>
+                        ${html(reference ? rangeSummary(reference.system_tiers) : tierSummary(item))}
+                        <div class="small muted">${reference && reference.checks && reference.checks.pdf_vs_xlsx_tiers_match ? "PDF/XLSX 档位一致" : "需人工核对"}</div>
+                      </td>
+                    </tr>
+                  `;
+                }).join("")}
               </tbody>
             </table>
           </div>
@@ -787,8 +898,7 @@
     const completedCount = Math.min(state.run.finished ? TOTAL_REVIEWS : state.run.completedReviews, TOTAL_REVIEWS);
     const pendingCount = Math.max(0, TOTAL_REVIEWS - completedCount);
     const canExportReport = Boolean(state.run.finished);
-    const visibleReviewFlags = completedReviewResults()
-      .filter((row) => row.status === "rated" && row.score !== 0 && row.confidence < LOW_CONFIDENCE_THRESHOLD);
+    const visibleReviewFlags = reviewFlagRows(completedKeys);
     const visibleAuditFlags = (DATA.reportData.audit || [])
       .filter((row) => scoringItems().some((item) => item.id === row.item_id))
       .filter((row) => DATA.bidders.every((bidder) => isReviewCompleted(bidder.id, row.item_id, completedKeys)));
@@ -873,7 +983,7 @@
               </table>
             </div>
             <div class="legend">
-              <span>0 = 未命中，投标文件未写此项</span>
+              <span>0 = 缺文件或未命中；0 复核 = 文件存在但证据定位未命中</span>
               <span>— = 未评定，系统未能给出判断，不计入合计</span>
               <span>评审中 = 结果尚未到达，暂不计入当前合计</span>
               <span>复核 = confidence &lt; ${LOW_CONFIDENCE_THRESHOLD}，建议人工复核</span>
@@ -893,9 +1003,9 @@
     const bidder = bidderById(bidderId) || DATA.bidders[0];
     const item = itemById(itemId) || scoringItems()[1];
     const result = resultBy(bidder.id, item.id);
-    const evidence = evidenceBy(bidder.id, item.id);
+    const evidence = evidenceBy(bidder.id, item.id) || {};
 
-    if (!result || !evidence) {
+    if (!result) {
       return `
         <main class="page">
           <div class="panel"><div class="empty">未找到对应详情</div></div>
@@ -912,7 +1022,7 @@
     const titleStatus = result.status === "unrated"
       ? "未评定"
       : result.score === 0
-        ? "未命中"
+        ? zeroMissLabel(result)
         : "判分 " + result.tier;
     const scoreText = scoreLabel(result.score);
     const overrideScoreText = scoreLabel(overrideScore);
@@ -937,14 +1047,14 @@
                 ${result.status === "unrated"
                   ? `<span class="badge danger">未评定</span>`
                   : result.score === 0
-                    ? `<span class="badge neutral">0 分未命中</span>`
+                    ? `<span class="badge ${isLowConfidence(result) ? "warning" : "neutral"}">0 分${html(zeroMissLabel(result))}</span>`
                     : `<span class="badge primary">${html(result.tier)} · ${scoreText} 分</span>`}
                 </div>
                 <div class="panel-body">
                   <div class="summary-strip">
                   ${metric("系统判分", scoreText, result.status === "unrated" ? "score 保持为 null" : "不因下方操作改变")}
                   ${metric("专家判分", overrideScore !== null ? overrideScoreText : "—", overrideScore !== null ? "仅进入专家口径合计" : "未改判")}
-                  ${metric("当前档位", result.tier || "无", result.status === "unrated" ? "重试耗尽未进入判分" : result.score === 0 ? "按缺项不得分处理" : "来自评分区间")}
+                  ${metric("当前档位", result.tier || "无", result.status === "unrated" ? "重试耗尽未进入判分" : result.score === 0 ? zeroMissDetail(result) : "来自评分区间")}
                   ${metric("置信度", result.confidence.toFixed(2), result.status === "unrated" ? "未产生有效判分" : isLowConfidence(result) ? "建议人工复核" : "可追溯")}
                   ${metric("调用次数", result.attempts + " 次", result.attempts > 1 ? "曾重试" : "一次成功")}
                 </div>
@@ -1084,7 +1194,7 @@
     }
     if (!citedEntries.length) {
       return result.score === 0
-        ? `<div class="empty">未检索到合格证据。按招标文件规则“若此条缺项不得分”处理。</div>`
+        ? `<div class="empty">${html(zeroMissDetail(result))}。</div>`
         : `<div class="empty">未找到合法引用编号，真实调用中应触发重试。</div>`;
     }
     return `
@@ -1095,7 +1205,8 @@
   }
 
   function renderRetrievalPanel(result, evidence) {
-    const picked = Array.isArray(evidence.picked) ? evidence.picked : [];
+    const safeEvidence = evidence && typeof evidence === "object" ? evidence : {};
+    const picked = Array.isArray(safeEvidence.picked) ? safeEvidence.picked : [];
     const truncated = picked.some((row) => row.truncated);
     const retryCount = Math.max(0, result.attempts - 1);
     return `
@@ -1106,8 +1217,8 @@
         </div>
         <div class="panel-body">
           <div class="info-box">
-            <strong>证据 ${number(evidence.units)} 段 / ${number(evidence.evidence_chars)} 字（上限 ${number(evidence.budget)} 字）</strong>
-            <span class="muted">降级检索 ${evidence.fallback ? "是" : "否"} · 截断 ${truncated ? "是" : "否"} · 重试 ${retryCount} 次 · confidence ${result.confidence.toFixed(2)}</span>
+            <strong>证据 ${number(safeEvidence.units)} 段 / ${number(safeEvidence.evidence_chars)} 字（上限 ${number(safeEvidence.budget)} 字）</strong>
+            <span class="muted">降级检索 ${safeEvidence.fallback ? "是" : "否"} · 截断 ${truncated ? "是" : "否"} · 重试 ${retryCount} 次 · confidence ${result.confidence.toFixed(2)}</span>
           </div>
         </div>
       </section>
@@ -1179,8 +1290,9 @@
       title = "未评定，点击查看失败信息";
     } else if (result.score === 0) {
       cls += " zero";
-      label = "0";
-      title = "未命中，点击查看依据";
+      label = "0" + (low ? " 复核" : "");
+      title = zeroMissDetail(result) + "，点击查看依据";
+      if (low) cls += " review";
     } else {
       label = result.score.toFixed(1) + (low ? " 复核" : "");
       if (low) cls += " review";
@@ -1520,8 +1632,8 @@
       pushRunLog({
         time: clock(),
         kind: "retry",
-        bidder: bidder.short,
-        item: item.name,
+        bidder: bidder ? bidder.short : event.bidder_id,
+        item: item ? item.name : event.item_id,
         result: "重试 " + event.attempt + "/" + event.max_attempts
       });
       return;
@@ -1536,18 +1648,25 @@
       run.outTokens += event.out_tokens || 0;
       run.latencyTotal += event.latency_ms || 0;
 
+      const review = normalizeReviewResult(event);
       let kind = "rated";
       let result = "";
-      if (event.status === "unrated") {
+      if (!review || review.status === "unrated") {
         kind = "unrated";
         run.unrated += 1;
         result = "— 未评定";
-      } else if (event.score === 0) {
-        kind = "miss";
-        result = "0 分 未命中";
+        if (review && review.last_error) {
+          result += " · " + review.last_error;
+        }
+      } else if (review.score === 0) {
+        kind = isLowConfidence(review) ? "retry" : "miss";
+        result = "0 分 " + zeroMissLabel(review);
+        if (isLowConfidence(review)) {
+          result += " · 建议复核";
+        }
       } else {
-        result = event.tier + " " + event.score.toFixed(1) + " 分";
-        if (isLowConfidence(event)) {
+        result = review.tier + " " + review.score.toFixed(1) + " 分";
+        if (isLowConfidence(review)) {
           kind = "retry";
           result += " · 建议复核";
         }
@@ -1556,8 +1675,8 @@
       pushRunLog({
         time: clock(),
         kind,
-        bidder: bidder.short,
-        item: item.name,
+        bidder: bidder ? bidder.short : event.bidder_id,
+        item: item ? item.name : event.item_id,
         result
       });
     }
@@ -1764,6 +1883,9 @@
               return `<td class="pending">评审中</td><td></td>`;
             }
             const result = resultBy(bidder.id, item.id);
+            if (!result) {
+              return `<td class="pending">评审中</td><td></td>`;
+            }
             const review = overrideBy(bidder.id, item.id);
             const overrideScore = numericOverrideScore(review);
             const systemLabel = result.status === "unrated"
@@ -1792,14 +1914,18 @@
         }).join("")}
       </tr>
     `;
-    const unrated = DATA.reportData.unrated.filter((row) => {
-      const bidder = DATA.bidders.find((item) => item.name === row.bidder);
-      return bidder && isReviewCompleted(bidder.id, row.item_id, completedKeys);
-    });
-    const reviewFlags = DATA.reportData.review_flags.filter((row) => {
-      const bidder = DATA.bidders.find((item) => item.name === row.bidder);
-      return bidder && isReviewCompleted(bidder.id, row.item_id, completedKeys);
-    });
+    const unrated = completedReviewResults(completedKeys)
+      .filter((row) => row.status === "unrated")
+      .map((row) => {
+        const bidder = bidderById(row.bidder_id);
+        return {
+          bidder: row.bidder || (bidder ? bidder.name : row.bidder_id),
+          item_id: row.item_id,
+          attempts: row.attempts,
+          last_error: row.last_error
+        };
+      });
+    const reviewFlags = reviewFlagRows(completedKeys);
     const unratedRows = unrated.length
       ? unrated.map((row) => {
         const item = itemById(row.item_id);
@@ -1897,7 +2023,7 @@
       </tbody>
     </table>
   </div>
-  <p class="note">0 = 未命中；— = 未评定；复核 = confidence &lt; ${LOW_CONFIDENCE_THRESHOLD}；专家列仅列人工改判值；* = 该家存在未评定项。</p>
+  <p class="note">0 = 缺文件或未命中；0 复核 = 文件存在但证据定位未命中；— = 未评定；复核 = confidence &lt; ${LOW_CONFIDENCE_THRESHOLD}；专家列仅列人工改判值；* = 该家存在未评定项。</p>
 
   <h2>未评定单列</h2>
   <table class="single-column">
