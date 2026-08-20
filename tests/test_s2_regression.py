@@ -190,6 +190,62 @@ def test_证据字数不超过budget(corpus, cats):
         assert r["evidence_chars"] <= S.BUDGET
 
 
+def test_GUID绑定后锚点按当前池选择避免误杀():
+    """红线二在 GUID 绑定后的修正：全局最罕见词可能只出现在该家其他 PDF 里，
+    若仍坚持用它当池内锚点，会把当前 PDF 中写得满满的相关内容误杀为 0 分。
+
+    场景：投标人两份 PDF。A 写深基坑（"深基坑" 全局 DF=1），B 写盾构法
+    （"盾构法" 全局 DF=2）。评分项绑定到 B，aspects 同时含 "深基坑" 与 "盾构法"。
+    全局最罕见词是 "深基坑"，但它不在 B 池中；应改用 B 池内的 "盾构法" 当锚点。
+
+    需要足够多的通用章节（n>=40），让 DF=1/DF=2 都落在 ANCHOR_DF_RATIO 门槛内。
+    """
+    common = "本方案措施完整性好，技术可行性高，内容成熟可靠，风险可控。"
+    dummy = [sec(f"D#{i}", ["技术标", f"第{i}章 通用"], common) for i in range(1, 41)]
+    file_a = [sec("A#1", ["技术标", "深基坑工程"], "深基坑开挖分层分段，" + common)]
+    file_b = [
+        sec("B#1", ["技术标", "盾构法施工"], "盾构法始发井施工，" + common),
+        sec("B#2", ["技术标", "盾构法施工"], "盾构法管片拼装与盾构机选型，" + common),
+    ]
+    sections = dummy + file_a + file_b
+
+    items = [{
+        "id": "T-01",
+        "guid": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        "name": "盾构法施工接口",
+        "max_score": 4.0,
+        "aspects": ["深基坑与盾构法接口", "盾构始发井"],
+        "synonyms": [],
+    }]
+
+    results = S.locate_items(sections, items)
+    assert len(results) == 1
+    r = results[0]
+    assert r["pool_sections"] == 2
+    assert len(r["picked"]) > 0, "当前池内有盾构法内容，不应被不在池内的全局锚点误杀"
+    assert all(p["section_id"].startswith("B#") for p in r["picked"])
+
+
+def test_GUID绑定后全局DF为零仍不換詞():
+    """GUID 绑定路径下，全局 DF=0 的词仍然不换，这是「该项未写」的最强信号。"""
+    common = "本方案措施完整性好，技术可行性高。"
+    dummy = [sec(f"D#{i}", ["技术标", f"第{i}章 通用"], common) for i in range(1, 41)]
+    file_a = [sec("A#1", ["技术标", "深基坑工程"], "深基坑开挖分层分段，" + common)]
+    sections = dummy + file_a
+
+    items = [{
+        "id": "T-01",
+        "guid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "name": "盾构法施工",
+        "max_score": 4.0,
+        "aspects": ["盾构法", "始发井"],
+        "synonyms": [],
+    }]
+
+    results = S.locate_items(sections, items)
+    assert results[0]["picked"] == [], "全局 DF=0 的概念未写，不能因池内有其他内容而放行"
+
+
 # ── 真实标书冒烟测试（缺文件则跳过）────────────────────────────────────
 
 REAL = Path(__file__).resolve().parents[1] / "data/projects/_sample-docx/evidence/sample-docx/located.json"
