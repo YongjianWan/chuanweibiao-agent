@@ -5,7 +5,7 @@
   const TOTAL_REVIEWS = DATA.bidders.length * DATA.scoringTable.items.length;
   const LOW_CONFIDENCE_THRESHOLD = DATA.lowConfidenceThreshold || 0.85;
   const stageNames = ["PDF 入库", "证据定位", "逐项评审", "结果汇总"];
-  const STORAGE_KEY = "technical-review-state-v3";
+  const STORAGE_KEY = "technical-review-state-v4";
   const LOG_BOTTOM_GAP = 16;
   const BIDDER_RECOGNITION_MS = 420;
   const REVIEW_EVENT_KEYS = DATA.runEvents
@@ -62,7 +62,11 @@
     return {
       items: DATA.scoringTable.items.map((item) => ({
         ...item,
-        tiers: item.tiers.map((tier) => ({ ...tier }))
+        criteria: typeof item.criteria === "string" ? item.criteria : "",
+        tiers: item.tiers.map((tier) => ({
+          ...tier,
+          desc: typeof tier.desc === "string" ? tier.desc : ""
+        }))
       })),
       rules: DATA.scoringTable.rules.slice()
     };
@@ -84,7 +88,13 @@
           ...item,
           name: typeof savedItem.name === "string" ? savedItem.name : item.name,
           max_score: finiteNumber(savedItem.max_score, item.max_score),
-          tier_quote: typeof savedItem.tier_quote === "string" ? savedItem.tier_quote : item.tier_quote,
+          criteria: typeof item.criteria === "string" && item.criteria
+            ? item.criteria
+            : typeof savedItem.criteria === "string"
+              ? savedItem.criteria
+              : typeof savedItem.tier_quote === "string"
+                ? savedItem.tier_quote
+                : "",
           tiers: item.tiers.map((tier, index) => {
             const savedTier = Array.isArray(savedItem.tiers) ? savedItem.tiers[index] : null;
             if (!savedTier) return tier;
@@ -92,7 +102,7 @@
               ...tier,
               min: finiteNumber(savedTier.min, tier.min),
               max: finiteNumber(savedTier.max, tier.max),
-              desc: typeof savedTier.desc === "string" ? savedTier.desc : tier.desc
+              desc: typeof savedTier.desc === "string" ? savedTier.desc : ""
             };
           })
         };
@@ -707,7 +717,7 @@
                 <tr>
                   <th>评分项</th>
                   <th>满分</th>
-                  <th>招标文件区间</th>
+                  <th>招标文件评审标准原文</th>
                 </tr>
               </thead>
               <tbody>
@@ -715,7 +725,7 @@
                   <tr>
                     <td><strong>${html(item.name)}</strong></td>
                     <td>${item.max_score.toFixed(1)}</td>
-                    <td>${html(item.tier_quote || tierSummary(item))}</td>
+                    <td>${html(item.criteria || tierSummary(item))}</td>
                   </tr>
                 `).join("")}
               </tbody>
@@ -729,13 +739,14 @@
   function renderTierEditors(item) {
     return `
       <div class="tier-edit-list">
+        <div class="tier-edit-help">招标文件仅提供 item 级评审标准原文；下方档位说明为评审专家补充，非招标文件原文，可留空。</div>
         ${item.tiers.map((tier, index) => `
           <div class="tier-edit-row">
             <span class="tier-edit-name">${html(tier.tier)}</span>
             <input class="input tier-number" type="number" step="0.1" value="${tier.min}" data-score-item="${html(item.id)}" data-tier-index="${index}" data-tier-field="min" aria-label="${html(item.name + tier.tier)}下限">
             <span class="muted">-</span>
             <input class="input tier-number" type="number" step="0.1" value="${tier.max}" data-score-item="${html(item.id)}" data-tier-index="${index}" data-tier-field="max" aria-label="${html(item.name + tier.tier)}上限">
-            <input class="input tier-desc" value="${html(tier.desc)}" data-score-item="${html(item.id)}" data-tier-index="${index}" data-tier-field="desc" aria-label="${html(item.name + tier.tier)}说明">
+            <input class="input tier-desc" value="${html(tier.desc)}" placeholder="专家补充说明，可留空" data-score-item="${html(item.id)}" data-tier-index="${index}" data-tier-field="desc" aria-label="${html(item.name + tier.tier)}专家补充说明">
           </div>
         `).join("")}
       </div>
@@ -1030,7 +1041,7 @@
             <section class="panel" style="margin-top: 18px;">
               <div class="panel-header">
                 <h3 class="panel-title">评分档位</h3>
-                <span class="badge neutral">招标文件第 33~37 页</span>
+                <span class="badge neutral">区间来自招标文件</span>
               </div>
               <div class="panel-body">
                 <div class="tier-list">
@@ -1038,11 +1049,16 @@
                     <div class="tier ${tier.tier === result.tier ? "active" : ""}">
                       <div class="tier-name">${tier.tier}</div>
                       <div>${tier.min.toFixed(1)}-${tier.max.toFixed(1)} 分</div>
-                      <div class="small muted">${html(tier.desc)}</div>
+                      <div class="small muted">${tier.desc ? html(tier.desc) : "专家补充说明未填写"}</div>
                     </div>
                   `).join("")}
                 </div>
-                ${item.tier_quote ? `<blockquote class="tier-quote">${html(item.tier_quote)}</blockquote>` : ""}
+                ${item.criteria ? `
+                  <blockquote class="tier-quote">
+                    <div class="tier-quote-label">招标文件第 33~37 页评审标准原文</div>
+                    ${html(item.criteria)}
+                  </blockquote>
+                ` : ""}
               </div>
             </section>
 

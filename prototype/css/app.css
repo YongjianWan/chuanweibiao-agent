@@ -546,6 +546,13 @@ tr:last-child td {
   min-width: 420px;
 }
 
+.tier-edit-help {
+  margin-bottom: 2px;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .tier-edit-row {
   display: grid;
   grid-template-columns: 38px 64px 10px 64px minmax(160px, 1fr);
@@ -985,6 +992,13 @@ tr:last-child td {
   border-radius: 6px;
   background: var(--surface-subtle);
   color: #344054;
+}
+
+.tier-quote-label {
+  margin-bottom: 6px;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .reason-text {
