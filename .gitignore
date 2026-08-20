@@ -35,4 +35,5 @@ data/projects/*/sections_all.json
 
 # 运行期产出（演练与正式评审结果）：含评审分数，不进仓库。
 data/out/
+out.json
 *.local
