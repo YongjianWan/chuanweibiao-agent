@@ -391,3 +391,41 @@ class TestMainAgentFactory:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+def test_wall_clock_accumulates_across_reruns(tmp_path, monkeypatch):
+    """续跑 / --retry-unrated 的耗时必须累加进 perf.wall_clock_sec，不能覆盖。
+
+    守的是一个真出过的 bug：补跑 1 个未评定项耗时 14 秒，把上一轮的 318 秒盖掉，
+    报告里的总耗时就成了 14 秒。耗时是 README §1 的 P0 考核项，报错等于自毁。
+
+    真跑两遍 main()（perf_counter 打桩：第一轮 100 秒、第二轮 50 秒），
+    最终文件里必须是 150——只在测试里自己算一遍加法不算数，
+    要验的是 main() 实际写出来的 reviews.json。
+    """
+    import scheduler as sched
+
+    paths = TestMainAgentFactory()._write_minimal_inputs(tmp_path)
+    argv = [
+        "--evidence", str(paths["evidence"]),
+        "--scoring-table", str(paths["scoring"]),
+        "--project-summary", str(paths["summary"]),
+        "--sections", str(paths["sections"]),
+        "--output", str(paths["output"]),
+        "--mock",
+    ]
+
+    def fake_perf_counter(values):
+        # 用完后恒返回末值：run 内部若另有 perf_counter 调用（如延迟统计）不会打乱断言
+        it = iter(values)
+        return lambda: next(it, values[-1])
+
+    monkeypatch.setattr(sched.time, "perf_counter", fake_perf_counter([0.0, 100.0]))
+    assert sched.main(argv) == 0
+    first = json.loads((paths["output"] / "reviews.json").read_text(encoding="utf-8"))
+    assert first["perf"]["wall_clock_sec"] == 100.0
+
+    monkeypatch.setattr(sched.time, "perf_counter", fake_perf_counter([0.0, 50.0]))
+    assert sched.main(argv) == 0  # 第二遍：该项已完成，走续跑路径
+    second = json.loads((paths["output"] / "reviews.json").read_text(encoding="utf-8"))
+    assert second["perf"]["wall_clock_sec"] == 150.0, "续跑耗时必须累加，不能覆盖"

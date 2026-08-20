@@ -158,10 +158,18 @@ async def run_batch(
     work_dir: Path,
     concurrency: int = DEFAULT_CONCURRENCY,
     max_attempts: int = 4,
+    retry_unrated: bool = False,
 ) -> dict[str, Any]:
-    """并发处理批任务，返回汇总结果。"""
+    """并发处理批任务，返回汇总结果。
+
+    `retry_unrated=True` 时把 manifest 里的 `errored`（重试耗尽判 unrated 的项）
+    重新纳入待办——README §3.6 要求的「全流程跑完后对所有未评定项发起一轮统一重跑」。
+    默认不开：断点续跑的语义是「接着没做完的做」，不该顺手重试已经判定失败的项。"""
     manifest_path = work_dir / "manifest.json"
     manifest = load_manifest(manifest_path)
+    if retry_unrated and manifest.errored:
+        print(f"重跑 {len(manifest.errored)} 个未评定项")
+        manifest.errored = set()
 
     results_by_key: dict[JobKey, dict[str, Any]] = {}
     semaphore = asyncio.Semaphore(concurrency)
@@ -186,6 +194,7 @@ async def run_batch(
             except Exception as e:
                 return key, {"status": "error", "error": str(e), "attempts": max_attempts}
 
+    # errored 已在 retry_unrated 时清空，这里统一按「不在 completed 也不在 errored」筛
     pending = [(k, pkg) for k, pkg in jobs if k not in manifest.completed and k not in manifest.errored]
     total = len(pending)
     completed = 0
@@ -270,6 +279,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--mock", action="store_true", help="使用 Mock 模型")
     parser.add_argument("--agent-factory", action="store_true", help="使用智能体工厂端点（读 AF_BASE_URL / AF_API_KEY / AF_AGENT_ID）")
     parser.add_argument("--max-attempts", type=int, default=4, help="最大重试次数")
+    parser.add_argument("--retry-unrated", action="store_true",
+                        help="把上一轮判 unrated 的项重新跑一遍（README §3.6 的统一重跑）。"
+                             "已判分的项不受影响，仍然跳过")
     args = parser.parse_args(argv)
 
     # 加载配置
@@ -321,12 +333,27 @@ def main(argv: Sequence[str] | None = None) -> int:
         work_dir=work_dir,
         concurrency=args.concurrency,
         max_attempts=args.max_attempts,
+        retry_unrated=args.retry_unrated,
     ))
     wall_clock_sec = round(time.perf_counter() - start_time, 3)
 
     # 写最终汇总：以 work_dir 下已落盘的 per-item 文件为准做全量聚合，
     # 覆盖 manifest.completed 的所有 key，保证续跑后 reviews.json 不残缺。
     all_results = load_all_results(work_dir)
+
+    # 墙钟**累加**，不覆盖。续跑与 --retry-unrated 都是「接着上一轮跑」，
+    # 它们花掉的时间同样计入总耗时（README §3.6 明确要求）。
+    # 不累加会出严重错误：补跑 1 个未评定项耗时 14 秒，直接把上一轮的 318 秒盖掉，
+    # 报告里的总耗时就成了 14 秒——而耗时是 §1 的 P0 考核项，报这个数等于自毁。
+    previous_wall = 0.0
+    output_path = work_dir / "reviews.json"
+    if output_path.exists():
+        try:
+            previous = json.loads(output_path.read_text(encoding="utf-8"))
+            previous_wall = float((previous.get("perf") or {}).get("wall_clock_sec") or 0)
+        except (json.JSONDecodeError, OSError, TypeError, ValueError):
+            previous_wall = 0.0
+    wall_clock_sec = round(previous_wall + wall_clock_sec, 3)
     total_retries = sum(max(r.get("attempts", 0) - 1, 0) for r in all_results.values())
     output = {
         "project": scoring_table.get("project", ""),
@@ -342,7 +369,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             "concurrency": args.concurrency,
         },
     }
-    output_path = work_dir / "reviews.json"
     output_path.write_text(json.dumps(output, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {output_path} ({len(output['review_results'])} reviews, "
           f"wall_clock_sec={wall_clock_sec}, concurrency={args.concurrency})")
