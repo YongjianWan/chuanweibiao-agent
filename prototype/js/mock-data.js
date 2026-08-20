@@ -411,6 +411,11 @@
         attempts = 2;
       }
 
+      if (status === "rated" && item.id === "T-17") {
+        tier = item.tiers.find((row) => row.tier === "良");
+        rate = mockCompletionRate(bidderIndex, itemIndex, "良");
+      }
+
       const score = status === "unrated" ? null : scoreInTier(tier, rate);
       const evidencePackage = makeEvidencePackage(bidder, item, bidderIndex, itemIndex, status, score);
       const confidenceState = status === "unrated"
@@ -471,11 +476,38 @@
   const totals = {};
   bidders.forEach((bidder) => {
     const rows = reviewResults.filter((row) => row.bidder_id === bidder.id);
+    const score = round1(rows.reduce((sum, row) => sum + (typeof row.score === "number" ? row.score : 0), 0));
     totals[bidder.name] = {
-      score: round1(rows.reduce((sum, row) => sum + (typeof row.score === "number" ? row.score : 0), 0)),
-      unrated: rows.filter((row) => row.status === "unrated").length
+      score,
+      unrated: rows.filter((row) => row.status === "unrated").length,
+      expert_score: score,
+      expert_overrides: 0
     };
   });
+
+  function buildAuditRows() {
+    return items.flatMap((item) => {
+      const rows = bidders.map((bidder) => resultFor(bidder.id, item.id));
+      if (rows.some((row) => !row || row.status === "unrated")) return [];
+
+      const buckets = rows.map((row) => row.score === 0 ? "0分" : row.tier);
+      const firstBucket = buckets[0];
+      if (!firstBucket || !buckets.every((bucket) => bucket === firstBucket)) return [];
+
+      const tierDist = item.tiers.reduce((dist, tier) => {
+        dist[tier.tier] = buckets.filter((bucket) => bucket === tier.tier).length;
+        return dist;
+      }, {});
+      tierDist["0分"] = buckets.filter((bucket) => bucket === "0分").length;
+
+      return [{
+        item_id: item.id,
+        kind: "no_discrimination",
+        detail: bidders.length + " 家全部判「" + firstBucket + "」档",
+        tier_dist: tierDist
+      }];
+    });
+  }
 
   const reportData = {
     project: scoringTable.project,
@@ -500,6 +532,8 @@
         confidence: row.confidence,
         why: confidenceWhy(row.confidence_factors)
       })),
+    audit: buildAuditRows(),
+    expert_reviews: [],
     perf: {
       wall_clock_sec: 582,
       concurrency: 8,
@@ -510,6 +544,16 @@
       gpu: "未采集",
       vram_peak_gb: null,
       gpu_note: "模型为远程托管端点时，我方进程内无法采集显存；此处显示为未采集。"
+    },
+    compute_notes: {
+      owner: "我方自有算力",
+      spec: "未采集",
+      model: "远程托管模型端点，版本未采集",
+      method: [
+        "证据定位：IDF 加权 + 单锚点闸门，不依赖向量库",
+        "防幻觉：模型只选择证据编号，引用原文由系统从证据包截取",
+        "计时口径：页面①点击下一步后覆盖 S1-S4 全流程"
+      ]
     }
   };
 
