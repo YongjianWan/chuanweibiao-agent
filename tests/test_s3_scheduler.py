@@ -317,5 +317,77 @@ class TestResumeAfterCrash:
             assert result["status"] == "rated", f"{key} 的结果缺失或非 rated"
 
 
+class TestMainAgentFactory:
+    """scheduler CLI 的 --agent-factory 必须选用 AgentFactoryClient。"""
+
+    def _write_minimal_inputs(self, tmp_path: Path) -> dict:
+        scoring = tmp_path / "scoring.yaml"
+        scoring.write_text(
+            "project: 测试项目\n"
+            "items:\n"
+            "  - id: T-01\n"
+            "    name: 资质\n"
+            "    max_score: 10\n"
+            "    criteria: 评审资质\n"
+            "    tiers:\n"
+            "      - {tier: 优, min: 8, max: 10}\n"
+            "      - {tier: 中, min: 4, max: 8}\n"
+            "      - {tier: 差, min: 0, max: 4}\n",
+            encoding="utf-8",
+        )
+        summary = tmp_path / "summary.md"
+        summary.write_text("项目摘要\n", encoding="utf-8")
+        sections = tmp_path / "sections.json"
+        sections.write_text(
+            json.dumps([{"id": "S1", "bidder": "甲公司", "text": "投标响应正文"}], ensure_ascii=False),
+            encoding="utf-8",
+        )
+        bidder_dir = tmp_path / "evidence" / "甲公司"
+        bidder_dir.mkdir(parents=True)
+        (bidder_dir / "located.json").write_text(
+            json.dumps(
+                [{"bidder": "甲公司", "item_id": "T-01", "picked": [{"section_id": "S1", "text": "投标响应正文"}]}],
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        return {
+            "scoring": scoring,
+            "summary": summary,
+            "sections": sections,
+            "evidence": tmp_path / "evidence",
+            "output": tmp_path / "out",
+        }
+
+    def test_agent_factory_flag_uses_agent_factory_client(self, tmp_path: Path, monkeypatch):
+        import scheduler as sched
+        from s3_review import AgentFactoryClient, MockModelClient
+
+        paths = self._write_minimal_inputs(tmp_path)
+        calls = {"n": 0}
+
+        def fake_from_env(cls, timeout=300.0):
+            calls["n"] += 1
+            return MockModelClient()
+
+        monkeypatch.setattr(AgentFactoryClient, "from_env", classmethod(fake_from_env))
+
+        rc = sched.main([
+            "--evidence", str(paths["evidence"]),
+            "--scoring-table", str(paths["scoring"]),
+            "--project-summary", str(paths["summary"]),
+            "--sections", str(paths["sections"]),
+            "--output", str(paths["output"]),
+            "--agent-factory",
+        ])
+
+        assert rc == 0
+        assert calls["n"] >= 1, "--agent-factory 时必须通过 AgentFactoryClient.from_env 建客户端"
+        reviews = json.loads((paths["output"] / "reviews.json").read_text(encoding="utf-8"))
+        assert reviews["model"] == "mock"  # stub 客户端的 name，证明走的是被打桩的工厂
+        assert len(reviews["review_results"]) == 1
+        assert reviews["review_results"][0]["status"] == "rated"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
