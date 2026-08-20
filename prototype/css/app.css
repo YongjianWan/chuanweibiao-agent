@@ -889,7 +889,6 @@ tr:last-child td {
 }
 
 .tier-list,
-.factor-list,
 .evidence-list {
   display: flex;
   flex-direction: column;
@@ -923,37 +922,6 @@ tr:last-child td {
   border-radius: 6px;
   background: var(--surface-subtle);
   color: #344054;
-}
-
-.factor {
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
-}
-
-.factor-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.factor-title {
-  font-weight: 700;
-}
-
-.factor-bar {
-  height: 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #e5eaf0;
-}
-
-.factor-fill {
-  height: 100%;
-  background: var(--primary);
 }
 
 .reason-text {

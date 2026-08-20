@@ -388,6 +388,9 @@
       setRoute(blockedHash);
       return;
     }
+    if (route.path === "/create" && state.run.finished) {
+      resetWorkflowState();
+    }
     if (route.path === "/create") {
       app.innerHTML = shell(route.path, renderCreate());
       return;
@@ -938,8 +941,6 @@
               </div>
             </section>
 
-            ${result.factor_scores && result.factor_scores.length ? renderFactorPanel(result, item) : ""}
-
             ${result.status === "unrated" ? renderUnratedPanel(result) : `
               <section class="panel" style="margin-top: 18px;">
                 <div class="panel-header">
@@ -961,6 +962,8 @@
                 </div>
               </section>
             `}
+
+            ${renderRetrievalPanel(result, evidence)}
 
             <section class="panel" style="margin-top: 18px;">
               <div class="panel-header">
@@ -1056,31 +1059,20 @@
     `;
   }
 
-  function renderFactorPanel(result, item) {
-    const value = result.factor_scores.reduce((sum, factor) => sum + factor.weight * factor.value, 0);
+  function renderRetrievalPanel(result, evidence) {
+    const picked = Array.isArray(evidence.picked) ? evidence.picked : [];
+    const truncated = picked.some((row) => row.truncated);
+    const retryCount = Math.max(0, result.attempts - 1);
     return `
       <section class="panel" style="margin-top: 18px;">
         <div class="panel-header">
-          <h3 class="panel-title">区间内定分 / 要素加权</h3>
-          <span class="badge neutral">存在 factor_scores 时显示</span>
+          <h3 class="panel-title">检索与置信度</h3>
+          <span class="badge neutral">按分值分配证据上限</span>
         </div>
         <div class="panel-body">
-          <div class="factor-list">
-            ${result.factor_scores.map((factor) => `
-              <div class="factor">
-                <div class="factor-head">
-                  <div class="factor-title">${html(factor.name)}</div>
-                  <div class="small muted">${factor.weight.toFixed(2)} × ${factor.value.toFixed(2)} = ${(factor.weight * factor.value).toFixed(3)}</div>
-                </div>
-                <div class="factor-bar">
-                  <div class="factor-fill" style="width: ${factor.value * 100}%;"></div>
-                </div>
-              </div>
-            `).join("")}
-          </div>
-          <div class="info-box" style="margin-top: 12px;">
-            <strong>合计得分率 ${value.toFixed(2)}</strong>
-            <span class="muted">映射到当前档位区间，得到 ${result.score == null ? "—" : result.score.toFixed(1)} / ${item.max_score.toFixed(1)} 分。</span>
+          <div class="info-box">
+            <strong>证据 ${number(evidence.units)} 段 / ${number(evidence.evidence_chars)} 字（上限 ${number(evidence.budget)} 字）</strong>
+            <span class="muted">降级检索 ${evidence.fallback ? "是" : "否"} · 截断 ${truncated ? "是" : "否"} · 重试 ${retryCount} 次 · confidence ${result.confidence.toFixed(2)}</span>
           </div>
         </div>
       </section>
