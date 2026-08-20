@@ -252,6 +252,56 @@ def test_review_all_aggregates_results_and_perf():
     assert output["perf"]["calls"] == 1
 
 
+class FailNThenSucceedClient:
+    name = "fail-n-then-succeed"
+
+    def __init__(self, fail_count):
+        self.fail_count = fail_count
+        self.calls = 0
+
+    def complete(self, messages):
+        self.calls += 1
+        if self.calls <= self.fail_count:
+            raise RuntimeError(f"call {self.calls} fails")
+        return ModelResponse(model_payload(), in_tokens=10, out_tokens=2, latency_ms=50)
+
+
+def test_review_all_retries_unrated_and_accumulates_perf():
+    """首轮耗尽重试后 unrated，统一重跑一轮后变 rated，attempts/perf 累加。"""
+    scoring_table = {"project": "测试项目", "rules": [], "items": [ITEM]}
+    sections = [
+        {"bidder": "测试投标人001", "id": "1#1", "text": "正文", "path": []}
+    ]
+    client = FailNThenSucceedClient(fail_count=4)
+
+    output = review_all([EVIDENCE], scoring_table, "摘要", sections, client)
+
+    result = output["review_results"][0]
+    assert result["status"] == "rated"
+    assert result["attempts"] == 5  # 首轮 4 次 + 重跑 1 次
+    # 失败调用不产生 token/耗时，首轮 perf 为 0；重跑成功后累加成功那次。
+    assert result["perf"]["in_tokens"] == 10
+    assert result["perf"]["out_tokens"] == 2
+    assert result["perf"]["latency_ms"] == 50
+
+
+def test_review_all_skips_retry_when_disabled():
+    """max_retry_rounds=0 时统一重跑不执行，首轮失败保持 unrated。"""
+    scoring_table = {"project": "测试项目", "rules": [], "items": [ITEM]}
+    sections = [
+        {"bidder": "测试投标人001", "id": "1#1", "text": "正文", "path": []}
+    ]
+    client = FailNThenSucceedClient(fail_count=4)
+
+    output = review_all(
+        [EVIDENCE], scoring_table, "摘要", sections, client, max_retry_rounds=0
+    )
+
+    result = output["review_results"][0]
+    assert result["status"] == "unrated"
+    assert result["attempts"] == 4
+
+
 def test_model_output_may_have_empty_citation():
     client = SequenceClient([model_payload(cite=[])])
 

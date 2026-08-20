@@ -579,9 +579,16 @@ def review_all(
     client: ModelClient,
     *,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    max_retry_rounds: int = 1,
     sleep: Callable[[float], None] = time.sleep,
 ) -> dict[str, Any]:
-    """按证据包逐项评审，并汇总模型调用次数、重试、token 和耗时。"""
+    """按证据包逐项评审，并汇总模型调用次数、重试、token 和耗时。
+
+    首轮评审结束后，对所有 ``status == "unrated"`` 的项发起统一重跑。
+    重跑轮数由 ``max_retry_rounds`` 控制（默认 1 轮），可防止偶发故障
+    导致完成判定「未评定项为 0」不达标。重跑的 attempts 与 perf 会累加到
+    原结果上，而不是覆盖。
+    """
     items = scoring_table.get("items")
     if not isinstance(items, list):
         raise ValueError("评分表顶层必须包含 items 数组")
@@ -610,6 +617,31 @@ def review_all(
             )
         )
 
+    for _ in range(max_retry_rounds):
+        retry_indices = [i for i, result in enumerate(results) if result["status"] == "unrated"]
+        if not retry_indices:
+            break
+        for i in retry_indices:
+            old = results[i]
+            evidence = evidence_packages[i]
+            item_id = str(evidence.get("item_id") or evidence.get("point_id") or "")
+            new = review_one(
+                evidence,
+                item_by_id[item_id],
+                project_summary,
+                rules,
+                section_index,
+                client,
+                max_attempts=max_attempts,
+                sleep=sleep,
+            )
+            merged_attempts = old["attempts"] + new["attempts"]
+            merged_perf = {
+                key: old["perf"][key] + new["perf"][key]
+                for key in ("in_tokens", "out_tokens", "latency_ms")
+            }
+            results[i] = {**new, "attempts": merged_attempts, "perf": merged_perf}
+
     return {
         "project": scoring_table.get("project", ""),
         "generated_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
@@ -635,6 +667,12 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--mock", action="store_true", help="使用本地确定性 Mock 模型")
     parser.add_argument("--timeout", type=float, default=60.0, help="真实模型请求超时秒数")
     parser.add_argument("--max-attempts", type=int, default=DEFAULT_MAX_ATTEMPTS)
+    parser.add_argument(
+        "--max-retry-rounds",
+        type=int,
+        default=1,
+        help="首轮评审后，对未评定项统一重跑的轮数（默认 1）",
+    )
     return parser.parse_args(argv)
 
 
@@ -657,6 +695,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         sections,
         client,
         max_attempts=args.max_attempts,
+        max_retry_rounds=args.max_retry_rounds,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(output, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
