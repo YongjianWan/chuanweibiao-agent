@@ -100,9 +100,10 @@ def test_review_one_builds_score_citations_and_perf():
     assert "confidence_factors" not in result
 
 
-def test_empty_evidence_is_zero_without_calling_model():
+def test_no_file_miss_is_zero_with_full_confidence():
+    """pool_sections == 0：该家没有这个 PDF，确实没写，判 0 分且置信度满。"""
     client = SequenceClient([])
-    evidence = {**EVIDENCE, "picked": []}
+    evidence = {**EVIDENCE, "picked": [], "pool_sections": 0}
 
     result = review_one(evidence, ITEM, "摘要", [], SECTIONS, client)
 
@@ -110,7 +111,50 @@ def test_empty_evidence_is_zero_without_calling_model():
     assert result["score"] == 0
     assert result["tier"] is None
     assert result["attempts"] == 0
+    assert result["miss_reason"] == "no_file"
+    assert result["confidence"] == 1.0
     assert client.messages == []
+
+
+def test_not_found_miss_is_flagged_for_human_review():
+    """pool_sections > 0 而 picked 为空：检索没找到，仍判 0 分但必须进 ⚠。
+
+    这是把「写了」判成「没写」的风险位，撞 README §1 的 P0「档位不能错」。
+    12 家真实数据里 12 个空证据包全部是这种（pool_sections 无一为 0），不是边角情形。
+    """
+    client = SequenceClient([])
+    evidence = {**EVIDENCE, "picked": [], "pool_sections": 41}
+
+    result = review_one(evidence, ITEM, "摘要", [], SECTIONS, client)
+
+    assert result["score"] == 0
+    assert result["miss_reason"] == "not_found"
+    assert result["confidence"] < 0.85
+    assert client.messages == []
+
+
+def test_missing_pool_sections_falls_back_to_not_found():
+    """pool_sections 缺失时保守判 not_found：无法证明该家没这个文件，就得标出来。"""
+    client = SequenceClient([])
+    evidence = {**EVIDENCE, "picked": []}
+
+    result = review_one(evidence, ITEM, "摘要", [], SECTIONS, client)
+
+    assert result["miss_reason"] == "not_found"
+    assert result["confidence"] < 0.85
+
+
+def test_rated_and_unrated_carry_null_miss_reason():
+    """miss_reason 字段恒在，渲染层不必判断键是否存在。"""
+    rated = review_one(EVIDENCE, ITEM, "摘要", [], SECTIONS, SequenceClient([model_payload()]))
+    unrated = review_one(
+        EVIDENCE, ITEM, "摘要", [], SECTIONS,
+        SequenceClient(["not json"]), max_attempts=1,
+    )
+
+    assert rated["miss_reason"] is None
+    assert unrated["status"] == "unrated"
+    assert unrated["miss_reason"] is None
 
 
 def test_invalid_json_retries_and_includes_previous_error():

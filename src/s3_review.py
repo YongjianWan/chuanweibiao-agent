@@ -26,6 +26,9 @@ BACKOFF_SECONDS = (2.0, 4.0, 8.0)
 DEFAULT_MAX_ATTEMPTS = len(BACKOFF_SECONDS) + 1
 # 防止异常端点返回超大内容耗尽进程内存；正常评审 JSON 远小于此值。
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+# 检索池非空却没检索到证据时的置信度。取值依据见 docs/data-contract.md 第 6 节
+# confidence 表：它必须低于「有证据」的最差组合 0.567，因为无证据比弱证据更不可信。
+NOT_FOUND_CONFIDENCE = 0.5
 
 
 class ReviewError(ValueError):
@@ -445,6 +448,49 @@ def _identity(evidence: Mapping[str, Any], item: Mapping[str, Any]) -> dict[str,
     return result
 
 
+def _miss_result(
+    identity: Mapping[str, Any],
+    evidence: Mapping[str, Any],
+) -> dict[str, Any]:
+    """证据包为空时的判分结果。
+
+    两种未命中必须分开，理由见 docs/data-contract.md 第 5 节 ``pool_sections``：
+    - ``pool_sections == 0``：该投标人没有这个 PDF，确实没写，判 0 分是对的；
+    - ``pool_sections > 0``：文件在、内容在，是检索没找到。仍判 0 分（招标文件规则
+      「若此条缺项不得分」），但这是把「写了」判成「没写」的风险位，撞 README §1 的
+      P0「档位不能错」，因此压低 confidence 让它进页面④的 ⚠ 与报告的 review_flags。
+
+    ``pool_sections`` 缺失时按 ``not_found`` 处理：无法证明该家没有这个文件，
+    保守方向是标出来让人看，而不是静默判 0 分。
+    """
+    pool_sections = evidence.get("pool_sections")
+    # type(...) is int 而非 isinstance：bool 是 int 的子类，False 会等于 0。
+    if type(pool_sections) is int and pool_sections == 0:
+        miss_reason = "no_file"
+        reason = "该投标人未提交本评分项对应的投标文件，按项目规则“若此条缺项不得分”判 0 分。"
+        confidence = 1.0
+    else:
+        miss_reason = "not_found"
+        reason = (
+            "本评分项对应的投标文件存在，但证据定位未检索到相关章节，"
+            "按项目规则“若此条缺项不得分”判 0 分。检索未命中不等于投标人未写，建议人工复核。"
+        )
+        confidence = NOT_FOUND_CONFIDENCE
+    return {
+        **identity,
+        "status": "rated",
+        "tier": None,
+        "score": 0,
+        "miss_reason": miss_reason,
+        "cite": [],
+        "reason": reason,
+        "confidence": confidence,
+        "attempts": 0,
+        "last_error": "",
+        "perf": {"in_tokens": 0, "out_tokens": 0, "latency_ms": 0},
+    }
+
+
 def review_one(
     evidence: Mapping[str, Any],
     item: Mapping[str, Any],
@@ -463,19 +509,7 @@ def review_one(
     identity = _identity(evidence, item)
     picked = evidence.get("picked") or []
     if not picked:
-        # S2 未命中表示投标文件未写该项，应判 0 分；这与模型故障导致的未评定不同。
-        return {
-            **identity,
-            "status": "rated",
-            "tier": None,
-            "score": 0,
-            "cite": [],
-            "reason": "证据定位未检索到相关章节，按项目规则“若此条缺项不得分”处理为 0 分。",
-            "confidence": 1.0,
-            "attempts": 0,
-            "last_error": "",
-            "perf": {"in_tokens": 0, "out_tokens": 0, "latency_ms": 0},
-        }
+        return _miss_result(identity, evidence)
 
     # 若证据元数据无法还原正文，先失败再调用模型，避免花 token 评审空内容。
     _evidence_with_text(evidence, section_index)
@@ -508,6 +542,7 @@ def review_one(
                 "status": "rated",
                 "tier": validated["tier"],
                 "score": score,
+                "miss_reason": None,
                 "cite": validated["cite"],
                 "reason": validated["reason"],
                 "confidence": confidence,
@@ -526,6 +561,7 @@ def review_one(
         "status": "unrated",
         "tier": None,
         "score": None,
+        "miss_reason": None,
         "cite": [],
         "reason": "模型调用重试耗尽，未能完成评审。",
         "confidence": 0.0,
