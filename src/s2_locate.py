@@ -18,6 +18,8 @@ from pathlib import Path
 
 import yaml
 
+from build_points import build_terms
+
 W_TITLE = 3.0      # 命中标题链 = 命中正文的 3 倍权重
 # hit 标记前缀：大写=完整短语命中，小写=单词命中；T/t=命中标题链，B/b=命中正文
 # 词的区分度用 DF 占比衡量，不用 IDF 绝对值：IDF 绝对值随语料篇数变化，
@@ -90,8 +92,15 @@ def anchor(terms, df, n):
     return min(cands, key=lambda x: df.get(x, 0)) if cands else None
 
 
-def _rank(sections, phrases, terms, idf, df):
-    n = len(sections)
+def _rank(sections, phrases, terms, idf, df, n=None):
+    """在 sections 里排出候选块。
+
+    `n` 是 DF 的统计基大小，默认等于检索池大小。评分表路径下两者不同：
+    检索池收窄到单个 PDF，而 DF 仍按该家全部 20 个 PDF 统计（README §3.2 红线一），
+    此时必须显式传入 n，否则 MAX_DF_RATIO / ANCHOR_DF_RATIO 会按几百块去判占比，
+    通用词过滤和锚点闸门一起失效。
+    """
+    n = len(sections) if n is None else n
     anc = anchor(terms, df, n)
     if anc is not None and df.get(anc, 0) == 0:
         return []          # 该主题在本文件中不存在，直接未命中
@@ -121,6 +130,43 @@ def unit_key(sec):
     return (sec["file"], tuple(sec["path"][:-1]) or tuple(sec["path"]))
 
 
+def pick_units(scored, by_unit, budget, with_page=False):
+    """把候选块按证据单元归并、按 budget 收取，返回 (picked, 已用字数, 单元数)。
+
+    单元得分取组内最高分；收取时收下该单元的全部章节块，保持文档原顺序（§3.3）。
+    `with_page=True` 时透传 `page` 字段——评分表路径需要它给页面⑤跳转 PDF 页用，
+    旧的评审点路径跑在 docx 样例上、没有该字段，故默认不带。
+    """
+    units, best = {}, {}
+    for sc, hit, sec in scored:
+        k = unit_key(sec)
+        if sc > best.get(k, -1):
+            best[k] = sc
+            units.setdefault(k, {})["top"] = (sc, hit, sec)
+    order = sorted(units, key=lambda k: -best[k])[:MAX_SEC]
+
+    picked, used = [], 0
+    for k in order:
+        if used >= budget:
+            break
+        sc, hit, _ = units[k]["top"]
+        members = [x for x in by_unit.get(k, []) if used < budget]
+        for sec in members:
+            if used >= budget:
+                break
+            take = min(sec["char_len"], budget - used)
+            row = {
+                "section_id": sec["id"], "file": sec["file"], "path": sec["path"],
+                "unit": list(k[1]), "match_score": round(sc, 1), "hit": hit[:6],
+                "chars": take, "truncated": take < sec["char_len"],
+            }
+            if with_page:
+                row["page"] = sec.get("page")
+            picked.append(row)
+            used += take
+    return picked, used, len(order)
+
+
 def locate(sections, cats, budget=BUDGET):
     vocab = set()
     for c in cats:
@@ -142,38 +188,127 @@ def locate(sections, cats, budget=BUDGET):
                 scored = _rank(sections, cat["phrases"], cat["terms"], idf, df)
                 fallback = bool(scored)
 
-            # 命中的块按证据单元归并，单元得分取组内最高分
-            units, best = {}, {}
-            for sc, hit, sec in scored:
-                k = unit_key(sec)
-                if sc > best.get(k, -1):
-                    best[k] = sc
-                    units.setdefault(k, {})["top"] = (sc, hit, sec)
-            order = sorted(units, key=lambda k: -best[k])[:MAX_SEC]
-
-            picked, used = [], 0
-            for k in order:
-                if used >= budget:
-                    break
-                sc, hit, _ = units[k]["top"]
-                # 收下该单元的全部章节块，保持文档原顺序
-                members = [x for x in by_unit.get(k, []) if used < budget]
-                for sec in members:
-                    if used >= budget:
-                        break
-                    take = min(sec["char_len"], budget - used)
-                    picked.append({
-                        "section_id": sec["id"], "file": sec["file"], "path": sec["path"],
-                        "unit": list(k[1]), "match_score": round(sc, 1), "hit": hit[:6],
-                        "chars": take, "truncated": take < sec["char_len"],
-                    })
-                    used += take
+            picked, used, n_units = pick_units(scored, by_unit, budget)
             results.append({
                 "point_id": p["id"], "cat": cat["name"], "name": p["name"],
-                "candidates": len(scored), "units": len(order), "fallback": fallback,
+                "candidates": len(scored), "units": n_units, "fallback": fallback,
                 "picked": picked, "evidence_chars": used,
             })
     return results, idf, df
+
+# ===== 评分表路径（T8）：按评分项检索，检索范围收窄到单个 PDF =====
+#
+# 与上面的评审点路径的区别，见 README §2.1：评分项与投标 PDF 由文件名尾部的 GUID
+# 一一绑定，所以「从 87 万字的标书里找某评分项的证据」降级成「打开对应的那一个 PDF」。
+# 跨文件定位不再需要算法，S2 只负责单个 PDF 内部的压缩。
+#
+# 两条路径共用 build_idf / _rank / anchor / score_section / unit_key / pick_units，
+# README §3.2 的三条红线因此对两条路径同时生效，由 tests/test_s2_regression.py 守住。
+
+BUDGET_MIN, BUDGET_MAX = 1500, 6000
+
+
+def budget_for(max_score, total_score, n_items, base=BUDGET):
+    """证据字数上限按分值分配，不是全项统一常数。算式与理由见 docs/data-contract.md §5。
+
+    基准 3000、19 项、总分 100 时：20 分项得 6000（触上限），4 分项得 2280，3 分项得 1710。
+    上下限防止 3 分项被压到无法判断、20 分项一项吃掉大半预算。
+    """
+    raw = base * n_items * max_score / total_score
+    return int(min(max(raw, BUDGET_MIN), BUDGET_MAX))
+
+
+def search_terms(entries):
+    """检索词条目列表 -> (phrases, terms)。
+
+    条目 = 评分表里的一条 `aspects` 或 `synonyms`，整条即「短语」；
+    切分后的成分是「单词」。两级的含义与 hit 前缀的对应关系见 docs/data-contract.md §5。
+    """
+    phrases, terms = [], []
+    for entry in entries:
+        if not entry:
+            continue
+        ph, tm = build_terms(str(entry))
+        for x in ph:
+            if x not in phrases:
+                phrases.append(x)
+        for x in tm:
+            if x not in terms:
+                terms.append(x)
+    return phrases, terms
+
+
+def locate_items(sections, items, base_budget=BUDGET):
+    """一家投标人 × 全部评分项 -> 证据包列表（docs/data-contract.md §5）。
+
+    `sections` 必须是该家**全部** 20 个 PDF 的章节块：DF 统计基取全部（红线一），
+    而每个评分项的检索池按 `item_guid` 收窄到它对应的那一个 PDF。
+    """
+    total_score = sum(float(it["max_score"]) for it in items)
+    n_items = len(items)
+
+    vocab = set()
+    prepared = []
+    for it in items:
+        ph, tm = search_terms(list(it.get("aspects") or []) + list(it.get("synonyms") or []))
+        fb_ph, fb_tm = search_terms([it["name"]])
+        prepared.append((it, ph, tm, fb_ph, fb_tm))
+        vocab |= set(tm) | set(fb_tm)
+    idf, df = build_idf(sections, vocab)
+    n_df = len(sections)                      # DF 基 = 该家全部 20 个 PDF
+
+    by_guid = {}
+    for sec in sections:
+        by_guid.setdefault((sec.get("item_guid") or "").lower(), []).append(sec)
+
+    results = []
+    for it, ph, tm, fb_ph, fb_tm in prepared:
+        pool = by_guid.get(str(it["guid"]).lower(), [])
+        by_unit = {}
+        for sec in pool:
+            by_unit.setdefault(unit_key(sec), []).append(sec)
+
+        scored = _rank(pool, ph, tm, idf, df, n_df)
+        fallback = False
+        if not scored:                        # aspects 级检索不到，退到评分项名级
+            scored = _rank(pool, fb_ph, fb_tm, idf, df, n_df)
+            fallback = bool(scored)
+
+        budget = budget_for(float(it["max_score"]), total_score, n_items, base_budget)
+        picked, used, n_units = pick_units(scored, by_unit, budget, with_page=True)
+        results.append({
+            "item_id": it["id"], "item_guid": str(it["guid"]).lower(), "name": it["name"],
+            "candidates": len(scored), "units": n_units, "fallback": fallback,
+            "evidence_chars": used, "budget": budget, "pool_sections": len(pool),
+            "picked": picked,
+        })
+    return results
+
+
+def run_project(project_dir, scoring_path, base_budget=BUDGET):
+    """遍历 data/projects/<slug>/sections/<bidder>/，每家产出一份 located.json。
+
+    `bidder` 取投标文件所在的一级目录名，原样照抄（README §2 术语表）——
+    它是报告数据 matrix/totals 的键，12 家写法必须完全一致。
+    """
+    project_dir = Path(project_dir)
+    items = yaml.safe_load(Path(scoring_path).read_text(encoding="utf-8"))["items"]
+    sec_root = project_dir / "sections"
+    bidders = sorted(d.name for d in sec_root.iterdir() if (d / "sections.json").is_file())
+    if not bidders:
+        sys.exit(f"{sec_root} 下没有投标人目录，先按 README §10.1 跑 S1")
+
+    summary = []
+    for bidder in bidders:
+        sections = json.loads((sec_root / bidder / "sections.json").read_text(encoding="utf-8"))
+        res = locate_items(sections, items, base_budget)
+        for r in res:
+            r["bidder"] = bidder
+        out = project_dir / "evidence" / bidder / "located.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
+        summary.append((bidder, res, len(sections)))
+    return summary
 
 
 def main(sections_path, points_path, out_path):

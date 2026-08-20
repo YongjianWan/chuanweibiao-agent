@@ -1,6 +1,5 @@
 (function () {
   const DATA = window.PROTOTYPE_DATA;
-  const SCORING_REFERENCE = window.SCORING_REFERENCE || null;
   const DEMO_MODE = false;
   const app = document.getElementById("app");
   const TOTAL_REVIEWS = DATA.bidders.length * DATA.scoringTable.items.length;
@@ -59,58 +58,6 @@
     };
   }
 
-  function createScoringDraft() {
-    return {
-      items: DATA.scoringTable.items.map((item) => ({
-        ...item,
-        criteria: typeof item.criteria === "string" ? item.criteria : "",
-        tiers: item.tiers.map((tier) => ({
-          ...tier,
-          desc: typeof tier.desc === "string" ? tier.desc : ""
-        }))
-      })),
-      rules: DATA.scoringTable.rules.slice()
-    };
-  }
-
-  function hydrateScoringDraft(saved) {
-    const draft = createScoringDraft();
-    if (!saved || typeof saved !== "object") return draft;
-
-    if (Array.isArray(saved.rules) && saved.rules.length) {
-      draft.rules = saved.rules.map((rule) => String(rule));
-    }
-
-    if (Array.isArray(saved.items)) {
-      draft.items = draft.items.map((item) => {
-        const savedItem = saved.items.find((row) => row && row.id === item.id);
-        if (!savedItem) return item;
-        return {
-          ...item,
-          name: typeof savedItem.name === "string" ? savedItem.name : item.name,
-          max_score: finiteNumber(savedItem.max_score, item.max_score),
-          criteria: typeof item.criteria === "string" && item.criteria
-            ? item.criteria
-            : typeof savedItem.criteria === "string"
-              ? savedItem.criteria
-              : "",
-          tiers: item.tiers.map((tier, index) => {
-            const savedTier = Array.isArray(savedItem.tiers) ? savedItem.tiers[index] : null;
-            if (!savedTier) return tier;
-            return {
-              ...tier,
-              min: finiteNumber(savedTier.min, tier.min),
-              max: finiteNumber(savedTier.max, tier.max),
-              desc: typeof savedTier.desc === "string" ? savedTier.desc : ""
-            };
-          })
-        };
-      });
-    }
-
-    return draft;
-  }
-
   function totalBidderPdfCount() {
     return DATA.bidders.reduce((sum, bidder) => sum + bidder.pdfCount, 0);
   }
@@ -147,8 +94,6 @@
       upload: createUploadState(),
       reviewOverrides: {},
       expertReviews: [],
-      scoringDraft: createScoringDraft(),
-      projectSummary: DATA.projectSummary,
       activeSectionId: "",
       showScoringReference: false
     };
@@ -163,8 +108,6 @@
         upload: hydrateUploadState(saved.upload, run),
         reviewOverrides: saved.reviewOverrides && typeof saved.reviewOverrides === "object" ? saved.reviewOverrides : {},
         expertReviews: Array.isArray(saved.expertReviews) ? saved.expertReviews : [],
-        scoringDraft: hydrateScoringDraft(saved.scoringDraft),
-        projectSummary: typeof saved.projectSummary === "string" ? saved.projectSummary : DATA.projectSummary,
         activeSectionId: "",
         showScoringReference: false
       };
@@ -263,9 +206,7 @@
         run,
         upload,
         reviewOverrides: state.reviewOverrides,
-        expertReviews: state.expertReviews,
-        scoringDraft: state.scoringDraft,
-        projectSummary: state.projectSummary
+        expertReviews: state.expertReviews
       }));
     } catch (error) {
       // 存储不可用时降级为内存状态，保证页面仍可运行。
@@ -320,21 +261,11 @@
   }
 
   function scoringItems() {
-    if (!state.scoringDraft) {
-      state.scoringDraft = createScoringDraft();
-    }
-    return state.scoringDraft && Array.isArray(state.scoringDraft.items)
-      ? state.scoringDraft.items
-      : DATA.scoringTable.items;
+    return DATA.scoringTable.items;
   }
 
   function scoringRules() {
-    if (!state.scoringDraft) {
-      state.scoringDraft = createScoringDraft();
-    }
-    return state.scoringDraft && Array.isArray(state.scoringDraft.rules)
-      ? state.scoringDraft.rules
-      : DATA.scoringTable.rules;
+    return DATA.scoringTable.rules;
   }
 
   function itemById(id) {
@@ -637,7 +568,7 @@
         <section class="layout-grid" style="margin-top: 18px;">
           <div class="panel">
             <div class="panel-header">
-              <h3 class="panel-title">评分表核对（可编辑）</h3>
+              <h3 class="panel-title">解析结果（可核对）</h3>
               <span class="badge ${mismatch ? "danger" : "success"}">${mismatch ? "存在缺项" : "可开始"}</span>
             </div>
             <div class="panel-body">
@@ -657,12 +588,12 @@
                       <tr>
                         <td>${index + 1}</td>
                         <td>
-                          <input class="input table-input" value="${html(item.name)}" data-score-item="${html(item.id)}" data-score-field="name">
+                          <strong>${html(item.name)}</strong>
                         </td>
                         <td>
-                          <input class="input table-input number-input" type="number" min="0" step="0.1" value="${item.max_score}" data-score-item="${html(item.id)}" data-score-field="max_score">
+                          ${item.max_score.toFixed(1)}
                         </td>
-                        <td>${renderTierEditors(item)}</td>
+                        <td>${html(tierSummary(item))}</td>
                         <td><span class="badge ${item.bound_count === item.expected_bidders ? "success" : "danger"}">${item.bound_count}/${item.expected_bidders} 家已匹配</span></td>
                       </tr>
                     `).join("")}
@@ -678,17 +609,17 @@
               <span class="badge primary">注入评审</span>
             </div>
             <div class="panel-body">
-              <ul class="rule-list editable-rules">
-                ${scoringRules().map((rule, index) => `
+              <ul class="rule-list readonly-rules">
+                ${scoringRules().map((rule) => `
                   <li>
                     <span class="check-dot">✓</span>
-                    <input class="input" value="${html(rule)}" data-rule-index="${index}">
+                    <span>${html(rule)}</span>
                   </li>
                 `).join("")}
               </ul>
               <div class="field" style="margin-top: 18px;">
-                <label for="projectSummary">项目特征摘要</label>
-                <textarea id="projectSummary" class="textarea">${html(state.projectSummary)}</textarea>
+                <label for="projectSummaryReadonly">项目特征摘要</label>
+                <textarea id="projectSummaryReadonly" class="textarea readonly-textarea" readonly>${html(DATA.projectSummary)}</textarea>
               </div>
             </div>
           </aside>
@@ -698,120 +629,40 @@
   }
 
   function renderScoringReference(items) {
-    const referenceItems = SCORING_REFERENCE && Array.isArray(SCORING_REFERENCE.items)
-      ? SCORING_REFERENCE.items
-      : [];
-    const referenceByGuid = new Map(referenceItems.map((row) => [row.guid, row]));
-    const summary = SCORING_REFERENCE && SCORING_REFERENCE.summary ? SCORING_REFERENCE.summary : null;
-    const summaryText = summary
-      ? "PDF/XLSX 档位 " + summary.pdf_vs_xlsx_tiers_match + "/" + summary.items
-      : "未加载独立核对数据";
     return `
       <section class="panel reference-panel" aria-label="招标文件评标办法对照">
         <div class="panel-header">
           <h3 class="panel-title">招标文件评标办法对照</h3>
-          <span class="badge primary">${html(summaryText)}</span>
+          <span class="badge primary">第 33~37 页</span>
         </div>
         <div class="panel-body reference-grid">
           <aside class="reference-page">
-            <div class="reference-page-title">招标文件第 33~37 页</div>
-            <p>核对数据由 scripts/verify_scoring_table.py 从招标文件与拆分评审项.xlsx 生成。</p>
-            <p>清洗记录：剔除水印 ${number(SCORING_REFERENCE?.cleanup?.watermark_lines_dropped || 0)} 行，左列跨页续行 ${number((SCORING_REFERENCE?.cleanup?.contaminated_fragments || []).length)} 处。</p>
+            <div class="reference-page-title">技术标评审办法摘录</div>
+            <p>评委根据投标文件对各评分项的响应情况，在一般、良、优三个区间内酌情定分；内容不全酌情扣分，若对应评分项缺项不得分。</p>
+            <p>本页用于人工核对评分项名称、满分、三档区间与投标文件绑定状态，确认后才进入逐项评审。</p>
           </aside>
           <div class="table-wrap">
             <table class="table-compact">
               <thead>
                 <tr>
                   <th>评分项</th>
-                  <th>招标文件原文</th>
-                  <th>当前评分表</th>
-                  <th>核对</th>
+                  <th>满分</th>
+                  <th>招标文件评审标准原文</th>
                 </tr>
               </thead>
               <tbody>
-                ${items.map((item) => {
-                  const ref = referenceByGuid.get(item.guid);
-                  const refTiers = ref && Array.isArray(ref.pdf_tiers) ? ref.pdf_tiers : [];
-                  const itemTiers = tierRanges(item.tiers);
-                  const criteriaOk = ref ? compactReferenceText(ref.pdf_criteria) === compactReferenceText(item.criteria) : false;
-                  const tiersOk = sameTierRanges(refTiers, itemTiers);
-                  const ok = criteriaOk && tiersOk;
-                  return `
-                    <tr>
-                      <td>
-                        <strong>${html(item.name)}</strong>
-                        <div class="small muted">${html(item.id)} · ${item.max_score.toFixed(1)} 分</div>
-                      </td>
-                      <td>
-                        <div>${html(ref ? ref.pdf_criteria : "未找到独立核对数据")}</div>
-                        <div class="small muted">区间：${html(tierRangeText(refTiers))}</div>
-                      </td>
-                      <td>
-                        <div>${html(item.criteria || tierSummary(item))}</div>
-                        <div class="small muted">区间：${html(tierRangeText(itemTiers))}</div>
-                      </td>
-                      <td>
-                        <span class="badge ${ok ? "success" : "danger"}">${ok ? "一致" : "待核"}</span>
-                      </td>
-                    </tr>
-                  `;
-                }).join("")}
+                ${items.map((item) => `
+                  <tr>
+                    <td><strong>${html(item.name)}</strong></td>
+                    <td>${item.max_score.toFixed(1)}</td>
+                    <td>${item.criteria ? html(item.criteria) : `<span class="muted">评审标准原文缺失，需回招标文件补</span>`}</td>
+                  </tr>
+                `).join("")}
               </tbody>
             </table>
           </div>
         </div>
       </section>
-    `;
-  }
-
-  function compactReferenceText(value) {
-    return String(value || "").replace(/\s+/g, "");
-  }
-
-  function trimScore(value) {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return String(value ?? "");
-    return Number.isInteger(numeric) ? String(numeric) : String(numeric).replace(/0+$/, "").replace(/\.$/, "");
-  }
-
-  function tierRanges(tiers) {
-    if (!Array.isArray(tiers)) return [];
-    return tiers
-      .map((tier) => ({ min: Number(tier.min), max: Number(tier.max) }))
-      .filter((tier) => Number.isFinite(tier.min) && Number.isFinite(tier.max))
-      .sort((a, b) => a.min - b.min || a.max - b.max);
-  }
-
-  function tierRangeText(tiers) {
-    const ranges = tierRanges(tiers);
-    return ranges.length
-      ? ranges.map((tier) => trimScore(tier.min) + "-" + trimScore(tier.max)).join(" / ")
-      : "未匹配";
-  }
-
-  function sameTierRanges(left, right) {
-    const leftRanges = tierRanges(left);
-    const rightRanges = tierRanges(right);
-    if (leftRanges.length !== rightRanges.length) return false;
-    return leftRanges.every((tier, index) =>
-      tier.min === rightRanges[index].min && tier.max === rightRanges[index].max
-    );
-  }
-
-  function renderTierEditors(item) {
-    return `
-      <div class="tier-edit-list">
-        <div class="tier-edit-help">招标文件仅提供 item 级评审标准原文；下方档位说明为评审专家补充，非招标文件原文，可留空。</div>
-        ${item.tiers.map((tier, index) => `
-          <div class="tier-edit-row">
-            <span class="tier-edit-name">${html(tier.tier)}</span>
-            <input class="input tier-number" type="number" step="0.1" value="${tier.min}" data-score-item="${html(item.id)}" data-tier-index="${index}" data-tier-field="min" aria-label="${html(item.name + tier.tier)}下限">
-            <span class="muted">-</span>
-            <input class="input tier-number" type="number" step="0.1" value="${tier.max}" data-score-item="${html(item.id)}" data-tier-index="${index}" data-tier-field="max" aria-label="${html(item.name + tier.tier)}上限">
-            <input class="input tier-desc" value="${html(tier.desc)}" placeholder="专家补充说明，可留空" data-score-item="${html(item.id)}" data-tier-index="${index}" data-tier-field="desc" aria-label="${html(item.name + tier.tier)}专家补充说明">
-          </div>
-        `).join("")}
-      </div>
     `;
   }
 
@@ -1120,7 +971,7 @@
                     <div class="tier-quote-label">招标文件第 33~37 页评审标准原文</div>
                     ${html(item.criteria)}
                   </blockquote>
-                ` : ""}
+                ` : `<p class="small muted">评审标准原文缺失，本项判档位缺少依据，需回招标文件补。</p>`}
               </div>
             </section>
 
@@ -1389,14 +1240,6 @@
         <div class="metric-note">${html(note)}</div>
       </div>
     `;
-  }
-
-  function tierSummary(item) {
-    return item.tiers
-      .slice()
-      .reverse()
-      .map((tier) => `${tier.tier} ${tier.min.toFixed(1)}-${tier.max.toFixed(1)}`)
-      .join(" / ");
   }
 
   function totalScore() {
@@ -2280,52 +2123,6 @@
     const related = event.relatedTarget;
     if (!matrix || (related && related.nodeType && matrix.contains(related))) return;
     clearMatrixHover(matrix);
-  });
-
-  document.addEventListener("input", (event) => {
-    if (event.target && event.target.id === "projectSummary") {
-      state.projectSummary = event.target.value;
-      saveState();
-      return;
-    }
-
-    const scoreItemId = event.target && event.target.getAttribute ? event.target.getAttribute("data-score-item") : "";
-    const scoreField = event.target && event.target.getAttribute ? event.target.getAttribute("data-score-field") : "";
-    if (scoreItemId && scoreField) {
-      const item = scoringItems().find((row) => row.id === scoreItemId);
-      if (item) {
-        if (scoreField === "name") {
-          item.name = event.target.value;
-        } else if (scoreField === "max_score") {
-          item.max_score = Math.max(0, finiteNumber(event.target.value, item.max_score));
-        }
-        saveState();
-      }
-      return;
-    }
-
-    const tierField = event.target && event.target.getAttribute ? event.target.getAttribute("data-tier-field") : "";
-    if (scoreItemId && tierField) {
-      const item = scoringItems().find((row) => row.id === scoreItemId);
-      const tierIndex = Math.max(0, Math.floor(finiteNumber(event.target.getAttribute("data-tier-index"), 0)));
-      const tier = item && item.tiers ? item.tiers[tierIndex] : null;
-      if (tier) {
-        if (tierField === "desc") {
-          tier.desc = event.target.value;
-        } else {
-          tier[tierField] = finiteNumber(event.target.value, tier[tierField]);
-        }
-        saveState();
-      }
-      return;
-    }
-
-    const ruleIndexRaw = event.target && event.target.getAttribute ? event.target.getAttribute("data-rule-index") : null;
-    if (ruleIndexRaw !== null) {
-      const ruleIndex = Math.max(0, Math.floor(finiteNumber(ruleIndexRaw, 0)));
-      scoringRules()[ruleIndex] = event.target.value;
-      saveState();
-    }
   });
 
   window.addEventListener("hashchange", () => {
