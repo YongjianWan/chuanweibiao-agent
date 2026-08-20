@@ -310,6 +310,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     work_dir = args.output
     work_dir.mkdir(parents=True, exist_ok=True)
 
+    start_time = time.perf_counter()
     results = asyncio.run(run_batch(
         jobs=jobs,
         items_by_id=items_by_id,
@@ -321,25 +322,30 @@ def main(argv: Sequence[str] | None = None) -> int:
         concurrency=args.concurrency,
         max_attempts=args.max_attempts,
     ))
+    wall_clock_sec = round(time.perf_counter() - start_time, 3)
 
     # 写最终汇总：以 work_dir 下已落盘的 per-item 文件为准做全量聚合，
     # 覆盖 manifest.completed 的所有 key，保证续跑后 reviews.json 不残缺。
     all_results = load_all_results(work_dir)
+    total_retries = sum(max(r.get("attempts", 0) - 1, 0) for r in all_results.values())
     output = {
         "project": scoring_table.get("project", ""),
         "generated_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
         "model": "mock" if args.mock else client_factory().name,
         "review_results": list(all_results.values()),
         "perf": {
-            "calls": results["total"],
-            "retries": 0,  # 由每个结果的 perf 决定，汇总在 review_results
-            "completed": results["completed"],
-            "errored": results["errored"],
+            "calls": len(all_results),
+            "retries": total_retries,
+            "completed": sum(1 for r in all_results.values() if r.get("status") != "unrated"),
+            "errored": sum(1 for r in all_results.values() if r.get("status") == "unrated"),
+            "wall_clock_sec": wall_clock_sec,
+            "concurrency": args.concurrency,
         },
     }
     output_path = work_dir / "reviews.json"
     output_path.write_text(json.dumps(output, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"wrote {output_path} ({len(output['review_results'])} reviews)")
+    print(f"wrote {output_path} ({len(output['review_results'])} reviews, "
+          f"wall_clock_sec={wall_clock_sec}, concurrency={args.concurrency})")
     return 0
 
 

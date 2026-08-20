@@ -227,12 +227,33 @@ def build_report(
     calls = len(bidders) * len(items)
     sum_attempts = sum(r.get("attempts") or 0 for r in results.values())
     first_calls = sum(1 for r in results.values() if (r.get("attempts") or 0) >= 1)
+
+    # 优先读取调度器写进 reviews.json 顶层的 wall_clock_sec / concurrency；
+    # 缺失时保留占位口径，不估算。
+    reviews_meta_path = reviews_dir / "reviews.json"
+    reviews_perf = {}
+    if reviews_meta_path.exists():
+        try:
+            reviews_meta = json.loads(reviews_meta_path.read_text(encoding="utf-8"))
+            reviews_perf = reviews_meta.get("perf") or {}
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    wall_clock_sec = reviews_perf.get("wall_clock_sec")
+    concurrency = reviews_perf.get("concurrency")
+    if wall_clock_sec is None:
+        wall_clock_note = (
+            "未采集（调度器未落盘墙钟耗时；逐项 latency 之和为 "
+            f"{round(sum((r.get('perf') or {}).get('latency_ms') or 0 for r in results.values()) / 1000, 1)} 秒，"
+            "并发下实际墙钟低于该值）"
+        )
+    else:
+        wall_clock_note = f"调度器落盘墙钟耗时：{wall_clock_sec} 秒"
+
     perf = {
-        "wall_clock_sec": None,  # 墙钟耗时由调度器侧记录，S4 只有逐项 latency，不估算
-        "wall_clock_note": "未采集（调度器未落盘墙钟耗时；逐项 latency 之和为 "
-                           f"{round(sum((r.get('perf') or {}).get('latency_ms') or 0 for r in results.values()) / 1000, 1)} 秒，"
-                           "并发下实际墙钟低于该值）",
-        "concurrency": "未采集",
+        "wall_clock_sec": wall_clock_sec,
+        "wall_clock_note": wall_clock_note,
+        "concurrency": concurrency if concurrency is not None else "未采集",
         "calls": calls,
         "retries": sum_attempts - first_calls,
         "in_tokens": sum((r.get("perf") or {}).get("in_tokens") or 0 for r in results.values()),
@@ -387,6 +408,8 @@ def render_markdown(report: Mapping[str, Any]) -> str:
     lines.append(f"- 评审项次数（覆盖度校验位 = 家数 × 项数）：{perf['calls']}")
     lines.append(f"- 重试次数：{perf['retries']}；输入 tokens：{perf['in_tokens']}；"
                  f"输出 tokens：{perf['out_tokens']}")
+    lines.append("> 注：当前端点不返回 token usage，输入/输出 tokens 按 1.5 汉字/token "
+                 "本地估算，非端点真实计数。")
     lines.append(f"- GPU / 显存：{perf['gpu']} / {perf['vram_peak_gb']}（{perf['gpu_note']}）")
     lines.append(f"- 算力归属：{cn['owner']}")
     lines.append(f"- 算力规格：{cn['spec']}")
