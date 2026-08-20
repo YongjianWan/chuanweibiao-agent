@@ -74,9 +74,9 @@ def load_clean_text(pdf=PDF):
     return CONTAM.sub(r'\1\3', text), dropped, contam
 
 
-def extract(items):
+def extract(items, pdf=PDF):
     """返回 {item_id: criteria 原文}，以及清理统计。"""
-    text, dropped, contam = load_clean_text()
+    text, dropped, contam = load_clean_text(pdf)
 
     # 定位用无空白副本，取文本时映射回原串，从而保留行内空格
     compact, back = [], []

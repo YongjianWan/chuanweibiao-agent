@@ -249,6 +249,10 @@ button:disabled {
   resize: vertical;
 }
 
+.readonly-textarea {
+  cursor: default;
+}
+
 .summary-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -489,7 +493,7 @@ tr:last-child td {
   align-items: flex-start;
 }
 
-.editable-rules li {
+.readonly-rules li {
   align-items: center;
 }
 
@@ -537,42 +541,6 @@ tr:last-child td {
 
 .reference-page p:last-child {
   margin-bottom: 0;
-}
-
-.tier-edit-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 420px;
-}
-
-.tier-edit-help {
-  margin-bottom: 2px;
-  color: #667085;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.tier-edit-row {
-  display: grid;
-  grid-template-columns: 38px 64px 10px 64px minmax(160px, 1fr);
-  gap: 6px;
-  align-items: center;
-}
-
-.tier-edit-name {
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.tier-number {
-  min-height: 32px;
-  padding: 5px 6px;
-}
-
-.tier-desc {
-  min-height: 32px;
-  padding: 5px 8px;
 }
 
 .stage-stepper {
@@ -1176,16 +1144,4 @@ tr:last-child td {
     text-align: left;
   }
 
-  .tier-edit-list {
-    min-width: 0;
-  }
-
-  .tier-edit-row {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .tier-edit-name,
-  .tier-desc {
-    grid-column: 1 / -1;
-  }
 }
