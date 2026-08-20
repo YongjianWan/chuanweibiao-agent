@@ -1,8 +1,8 @@
 """S3：把 S2 证据包转换为模型辅助评审结果。
 
-模型只负责选择档位、评价要素完成度和选择证据编号；分数、置信度、重试与引用校验
-全部由程序确定性处理。模型调用被隔离在小型客户端接口后面，因此真实端点未提供时
-也能先用 ``MockModelClient`` 跑通和测试整个评审流程。
+模型负责对照招标文件档位描述判定档位、在档位区间内给出分数、并选择证据编号；
+置信度、重试与引用校验全部由程序确定性处理。模型调用被隔离在小型客户端接口后面，
+因此真实端点未提供时也能先用 ``MockModelClient`` 跑通和测试整个评审流程。
 """
 
 from __future__ import annotations
@@ -58,14 +58,16 @@ class MockModelClient:
         # Mock 仍读取真实 Prompt 结构，避免测试绕开 build_messages() 这条正式路径。
         request = json.loads(messages[-1]["content"])
         tiers = request["scoring_item"]["tiers"]
-        factors = request["scoring_item"]["factors"]
         picked = request["evidence"]
-        tier = tiers[len(tiers) // 2]["tier"]
+        tier_index = len(tiers) // 2
+        tier = tiers[tier_index]
+        # score 落在该档位区间内，取中点；最高档为闭区间，其余左闭右开。
+        score = (float(tier["min"]) + float(tier["max"])) / 2
+        if tier_index > 0 and score >= float(tier["max"]):
+            score = float(tier["max"]) - 0.05
         payload = {
-            "tier": tier,
-            "factor_scores": [
-                {"name": factor["name"], "value": 0.6} for factor in factors
-            ],
+            "tier": tier["tier"],
+            "score": round(score, 1),
             "cite": [0] if picked else [],
             "reason": "Mock 评审结果：证据覆盖主要要求，真实结论需接入模型端点后生成。",
         }
@@ -264,7 +266,7 @@ def build_messages(
     previous_error: str = "",
 ) -> list[dict[str, str]]:
     """构造一次评审调用的 Prompt：固定系统约束 + 当前评分项和证据。"""
-    # User Prompt 使用结构化 JSON，方便模型准确区分项目规则、档位、要素和证据。
+    # User Prompt 使用结构化 JSON，方便模型准确区分项目规则、档位描述和证据。
     request = {
         "project_summary": project_summary,
         "project_rules": list(project_rules),
@@ -273,10 +275,6 @@ def build_messages(
             "name": item["name"],
             "max_score": item["max_score"],
             "tiers": item["tiers"],
-            "factors": [
-                {"name": factor["name"], "weight": factor["weight"]}
-                for factor in item["factors"]
-            ],
         },
         "evidence": _evidence_with_text(evidence, section_index),
     }
@@ -286,11 +284,13 @@ def build_messages(
 
     # ===== 固定 System Prompt：模型侧调优时优先检查和修改这里 =====
     # 模型只返回引用编号，原文由系统从 evidence 回填，避免模型改写或编造引用。
+    # 档位判定以 tiers[].desc 原文为主要依据；score 必须落在该档位区间内。
     system = (
-        "你是工程建设技术标辅助评审模型。严格对照评分档位和项目事实评审。"
+        "你是工程建设技术标辅助评审模型。严格对照评分档位描述和项目事实评审。"
         "只能引用 evidence 中已有的 index，不得生成或改写原文。"
-        "只输出一个 JSON 对象，字段为 tier、factor_scores、cite、reason。"
-        "factor_scores 必须覆盖全部要素，每项含 name 和 0~1 的 value。"
+        "只输出一个 JSON 对象，字段为 tier、score、cite、reason。"
+        "tier 必须是评分档位之一；score 必须是一个数字，且落在 tier 对应的分值区间内；"
+        "cite 是证据编号数组，无相关证据时可为空；reason 说明判分理由。"
     )
     return [
         {"role": "system", "content": system},
@@ -325,24 +325,39 @@ def _number_between_zero_and_one(value: Any, name: str) -> float:
     return parsed
 
 
+def _score_in_tier(score: float, tier: Mapping[str, Any], tier_index: int) -> bool:
+    """判断 score 是否落在该档位的有效区间内。
+
+    边界约定（data-contract.md §3）：
+    - 最高档：闭区间 [min, max]
+    - 其他档：左闭右开 [min, max)
+    """
+    tier_min = float(tier["min"])
+    tier_max = float(tier["max"])
+    if tier_index == 0:
+        return tier_min <= score <= tier_max
+    return tier_min <= score < tier_max
+
+
 def _validate_model_output(
     payload: Mapping[str, Any],
     item: Mapping[str, Any],
     evidence_count: int,
 ) -> dict[str, Any]:
-    """校验模型输出字段，并阻止错误档位、缺失要素和越界引用进入结果。"""
+    """校验模型输出字段，并阻止错误档位、越界分数、越界引用进入结果。"""
     tier_names = [tier["tier"] for tier in item["tiers"]]
     tier = payload.get("tier")
     if tier not in tier_names:
         raise ReviewError(f"tier 必须是以下之一：{', '.join(tier_names)}")
+    tier_index = tier_names.index(tier)
 
     reason = payload.get("reason")
     if not isinstance(reason, str) or not reason.strip():
         raise ReviewError("reason 必须是非空字符串")
 
     cite = payload.get("cite")
-    if not isinstance(cite, list) or not cite:
-        raise ReviewError("cite 必须是非空数组")
+    if not isinstance(cite, list):
+        raise ReviewError("cite 必须是数组")
     clean_cite: list[int] = []
     for value in cite:
         if isinstance(value, bool) or not isinstance(value, int):
@@ -352,38 +367,21 @@ def _validate_model_output(
         if value not in clean_cite:
             clean_cite.append(value)
 
-    factor_rows = payload.get("factor_scores")
-    if not isinstance(factor_rows, list):
-        raise ReviewError("factor_scores 必须是数组")
-    returned: dict[str, float] = {}
-    for row in factor_rows:
-        if not isinstance(row, dict) or not isinstance(row.get("name"), str):
-            raise ReviewError("factor_scores 每项必须包含 name 和 value")
-        name = row["name"]
-        if name in returned:
-            raise ReviewError(f"factor_scores 出现重复要素：{name}")
-        returned[name] = _number_between_zero_and_one(row.get("value"), name)
+    score = payload.get("score")
+    if isinstance(score, bool) or not isinstance(score, (int, float)):
+        raise ReviewError("score 必须是数字")
+    score = float(score)
+    if not _score_in_tier(score, item["tiers"][tier_index], tier_index):
+        raise ReviewError(
+            f"score {score} 不在档位 {tier} 的有效区间内"
+        )
 
-    configured = [factor["name"] for factor in item["factors"]]
-    if set(returned) != set(configured):
-        missing = sorted(set(configured) - set(returned))
-        extra = sorted(set(returned) - set(configured))
-        raise ReviewError(f"factor_scores 与配置不一致；缺少={missing}，多出={extra}")
-
-    factors = [
-        {
-            "name": factor["name"],
-            "weight": float(factor["weight"]),
-            "value": returned[factor["name"]],
-        }
-        for factor in item["factors"]
-    ]
-    return {"tier": tier, "reason": reason.strip(), "cite": clean_cite, "factors": factors}
+    return {"tier": tier, "reason": reason.strip(), "cite": clean_cite, "score": score}
 
 
 def _validate_scoring_item(item: Mapping[str, Any]) -> None:
     """在调用模型前校验人工确认的评分配置，错误配置直接失败而不是产生错误分数。"""
-    required = ("id", "name", "max_score", "tiers", "factors")
+    required = ("id", "name", "max_score", "tiers")
     missing = [key for key in required if key not in item]
     if missing:
         raise ValueError(f"评分项缺少字段：{', '.join(missing)}")
@@ -402,41 +400,20 @@ def _validate_scoring_item(item: Mapping[str, Any]) -> None:
         if previous_max is not None and tier_max > previous_max:
             raise ValueError(f"评分项 {item['id']} 的 tiers 必须按分值降序排列")
         previous_max = tier_max
-    factors = item["factors"]
-    if not isinstance(factors, list) or not factors:
-        raise ValueError(f"评分项 {item['id']} 的 factors 不能为空")
-    factor_names = [factor.get("name") for factor in factors]
-    if any(not isinstance(name, str) or not name.strip() for name in factor_names):
-        raise ValueError(f"评分项 {item['id']} 的要素名称不能为空")
-    if len(set(factor_names)) != len(factor_names):
-        raise ValueError(f"评分项 {item['id']} 的要素名称必须唯一")
-    weights = [float(factor["weight"]) for factor in factors]
-    if any(weight < 0 for weight in weights):
-        raise ValueError(f"评分项 {item['id']} 的要素权重不能为负数")
-    weight_sum = sum(weights)
-    if abs(weight_sum - 1.0) > 1e-6:
-        raise ValueError(f"评分项 {item['id']} 的要素权重和必须为 1.0")
 
 
 def _score_and_confidence(
     validated: Mapping[str, Any],
-    item: Mapping[str, Any],
     evidence: Mapping[str, Any],
     attempts: int,
 ) -> tuple[float, float, list[str]]:
-    """根据模型档位和要素得分率计算最终分数及置信度。"""
-    tier_index = next(
-        index for index, tier in enumerate(item["tiers"]) if tier["tier"] == validated["tier"]
-    )
-    tier = item["tiers"][tier_index]
-    factor_rate = sum(row["weight"] * row["value"] for row in validated["factors"])
-    # 模型决定档位；程序仅用要素加权得分率确定该档位区间内的位置。
-    score = round(float(tier["min"]) + factor_rate * (float(tier["max"]) - float(tier["min"])), 1)
-    # 除最高档外上界均为开区间，四舍五入不能把分数推入上一档边界。
-    if tier_index > 0 and score >= float(tier["max"]):
-        score = round(float(tier["max"]) - 0.1, 1)
+    """根据模型给出的档位和分数计算置信度。
 
-    # 置信度从 1.0 开始，严格按照 README §4 的四个减分因素相乘。
+    score 由模型在档位区间内直接给出，程序只做区间校验，不再按要素加权计算。
+    置信度从 1.0 开始，按三因素相乘：降级 ×0.7 / 截断 ×0.9 / 重试 ×0.9。
+    """
+    score = float(validated["score"])
+
     confidence = 1.0
     factors: list[str] = []
     if evidence.get("fallback") is True:
@@ -448,11 +425,6 @@ def _score_and_confidence(
     if attempts > 1:
         confidence *= 0.9
         factors.append("重试")
-    highest = tier_index == 0
-    lowest = tier_index == len(item["tiers"]) - 1
-    if (highest and factor_rate < 0.3) or (lowest and factor_rate > 0.7):
-        confidence *= 0.7
-        factors.append("打架")
     return score, round(confidence, 3), factors
 
 
@@ -491,11 +463,9 @@ def review_one(
             "status": "rated",
             "tier": None,
             "score": 0,
-            "factor_scores": [],
             "cite": [],
             "reason": "证据定位未检索到相关章节，按项目规则“若此条缺项不得分”处理为 0 分。",
             "confidence": 1.0,
-            "confidence_factors": [],
             "attempts": 0,
             "last_error": "",
             "perf": {"in_tokens": 0, "out_tokens": 0, "latency_ms": 0},
@@ -524,19 +494,17 @@ def review_one(
             validated = _validate_model_output(
                 _parse_json_object(response.content), item, len(picked)
             )
-            score, confidence, confidence_factors = _score_and_confidence(
-                validated, item, evidence, attempt
+            score, confidence, _ = _score_and_confidence(
+                validated, evidence, attempt
             )
             return {
                 **identity,
                 "status": "rated",
                 "tier": validated["tier"],
                 "score": score,
-                "factor_scores": validated["factors"],
                 "cite": validated["cite"],
                 "reason": validated["reason"],
                 "confidence": confidence,
-                "confidence_factors": confidence_factors,
                 "attempts": attempt,
                 "last_error": "",
                 "perf": total_perf,
@@ -552,11 +520,9 @@ def review_one(
         "status": "unrated",
         "tier": None,
         "score": None,
-        "factor_scores": [],
         "cite": [],
         "reason": "模型调用重试耗尽，未能完成评审。",
         "confidence": 0.0,
-        "confidence_factors": [],
         "attempts": max_attempts,
         "last_error": last_error,
         "perf": total_perf,
@@ -608,7 +574,7 @@ def review_all(
         "model": client.name,
         "review_results": results,
         "perf": {
-            "calls": sum(result["attempts"] for result in results),
+            "calls": len(results),
             "retries": sum(max(result["attempts"] - 1, 0) for result in results),
             "in_tokens": sum(result["perf"]["in_tokens"] for result in results),
             "out_tokens": sum(result["perf"]["out_tokens"] for result in results),

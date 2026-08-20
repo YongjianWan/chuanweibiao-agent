@@ -5,11 +5,21 @@
 """
 
 import json
+import sys
 from collections import deque
+from pathlib import Path
 
 import pytest
+import yaml
 
-from src.s3_review import ModelResponse, MockModelClient, review_all, review_one
+sys.path.insert(0, "src")
+from s3_review import (
+    ModelResponse,
+    MockModelClient,
+    _validate_scoring_item,
+    review_all,
+    review_one,
+)
 
 
 ITEM = {
@@ -21,10 +31,6 @@ ITEM = {
         {"tier": "优", "min": 3.0, "max": 4.0, "desc": "内容完整且有针对性"},
         {"tier": "良", "min": 2.0, "max": 3.0, "desc": "内容基本完整"},
         {"tier": "一般", "min": 1.0, "max": 2.0, "desc": "内容一般"},
-    ],
-    "factors": [
-        {"name": "计划完整性", "weight": 0.6},
-        {"name": "项目针对性", "weight": 0.4},
     ],
 }
 
@@ -47,14 +53,11 @@ EVIDENCE = {
 SECTIONS = {("测试投标人001", "1#1"): "本项目设置关键路径、里程碑和进度纠偏机制。"}
 
 
-def model_payload(*, tier="良", cite=None, values=(0.5, 0.75)):
+def model_payload(*, tier="良", score=2.6, cite=None):
     return json.dumps(
         {
             "tier": tier,
-            "factor_scores": [
-                {"name": "计划完整性", "value": values[0]},
-                {"name": "项目针对性", "value": values[1]},
-            ],
+            "score": score,
             "cite": [0] if cite is None else cite,
             "reason": "包含关键路径和进度纠偏机制。",
         },
@@ -91,6 +94,9 @@ def test_review_one_builds_score_citations_and_perf():
     assert result["perf"] == {"in_tokens": 10, "out_tokens": 2, "latency_ms": 50}
     request = json.loads(client.messages[0][-1]["content"])
     assert request["evidence"][0]["text"].startswith("本项目设置关键路径")
+    # 要素加权已拆除，输出中不应再出现 factor_scores / confidence_factors。
+    assert "factor_scores" not in result
+    assert "confidence_factors" not in result
 
 
 def test_empty_evidence_is_zero_without_calling_model():
@@ -115,7 +121,6 @@ def test_invalid_json_retries_and_includes_previous_error():
     assert result["status"] == "rated"
     assert result["attempts"] == 2
     assert result["confidence"] == 0.9
-    assert result["confidence_factors"] == ["重试"]
     assert sleeps == [2.0]
     retry_request = json.loads(client.messages[1][-1]["content"])
     assert "JSON 解析失败" in retry_request["previous_error"]
@@ -144,26 +149,39 @@ def test_endpoint_failures_exhaust_to_unrated():
     assert result["last_error"] == "timeout"
 
 
-def test_confidence_applies_fallback_truncation_retry_and_conflict():
+def test_confidence_applies_fallback_truncation_retry():
     evidence = {
         **EVIDENCE,
         "fallback": True,
         "picked": [{**EVIDENCE["picked"][0], "truncated": True}],
     }
-    client = SequenceClient(["bad", model_payload(tier="优", values=(0.1, 0.2))])
+    client = SequenceClient(["bad", model_payload(tier="优", score=3.5)])
 
     result = review_one(evidence, ITEM, "摘要", [], SECTIONS, client, sleep=lambda _: None)
 
-    assert result["confidence_factors"] == ["降级", "截断", "重试", "打架"]
-    assert result["confidence"] == 0.397
+    assert result["confidence"] == 0.567
+    assert result["attempts"] == 2
 
 
-def test_non_highest_score_cannot_round_into_next_tier():
-    client = SequenceClient([model_payload(tier="良", values=(1.0, 1.0))])
+def test_score_out_of_tier_triggers_retry():
+    # "良" 档区间为 [2.0, 3.0)，3.0 应被判越界。
+    client = SequenceClient([model_payload(score=3.0)] * 4)
+
+    result = review_one(EVIDENCE, ITEM, "摘要", [], SECTIONS, client, sleep=lambda _: None)
+
+    assert result["status"] == "unrated"
+    assert "不在档位 良 的有效区间内" in result["last_error"]
+
+
+def test_highest_tier_uses_closed_interval():
+    # 最高档 "优" 为闭区间 [3.0, 4.0]，4.0 应被接受。
+    client = SequenceClient([model_payload(tier="优", score=4.0)])
 
     result = review_one(EVIDENCE, ITEM, "摘要", [], SECTIONS, client)
 
-    assert result["score"] == 2.9
+    assert result["status"] == "rated"
+    assert result["tier"] == "优"
+    assert result["score"] == 4.0
 
 
 def test_missing_section_text_fails_before_model_call():
@@ -172,19 +190,6 @@ def test_missing_section_text_fails_before_model_call():
     with pytest.raises(ValueError, match="找不到章节正文"):
         review_one(EVIDENCE, ITEM, "摘要", [], {}, client)
     assert client.messages == []
-
-
-def test_factor_schema_mismatch_is_retried():
-    invalid = json.dumps(
-        {"tier": "良", "factor_scores": [], "cite": [0], "reason": "理由"},
-        ensure_ascii=False,
-    )
-    client = SequenceClient([invalid] * 4)
-
-    result = review_one(EVIDENCE, ITEM, "摘要", [], SECTIONS, client, sleep=lambda _: None)
-
-    assert result["status"] == "unrated"
-    assert "factor_scores 与配置不一致" in result["last_error"]
 
 
 def test_review_all_aggregates_results_and_perf():
@@ -198,20 +203,25 @@ def test_review_all_aggregates_results_and_perf():
     assert output["project"] == "测试项目"
     assert output["model"] == "mock"
     assert len(output["review_results"]) == 1
+    # calls 口径为评审项数，与 data-contract.md 示例一致。
     assert output["perf"]["calls"] == 1
 
 
-def test_model_output_must_have_non_empty_citation():
-    client = SequenceClient([model_payload(cite=[])] * 4)
+def test_model_output_may_have_empty_citation():
+    client = SequenceClient([model_payload(cite=[])])
 
-    result = review_one(EVIDENCE, ITEM, "摘要", [], SECTIONS, client, sleep=lambda _: None)
+    result = review_one(EVIDENCE, ITEM, "摘要", [], SECTIONS, client)
 
-    assert result["status"] == "unrated"
-    assert "cite 必须是非空数组" in result["last_error"]
+    assert result["status"] == "rated"
+    assert result["cite"] == []
 
 
-def test_scoring_config_rejects_negative_weights():
-    item = {**ITEM, "factors": [{"name": "错误要素", "weight": -0.1}, {"name": "另一要素", "weight": 1.1}]}
-
-    with pytest.raises(ValueError, match="权重不能为负数"):
-        review_one(EVIDENCE, item, "摘要", [], SECTIONS, SequenceClient([]))
+def test_real_scoring_table_passes_validation():
+    """真实评分表 19/19 必须通过 _validate_scoring_item()。"""
+    path = Path("config/projects/济阳区实验高级中学.yaml")
+    table = yaml.safe_load(path.read_text(encoding="utf-8"))
+    ok = 0
+    for item in table["items"]:
+        _validate_scoring_item(item)
+        ok += 1
+    assert ok == len(table["items"]) == 19
