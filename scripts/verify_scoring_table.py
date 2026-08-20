@@ -34,7 +34,7 @@ BASE = "原始资料/实际测试工程文件/济阳区实验高级中学项目�
 XLSX = "原始资料/实际测试工程文件/拆分评审项.xlsx"
 PAGES = range(32, 38)   # 0-based，技术标评分表所在页 p33~p38
 WINDOW = 420            # 从项名往后取多少字里找档位
-REFERENCE_JSON = "data/interim/mock/scoring_reference.json"
+REFERENCE_JSON = "data/interim/scoring_reference.json"
 REFERENCE_JS = "prototype/js/scoring-reference.js"
 
 
