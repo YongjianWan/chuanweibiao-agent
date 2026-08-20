@@ -168,6 +168,35 @@ def test_未命中由两道独立防线保证(corpus, monkeypatch):
     assert res[0]["picked"], "门槛归零后应放行 —— 确认挡住它的确实是 MIN_SCORE"
 
 
+def test_跨换行匹配():
+    """回归 2026-08-20 修复：S1 从 PDF 抽出的 text 保留了视觉折行（\\n），
+    跨过换行的短语在原始 text 上匹配不到（\"\\n\" in blob 为 False），
+    但在去换行副本上能命中，且原始 text 本身不变。
+
+    这个问题会在 T8 接真实评分表时爆发：
+    要素名长度 9~15 字，这个区间的打断率是 27%~40%。
+    """
+    # 短语「施工工艺落地」被折行打断
+    folded = sec("F1", ["技术部分", "施工工艺", "落地措施"],
+                 "施工方案中明确了施工工艺\n落地效果以及项目整体履约水平。")
+    flat_text = folded["text"].replace("\n", "")
+    assert "施工工艺落地" not in folded["text"], "原始 text 上应匹配不到"
+    assert "施工工艺落地" in flat_text, "去换行副本上应能命中"
+
+    # 用完整语料验证 locate 能在含折行的块上检索到
+    corpus = [folded] + [sec(f"F{i}", ["技术部分", f"第{i}章 通用"],
+                             "本方案措施完整性好，技术可行性高，内容成熟可靠。")
+                         for i in range(2, 22)]
+    cats = [{"mark": "①", "name": "施工工艺", "phrases": ["施工工艺"], "terms": ["施工工艺"],
+             "points": [{"id": "①-F1", "name": "施工工艺落地",
+                         "phrases": ["施工工艺落地"],
+                         "terms": ["施工工艺", "落地"]}]}]
+    res, _, _ = S.locate(corpus, cats)
+    r = res[0]
+    assert r["picked"], "跨换行的短语应命中"
+    assert r["picked"][0]["section_id"] == "F1"
+
+
 # ── 证据按父章节聚合 ──────────────────────────────────────────────────
 
 def test_证据按父章节整段收取(corpus, cats):
