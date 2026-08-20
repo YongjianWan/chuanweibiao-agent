@@ -239,6 +239,15 @@ button:disabled {
   padding: 8px 10px;
 }
 
+.readonly-value {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-subtle);
+  color: #344054;
+}
+
 .table-input {
   min-width: 0;
 }
@@ -255,6 +264,28 @@ button:disabled {
 
 .readonly-textarea {
   cursor: default;
+}
+
+.readonly-card {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+
+.project-summary-card h4 {
+  margin: 0 0 10px;
+  color: #121a2a;
+  font-size: 15px;
+}
+
+.project-summary-card p {
+  margin: 0 0 10px;
+  color: #344054;
+}
+
+.project-summary-card p:last-child {
+  margin-bottom: 0;
 }
 
 .summary-strip {
@@ -565,6 +596,58 @@ tr:last-child td {
 
 .reference-page p:last-child {
   margin-bottom: 0;
+}
+
+.diagnostic-panel {
+  border-style: dashed;
+}
+
+.criteria-details summary {
+  color: var(--primary-strong);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.criteria-card {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+
+.criteria-card p {
+  margin: 4px 0 10px;
+  color: #344054;
+}
+
+.criteria-label {
+  color: #121a2a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.criteria-card dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.criteria-card dl div {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.criteria-card dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.criteria-card dd {
+  margin: 0;
+  color: #344054;
 }
 
 .stage-stepper {

@@ -54,12 +54,15 @@
       ...baseData,
       dataSource: {
         kind: "real",
-        source: realData.source_reviews_json || "",
+        source: realData.source_report_json || realData.source_reviews_json || "",
+        reviews_source: realData.source_reviews_json || "",
+        report_source: realData.source_report_json || "",
         generated_at: realData.generated_at || ""
       },
       bidders: bidders.length ? bidders : baseBidders,
       reviewResults,
       reportData: realData.reportData || baseData.reportData,
+      reportDataSource: realData.source_report_json ? "s4_report_json" : "derived_from_reviews",
       runEvents: Array.isArray(realData.runEvents) && realData.runEvents.length ? realData.runEvents : baseData.runEvents
     };
   }
@@ -73,15 +76,18 @@
       : {};
     const baseReportData = data.reportData || {};
     const basePerf = baseReportData.perf || {};
-    const reportData = {
-      ...baseReportData,
-      project: projectConfig.project || baseReportData.project || scoringTable.project,
-      perf: {
-        ...basePerf,
-        ...perfOverride,
-        token_note: perfOverride.token_note || basePerf.token_note || TOKEN_NOTE
-      }
-    };
+    const reportUsesOfficialS4 = data.reportDataSource === "s4_report_json";
+    const reportData = reportUsesOfficialS4
+      ? baseReportData
+      : {
+        ...baseReportData,
+        project: projectConfig.project || baseReportData.project || scoringTable.project,
+        perf: {
+          ...basePerf,
+          ...perfOverride,
+          token_note: perfOverride.token_note || basePerf.token_note || TOKEN_NOTE
+        }
+      };
 
     return {
       ...data,
@@ -321,7 +327,7 @@
       upload.recognizedCount = DATA.bidders.length;
       upload.totalFiles = totalBidderPdfCount();
       upload.pdfFiles = upload.totalFiles;
-      upload.sourceLabel = "已选择投标文件";
+      upload.sourceLabel = "文件名预检通过";
       upload.startedAt = run.startedAt;
       upload.finishedAt = run.startedAt;
     }
@@ -331,7 +337,7 @@
       upload.recognizedCount = upload.recognizedBidders.length || DATA.bidders.length;
       upload.totalFiles = upload.totalFiles || upload.pdfFiles || totalBidderPdfCount();
       upload.pdfFiles = upload.pdfFiles || upload.totalFiles;
-      upload.sourceLabel = upload.sourceLabel || "已选择投标文件";
+      upload.sourceLabel = upload.sourceLabel || "文件名预检通过";
     }
     if (upload.recognizedCount >= DATA.bidders.length && upload.recognitionComplete) {
       upload.parsed = true;
@@ -450,6 +456,40 @@
         return min + "-" + max + " 分";
       })
       .join(" / ");
+  }
+
+  function renderReadonlyValue(value) {
+    return `<div class="readonly-value">${html(value)}</div>`;
+  }
+
+  function renderProjectSummaryMarkdown(markdown) {
+    const lines = String(markdown || "")
+      .split(/\r?\n/)
+      .map((line) => line.trim());
+    const blocks = [];
+    let paragraph = [];
+    const flushParagraph = () => {
+      if (!paragraph.length) return;
+      blocks.push(`<p>${paragraph.map(html).join("<br>")}</p>`);
+      paragraph = [];
+    };
+
+    lines.forEach((line) => {
+      if (!line) {
+        flushParagraph();
+        return;
+      }
+      const heading = line.match(/^(#{1,3})\s+(.+)$/);
+      if (heading) {
+        flushParagraph();
+        const level = Math.min(heading[1].length + 3, 6);
+        blocks.push(`<h${level}>${html(heading[2])}</h${level}>`);
+        return;
+      }
+      paragraph.push(line);
+    });
+    flushParagraph();
+    return blocks.join("");
   }
 
   function referenceByItemId(itemId) {
@@ -572,8 +612,7 @@
       recognizedBidders,
       unmatchedFiles,
       ignoredFiles,
-      sourceLabel: recognizedBidders.length + "/" + DATA.bidders.length +
-        " 家，" + technicalPdfFiles.length + " 个技术标 PDF，" + bytes(totalBytes) +
+      sourceLabel: "已选择 " + technicalPdfFiles.length + " 个技术标 PDF，" + bytes(totalBytes) +
         (ignoredFiles.length ? " · 已过滤 " + ignoredFiles.length + " 个非技术标/非 PDF 文件" : "")
     };
   }
@@ -609,8 +648,8 @@
       const note = status === "matched"
         ? "文件名 GUID/评分项名称已匹配"
         : status === "partial"
-          ? "仅部分投标人文件名匹配，需补齐或等待 S1/S2 定位确认"
-          : "文件名未匹配到 GUID/评分项名称，需等待 S1/S2 定位确认";
+          ? "仅部分投标人文件名匹配，需补齐或等待后续定位确认"
+          : "文件名未匹配到 GUID/评分项名称，需等待后续定位确认";
       return {
         ...item,
         expected_bidders: expected,
@@ -652,6 +691,58 @@
         (bidder && row.bidder === bidder.name)
       )
     ));
+  }
+
+  function reportBidderKey(bidder) {
+    const report = DATA.reportData || {};
+    const bidders = Array.isArray(report.bidders) ? report.bidders : [];
+    if (bidders.includes(bidder.name)) return bidder.name;
+    if (bidders.includes(bidder.id)) return bidder.id;
+    return bidder.name;
+  }
+
+  function reportMatrixRow(itemId) {
+    const rows = DATA.reportData && Array.isArray(DATA.reportData.matrix) ? DATA.reportData.matrix : [];
+    return rows.find((row) => row.item_id === itemId) || null;
+  }
+
+  function reportScoreFor(bidder, item) {
+    const row = reportMatrixRow(item.id);
+    if (!row || !row.scores || typeof row.scores !== "object") return undefined;
+    const key = reportBidderKey(bidder);
+    return Object.prototype.hasOwnProperty.call(row.scores, key) ? row.scores[key] : undefined;
+  }
+
+  function resultForDisplay(bidder, item, completedKeys = completedReviewKeySet()) {
+    if (!isReviewCompleted(bidder.id, item.id, completedKeys)) return null;
+    const result = resultForDisplay(bidder, item, completedKeys);
+    const reportScore = state.run.finished ? reportScoreFor(bidder, item) : undefined;
+    if (reportScore === undefined) return result;
+    if (reportScore === null) {
+      return {
+        ...(result || {}),
+        item_id: item.id,
+        bidder_id: bidder.id,
+        bidder: bidder.name,
+        status: "unrated",
+        score: null
+      };
+    }
+    return {
+      ...(result || {}),
+      item_id: item.id,
+      bidder_id: bidder.id,
+      bidder: bidder.name,
+      status: result && result.status ? result.status : "rated",
+      score: Number(reportScore)
+    };
+  }
+
+  function reportTotalForBidder(bidder) {
+    const totals = DATA.reportData && DATA.reportData.totals && typeof DATA.reportData.totals === "object"
+      ? DATA.reportData.totals
+      : {};
+    return totals[reportBidderKey(bidder)] || totals[bidder.name] || totals[bidder.id] || null;
   }
 
   function isLowConfidence(result) {
@@ -777,9 +868,9 @@
   function shell(activePath, body) {
     const links = [
       { path: "/create", label: "新建评审", enabled: true },
-      { path: "/confirm", label: "确认招标信息", enabled: isUploadParsed() && isRunAccessible() },
+      { path: "/confirm", label: "确认标准与文件", enabled: isUploadParsed() && isRunAccessible() },
       { path: "/running", label: "运行监视", enabled: isRunAccessible() },
-      { path: "/results", label: "结果并排", enabled: isResultsAccessible() }
+      { path: "/results", label: "评审结果", enabled: isResultsAccessible() }
     ];
 
     return `
@@ -848,6 +939,13 @@
         : upload.recognitionComplete
           ? "缺少投标人"
           : "识别中";
+    const bidderMetricValue = upload.selected ? recognizedBidders.length + " / " + DATA.bidders.length + " 家" : "待选择";
+    const bidderMetricNote = upload.selected ? uploadStatus : "选择投标文件后预检";
+    const reviewMetricValue = upload.parsed ? TOTAL_REVIEWS + " 项" : "待生成";
+    const reviewMetricNote = upload.parsed
+      ? DATA.bidders.length + " 家投标人 × " + items.length + " 个评分项"
+      : "文件名预检通过后生成";
+    const mainUploadLabel = upload.selected ? "重新选择投标文件" : "选择投标文件";
     const uploadBadge = !upload.selected ? "neutral" : upload.parsed ? "success" : upload.recognitionComplete ? "danger" : "primary";
     const nextClass = upload.parsed ? "btn primary" : "btn primary disabled";
     const nextAttrs = upload.parsed ? `href="#/confirm"` : `href="#/create" aria-disabled="true"`;
@@ -856,10 +954,10 @@
         <section class="page-header">
           <div>
             <h2 class="page-title">新建评审任务</h2>
-            <p class="page-desc">选择投标文件目录或技术标 PDF。选择目录时仅纳入各投标人“技术标”目录下的 PDF；PDF 正文解析和 S1-S4 真实运行由后端链路负责。</p>
+            <p class="page-desc">选择本次要评审的投标文件。招标文件及评分标准已加载，本次仅评审所选投标文件。</p>
           </div>
           <div class="toolbar upload-actions">
-            <label class="btn primary" for="bidDirInput">选择投标文件目录</label>
+            <label class="btn primary" for="bidDirInput">${mainUploadLabel}</label>
             <input id="bidDirInput" class="file-input" type="file" accept="application/pdf,.pdf" webkitdirectory directory multiple data-file-input>
             <label class="btn" for="bidFileInput">补充选择 PDF</label>
             <input id="bidFileInput" class="file-input" type="file" accept="application/pdf,.pdf" multiple data-file-input>
@@ -869,8 +967,8 @@
 
         <section class="summary-strip" aria-label="任务概览">
           ${metric("评分规则", "已加载", items.length + " 个评分项 / 总分 " + totalScore().toFixed(1) + " 分")}
-          ${metric("投标人", recognizedBidders.length + " / " + DATA.bidders.length + " 家", uploadStatus)}
-          ${metric("逐项评审", TOTAL_REVIEWS + " 项", DATA.bidders.length + " 家投标人 × " + items.length + " 个评分项")}
+          ${metric("投标人", bidderMetricValue, bidderMetricNote)}
+          ${metric("逐项评审", reviewMetricValue, reviewMetricNote)}
           ${metric("文件体量", upload.selected ? bytes(upload.totalBytes) : "待选择", shownFiles ? shownFiles + " 个技术标 PDF" : "等待文件选择")}
         </section>
 
@@ -883,20 +981,20 @@
             <div class="panel-body">
               <div class="field-grid">
                 <div class="field">
-                  <label for="projectName">项目名称</label>
-                  <input id="projectName" class="input" value="${html(DATA.scoringTable.project)}" readonly aria-readonly="true">
+                  <label>项目名称</label>
+                  ${renderReadonlyValue(DATA.scoringTable.project)}
                 </div>
                 <div class="field">
                   <label>招标文件</label>
-                  <div class="select-like">招标文件.pdf · 已加载</div>
+                  ${renderReadonlyValue("招标文件.pdf · 已加载")}
                 </div>
                 <div class="field">
                   <label>评分规则状态</label>
-                  <div class="select-like">${html(DATA.scoringTable.prepared_label || "已加载")} · ${items.length} 个评分项 · 总分 ${totalScore().toFixed(1)} 分</div>
+                  ${renderReadonlyValue((DATA.scoringTable.prepared_label || "已加载") + " · " + items.length + " 个评分项 · 总分 " + totalScore().toFixed(1) + " 分")}
                 </div>
                 <div class="field">
                   <label>投标文件</label>
-                  <div class="select-like">${upload.selected ? html(upload.sourceLabel || "已选择投标文件") : "未选择"}</div>
+                  ${renderReadonlyValue(upload.selected ? upload.sourceLabel || "已选择投标文件" : "未选择")}
                 </div>
               </div>
             </div>
@@ -904,13 +1002,13 @@
 
           <aside class="panel">
             <div class="panel-header">
-              <h3 class="panel-title">现场口径</h3>
-              <span class="badge primary">S1-S4 现场跑</span>
+              <h3 class="panel-title">本次评审说明</h3>
+              <span class="badge primary">已加载</span>
             </div>
             <div class="panel-body">
               <div class="info-box">
-                <strong>合法离线准备</strong>
-                <span class="muted">评分表和项目特征摘要来自前端注入的项目配置；投标文件正文解析、证据定位和评审结果不在静态前端内伪造。</span>
+                <strong>评分依据</strong>
+                <span class="muted">招标文件及评分标准已加载，本次仅评审所选投标文件。</span>
               </div>
             </div>
           </aside>
@@ -919,10 +1017,10 @@
         <section class="panel" style="margin-top: 18px;">
           <div class="panel-header">
             <h3 class="panel-title">投标文件（技术部分）</h3>
-            <span class="badge ${uploadBadge}">${recognizedBidders.length}/${DATA.bidders.length} 已识别</span>
+            <span class="badge ${uploadBadge}">${upload.selected ? recognizedBidders.length + "/" + DATA.bidders.length + " 已识别" : "待选择"}</span>
           </div>
           <div class="panel-body">
-            <p class="panel-note">识别依据为本次选择文件的目录名、文件名、GUID 和评分项名称；不读取 PDF 正文，不估算文字数。</p>
+            <p class="panel-note">识别依据为本次选择文件的目录名、文件名、GUID 和评分项名称；正文抽取将在接入现场运行接口后执行。</p>
             ${renderUploadFilterNote()}
             ${recognizedBidders.length ? `
               <div class="bidder-compact-list">
@@ -998,6 +1096,7 @@
     const elapsed = runElapsedMs();
     const scoringTotal = totalScore();
     const scoringTotalNote = scoringTotal === 100 ? "来自招标文件" : modeText("待评分规则确认", "Mock 尚未完整替换");
+    const bindingStatusText = mismatch ? "待确认" : "文件名预检通过";
     const bindingNote = mismatch
       ? mismatchItem.id + " " + mismatchItem.bound_count + "/" + mismatchItem.expected_bidders + " · " + mismatchItem.binding_note
       : confirmItems.length + " 项均为 " + DATA.bidders.length + "/" + DATA.bidders.length;
@@ -1005,24 +1104,24 @@
       <main class="page">
         <section class="page-header">
           <div>
-            <h2 class="page-title">确认招标信息</h2>
-            <p class="page-desc">评分表和项目摘要来自项目配置覆盖层。本页用于核对评分项、分值、档位区间，以及本次上传文件名/GUID 的绑定预检结果。</p>
+            <h2 class="page-title">确认评分标准与投标文件</h2>
+            <p class="page-desc">请核对评分项、分值、评分区间、招标文件原文，以及本次上传投标文件的文件名预检结果。</p>
           </div>
           <div class="toolbar">
             <a class="btn" href="#/create">上一步</a>
-            <button class="btn" data-toggle-reference>${state.showScoringReference ? "收起对照" : "打开对照"}</button>
+            <button class="btn" data-toggle-reference>${state.showScoringReference ? "收起开发诊断" : "开发诊断"}</button>
             ${state.run.started ? `<a class="btn" href="#/running">查看运行监视</a>` : ""}
             ${DEMO_MODE ? `<a class="btn" href="${bindingIssueDemo ? "#/confirm" : "#/confirm?binding=issue"}">${bindingIssueDemo ? "恢复正常绑定" : "演示绑定异常"}</a>` : ""}
-            <button class="btn primary" data-start-run ${mismatch ? "disabled" : ""}>确认并播放结果</button>
+            <button class="btn primary" data-start-run ${mismatch ? "disabled" : ""}>开始评审</button>
           </div>
         </section>
 
         <section class="summary-strip">
           ${metric("评分项", confirmItems.length + " 项", "技术标评分项")}
           ${metric("总分", scoringTotal.toFixed(1) + " 分", scoringTotalNote)}
-          ${metric("投标文件绑定", mismatch ? "待确认" : "全部匹配", bindingNote)}
-          ${metric("前端计时", `<span data-run-elapsed>${state.run.startedAt ? formatDuration(elapsed) : "未开始"}</span>`, "页面①下一步：解析起算")}
-          ${metric("人工介入", "本页一次", "确认后播放已落盘结果")}
+          ${metric("投标文件绑定", bindingStatusText, bindingNote)}
+          ${metric("评审计时", `<span data-run-elapsed>${state.run.startedAt ? formatDuration(elapsed) : "未开始"}</span>`, "页面①下一步：解析起算")}
+          ${metric("确认状态", state.run.reviewStarted ? "已开始" : "待确认", "确认后开始逐项评审")}
         </section>
 
         ${state.showScoringReference ? renderScoringReference(confirmItems) : ""}
@@ -1042,26 +1141,52 @@
                       <th>评分项</th>
                       <th>分值</th>
                       <th>三档区间</th>
+                      <th>招标原文</th>
                       <th>绑定的投标文件</th>
                     </tr>
                   </thead>
                   <tbody>
-                    ${confirmItems.map((item, index) => `
-                      <tr>
-                        <td>${index + 1}</td>
-                        <td>
-                          <strong>${html(item.name)}</strong>
-                        </td>
-                        <td>
-                          ${item.max_score.toFixed(1)}
-                        </td>
-                        <td>${html(tierSummary(item))}</td>
-                        <td>
-                          <span class="badge ${item.binding_status === "matched" ? "success" : item.binding_status === "partial" ? "warning" : "danger"}">${item.bound_count}/${item.expected_bidders} 家已匹配</span>
-                          <div class="small muted">${html(item.binding_note)}</div>
-                        </td>
-                      </tr>
-                    `).join("")}
+                    ${confirmItems.map((item, index) => {
+                      const reference = referenceByItemId(item.id);
+                      const criteriaText = reference ? reference.pdf_criteria : item.criteria || "";
+                      const sourcePage = reference ? reference.source_page : item.source || DATA.scoringTable.source || "招标文件第 33~37 页";
+                      const rangeText = reference ? rangeSummary(reference.pdf_tiers) : tierSummary(item);
+                      return `
+                        <tr>
+                          <td>${index + 1}</td>
+                          <td>
+                            <strong>${html(item.name)}</strong>
+                          </td>
+                          <td>
+                            ${item.max_score.toFixed(1)}
+                          </td>
+                          <td>${html(tierSummary(item))}</td>
+                          <td>
+                            <details class="criteria-details">
+                              <summary>查看招标原文</summary>
+                              <div class="criteria-card">
+                                <div class="criteria-label">招标文件原文</div>
+                                <p>${criteriaText ? html(criteriaText) : "评审标准原文缺失，需回招标文件补充。"}</p>
+                                <dl>
+                                  <div>
+                                    <dt>原文页码</dt>
+                                    <dd>${html(sourcePage)}</dd>
+                                  </div>
+                                  <div>
+                                    <dt>满分与评分区间</dt>
+                                    <dd>${item.max_score.toFixed(1)} 分；${html(rangeText)}</dd>
+                                  </div>
+                                </dl>
+                              </div>
+                            </details>
+                          </td>
+                          <td>
+                            <span class="badge ${item.binding_status === "matched" ? "success" : item.binding_status === "partial" ? "warning" : "danger"}">${item.bound_count}/${item.expected_bidders} 家已匹配</span>
+                            <div class="small muted">${html(item.binding_note)}</div>
+                          </td>
+                        </tr>
+                      `;
+                    }).join("")}
                   </tbody>
                 </table>
               </div>
@@ -1071,7 +1196,7 @@
           <aside class="panel">
             <div class="panel-header">
               <h3 class="panel-title">全局规则与项目摘要</h3>
-              <span class="badge primary">注入评审</span>
+              <span class="badge primary">已加载</span>
             </div>
             <div class="panel-body">
               <ul class="rule-list readonly-rules">
@@ -1082,9 +1207,8 @@
                   </li>
                 `).join("")}
               </ul>
-              <div class="field" style="margin-top: 18px;">
-                <label for="projectSummaryReadonly">项目特征摘要</label>
-                <textarea id="projectSummaryReadonly" class="textarea readonly-textarea" readonly>${html(DATA.projectSummary)}</textarea>
+              <div class="readonly-card project-summary-card" style="margin-top: 18px;">
+                ${renderProjectSummaryMarkdown(DATA.projectSummary)}
               </div>
             </div>
           </aside>
@@ -1102,16 +1226,17 @@
       ? SCORING_REFERENCE.summary.pdf_vs_xlsx_tiers_match + " / " + SCORING_REFERENCE.summary.items
       : "未加载";
     return `
-      <section class="panel reference-panel" aria-label="招标文件评标办法对照">
+      <section class="panel reference-panel diagnostic-panel" aria-label="开发诊断：评分表来源对照">
         <div class="panel-header">
-          <h3 class="panel-title">招标文件评标办法对照</h3>
-          <span class="badge primary">第 ${html(pages)} 页</span>
+          <h3 class="panel-title">开发诊断：评分表来源对照</h3>
+          <span class="badge neutral">非评标主视图</span>
         </div>
         <div class="panel-body reference-grid">
           <aside class="reference-page">
-            <div class="reference-page-title">技术标评审办法摘录</div>
+            <div class="reference-page-title">诊断来源</div>
             <p>PDF：${html(sourcePdf)}</p>
             <p>XLSX：${html(sourceXlsx)}</p>
+            <p>招标文件页码：第 ${html(pages)} 页</p>
             <p>PDF/XLSX 档位匹配：${html(matched)}</p>
           </aside>
           <div class="table-wrap">
@@ -1168,15 +1293,15 @@
       ? `<a class="btn primary" href="#/results">查看已完成结果</a>`
       : `<span class="btn primary disabled" aria-disabled="true" title="逐项评审开始后才会产生结果">查看已完成结果</span>`;
     const runSourceText = DATA.dataSource && DATA.dataSource.kind === "real"
-      ? "已落盘真实结果回放"
-      : "前端演示事件流";
+      ? "真实评审记录"
+      : "样例评审记录";
 
     return `
       <main class="page">
         <section class="page-header">
           <div>
             <h2 class="page-title">${run.finished ? "评审完成" : "评审进行中"}</h2>
-            <p class="page-desc">静态 prototype 不发起 fetch、WebSocket 或后端任务；本页按已加载的真实评审产物播放 S1-S4 事件流，分母为 ${TOTAL_REVIEWS} = ${DATA.bidders.length} 家投标人 × ${DATA.scoringTable.items.length} 个评分项。</p>
+            <p class="page-desc">本页展示逐项评审进度、当前处理状态、重试和未评定项；分母为 ${TOTAL_REVIEWS} = ${DATA.bidders.length} 家投标人 × ${DATA.scoringTable.items.length} 个评分项。</p>
           </div>
           <div class="toolbar">
             <button class="btn" data-toggle-run>${run.paused ? "继续" : "暂停"}</button>
@@ -1190,7 +1315,7 @@
             <span class="badge ${run.finished ? "success" : "primary"}">${run.finished ? "报告数据已生成" : runSourceText}</span>
           </div>
           <div class="panel-body">
-            <div class="stage-stepper" aria-label="S1-S4 运行阶段">
+            <div class="stage-stepper" aria-label="运行阶段">
               ${stageNames.map(renderStageStep).join(`<span class="stage-arrow" aria-hidden="true">→</span>`)}
             </div>
           </div>
@@ -1239,8 +1364,8 @@
             </div>
             <div class="panel-body">
               <div class="info-box">
-                <strong>前端口径</strong>
-                <span class="muted">本页播放已落盘的 S3/S4 结果事件，不能替代现场后端调用；真正现场跑需由后端 CLI 或服务触发。</span>
+                <strong>数据说明</strong>
+                <span class="muted">当前展示最近一次真实全量评审的过程记录；接入现场运行接口后，可切换为本次上传文件的实时运行记录。</span>
               </div>
               <div class="info-box" style="margin-top: 12px;">
                 <strong>token 口径</strong>
@@ -1280,6 +1405,8 @@
     const completedCount = Math.min(state.run.finished ? TOTAL_REVIEWS : state.run.completedReviews, TOTAL_REVIEWS);
     const pendingCount = Math.max(0, TOTAL_REVIEWS - completedCount);
     const canExportReport = Boolean(state.run.finished);
+    const resultsTitle = pendingCount ? "评审结果（运行中）" : "评审结果汇总";
+    const resultsDesc = "集中展示 " + DATA.bidders.length + " 家投标人的独立评分结果；各投标文件分别评审，互不影响。";
     const visibleReviewFlags = reviewFlagRows(completedKeys);
     const visibleAuditFlags = (DATA.reportData.audit || [])
       .filter((row) => scoringItems().some((item) => item.id === row.item_id))
@@ -1303,17 +1430,17 @@
       <main class="page page-wide">
         <section class="page-header">
           <div>
-            <h2 class="page-title">评审结果并排</h2>
-            <p class="page-desc">并排展示 ${DATA.bidders.length} 家投标人的逐项结果，供专家查看和比较；数据来自已加载评审产物，导出为前端 HTML 快照。</p>
+            <h2 class="page-title">${resultsTitle}</h2>
+            <p class="page-desc">${html(resultsDesc)}</p>
           </div>
           <div class="toolbar">
             <a class="btn" href="#/running">返回运行监视</a>
-            <button class="btn primary" data-export-report ${canExportReport ? "" : "disabled"} title="${canExportReport ? "导出前端 HTML 快照" : "评审完成后才能导出报告快照"}">导出报告快照</button>
+            <button class="btn primary" data-export-report ${canExportReport ? "" : "disabled"} title="${canExportReport ? "导出报告" : "评审完成后才能导出报告"}">导出报告</button>
           </div>
         </section>
 
         <section class="summary-strip">
-          ${metric("投标人", DATA.bidders.length + " 家", "横向滚动展示")}
+          ${metric("投标人", DATA.bidders.length + " 家", "独立评分结果")}
           ${metric("已完成", completedCount + " / " + TOTAL_REVIEWS, pendingCount ? pendingCount + " 项评审中" : "全部完成")}
           ${metric("用时", formatDuration(elapsed), state.run.startedAt ? "从页面①下一步：解析起算" : "尚未开始")}
           ${metric("建议复核", (visibleReviewFlags.length + visibleAuditFlags.length) + " 项", "低置信 " + visibleReviewFlags.length + " / 无区分度 " + visibleAuditFlags.length)}
@@ -1323,8 +1450,8 @@
           <section class="panel status-panel" style="margin-top: 18px;">
             <div class="panel-body">
               <div class="info-box">
-                <strong>当前为运行快照</strong>
-                <span class="muted">还有 ${pendingCount} 项未完成，当前合计不含评审中项；正式报告需等全部评审完成后导出。</span>
+                <strong>当前为阶段性结果</strong>
+                <span class="muted">${pendingCount} 项尚未完成；总分暂不生成，正式汇总需等全部评审完成后导出。</span>
               </div>
             </div>
           </section>
@@ -1332,8 +1459,8 @@
 
         <section class="panel" style="margin-top: 18px;">
           <div class="panel-header">
-            <h3 class="panel-title">并排矩阵</h3>
-            <span class="badge neutral">评分项列固定 · 12 家横向滚动</span>
+            <h3 class="panel-title">逐项评分矩阵</h3>
+            <span class="badge neutral">评分项列固定 · 各家独立评审</span>
           </div>
           <div class="panel-body">
             <div class="table-wrap matrix-wrap">
@@ -1348,15 +1475,15 @@
                 <tbody>
                   ${rows}
                   <tr class="matrix-total-row">
-                    <td class="sticky-item" data-score-col="0"><strong>合计（19 项）</strong></td>
-                    <td class="sticky-max" data-score-col="1"><strong>${totalScore().toFixed(1)}</strong></td>
+                    <td class="sticky-item" data-score-col="0"><strong>${pendingCount ? "总分（未完成）" : "合计（19 项）"}</strong></td>
+                    <td class="sticky-max" data-score-col="1"><strong>${pendingCount ? "满分 " + totalScore().toFixed(1) : totalScore().toFixed(1)}</strong></td>
                     ${DATA.bidders.map((bidder, index) => {
                       const systemTotal = systemTotalForBidder(bidder, completedKeys);
                       const expertTotal = expertTotalForBidder(bidder, completedKeys);
                       return `
-                        <td data-score-col="${index + 2}" title="系统合计不含评审中项；专家口径只在存在改判时显示">
-                          <strong>${systemTotal.score.toFixed(1)}${systemTotal.unrated ? "*" : ""}</strong>
-                          ${expertTotal.overrides ? `<div class="manual-score">专家 ${expertTotal.score.toFixed(1)}</div>` : ""}
+                        <td data-score-col="${index + 2}" title="${pendingCount ? "运行完成前不生成总分" : "专家口径只在存在改判时显示"}">
+                          ${pendingCount ? `<strong>未完成</strong>` : `<strong>${systemTotal.score.toFixed(1)}${systemTotal.unrated ? "*" : ""}</strong>`}
+                          ${!pendingCount && expertTotal.overrides ? `<div class="manual-score">专家 ${expertTotal.score.toFixed(1)}</div>` : ""}
                         </td>
                       `;
                     }).join("")}
@@ -1367,7 +1494,7 @@
             <div class="legend">
               <span>0 = 缺文件或未命中；0 复核 = 文件存在但证据定位未命中</span>
               <span>— = 未评定，系统未能给出判断，不计入合计</span>
-              <span>评审中 = 结果尚未到达，暂不计入当前合计</span>
+              <span>评审中 = 结果尚未到达，运行完成前不生成总分</span>
               <span>复核 = confidence &lt; ${LOW_CONFIDENCE_THRESHOLD}，建议人工复核</span>
               <span>无区分度 = 12 家落在同一档，建议复核</span>
               <span>人工 = 专家改判值，与系统判分并存</span>
@@ -1384,7 +1511,7 @@
     const itemId = query.get("item") || "T-02";
     const bidder = bidderById(bidderId) || DATA.bidders[0];
     const item = itemById(itemId) || scoringItems()[1];
-    const result = resultBy(bidder.id, item.id);
+    const result = resultForDisplay(bidder, item, completedKeys);
     const evidence = evidenceBy(bidder.id, item.id) || {};
 
     if (!result) {
@@ -1417,7 +1544,7 @@
             <p class="page-desc">${titleStatus} · 系统 ${scoreText} / ${item.max_score.toFixed(1)} 分${overrideScore !== null ? "；人工改判 " + overrideScoreText + " 分" : ""}</p>
           </div>
           <div class="toolbar">
-            <a class="btn" href="#/results">返回结果并排</a>
+            <a class="btn" href="#/results">返回评审结果</a>
           </div>
         </section>
 
@@ -1513,7 +1640,7 @@
             <aside class="panel source-viewer">
               <div class="panel-header">
                 <h3 class="panel-title">原文定位</h3>
-                <span class="badge primary">S2 证据页码</span>
+                <span class="badge primary">证据页码</span>
               </div>
               <div class="panel-body">
                 ${renderSourceViewer(citedEntries, activeSection)}
@@ -1781,7 +1908,7 @@
   }
 
   function startReview() {
-    ensureRunStarted("确认完成，开始播放评审事件流");
+    ensureRunStarted("确认完成，开始逐项评审");
     const run = state.run;
     if (run.paused) {
       toggleRunPaused();
@@ -1789,12 +1916,12 @@
     if (!run.reviewStarted) {
       run.reviewStarted = true;
       run.paused = false;
-      run.currentLabel = "确认完成，开始播放评审事件流";
+      run.currentLabel = "确认完成，开始逐项评审";
       run.logs.push({
         time: clock(),
         kind: "system",
-        message: "人工确认完成，已落盘评审事件流开始播放",
-        result: "开始回放"
+        message: "评分标准与投标文件确认完成，逐项评审开始",
+        result: "已开始"
       });
       saveState();
     }
@@ -1883,7 +2010,7 @@
         upload.recognitionComplete = true;
         upload.parsed = target >= DATA.bidders.length;
         upload.finishedAt = Date.now();
-        upload.sourceLabel = (upload.sourceLabel || "") + (upload.parsed ? " · 可进入解析" : " · 缺少投标人");
+        upload.sourceLabel = upload.parsed ? "文件名预检通过" : "文件名预检未通过：缺少投标人";
         clearUploadRecognitionTimer();
       }
       saveState();
@@ -2129,9 +2256,18 @@
   }
 
   function systemTotalForBidder(bidder, completedKeys = completedReviewKeySet()) {
+    if (state.run.finished) {
+      const total = reportTotalForBidder(bidder);
+      if (total) {
+        return {
+          score: roundScore(total.score),
+          unrated: Math.max(0, Number(total.unrated) || 0)
+        };
+      }
+    }
     const rows = scoringItems()
       .filter((item) => isReviewCompleted(bidder.id, item.id, completedKeys))
-      .map((item) => resultBy(bidder.id, item.id));
+      .map((item) => resultForDisplay(bidder, item, completedKeys));
     const score = rows.reduce((sum, row) => sum + (row && typeof row.score === "number" ? row.score : 0), 0);
     const unrated = rows.filter((row) => row && row.status === "unrated").length;
     return {
@@ -2141,12 +2277,21 @@
   }
 
   function expertTotalForBidder(bidder, completedKeys = completedReviewKeySet()) {
+    if (state.run.finished) {
+      const total = reportTotalForBidder(bidder);
+      if (total) {
+        return {
+          score: roundScore(total.expert_score ?? total.score),
+          overrides: Math.max(0, Number(total.expert_overrides) || 0)
+        };
+      }
+    }
     let score = 0;
     let overrides = 0;
     scoringItems()
       .filter((item) => isReviewCompleted(bidder.id, item.id, completedKeys))
       .forEach((item) => {
-        const result = resultBy(bidder.id, item.id);
+        const result = resultForDisplay(bidder, item, completedKeys);
         const overrideScore = numericOverrideScore(overrideBy(bidder.id, item.id));
         if (overrideScore !== null) {
           score += overrideScore;
@@ -2274,8 +2419,10 @@
     const dataSource = DATA.dataSource || {};
     const configSource = DATA.configSource || {};
     const reportSourceText = dataSource.kind === "real"
-      ? "真实评审结果：" + (dataSource.source || "已加载 real-results.js")
-      : "前端演示数据";
+      ? (dataSource.report_source
+        ? "正式 S4 报告：" + dataSource.report_source
+        : "真实评审结果：" + (dataSource.source || "已加载 real-results.js"))
+      : "样例数据";
     const configSourceText = configSource.scoring
       ? "评分配置：" + configSource.scoring + "；项目摘要：" + (configSource.summary || "未标注")
       : "评分配置来源未标注";
@@ -2304,7 +2451,7 @@
             if (!isReviewCompleted(bidder.id, item.id, completedKeys)) {
               return `<td class="pending">评审中</td><td></td>`;
             }
-            const result = resultBy(bidder.id, item.id);
+            const result = resultForDisplay(bidder, item, completedKeys);
             if (!result) {
               return `<td class="pending">评审中</td><td></td>`;
             }
@@ -2423,7 +2570,7 @@
 <body>
   <h1>${html(DATA.reportData.project)} - 技术标辅助评审报告</h1>
   <p class="meta">生成时间：${html(generatedAt)}；页面计时：${formatDuration(reportElapsedMs())}；低置信度阈值：confidence &lt; ${LOW_CONFIDENCE_THRESHOLD}</p>
-  <p class="meta">数据源：${html(reportSourceText)}；${html(configSourceText)}。本文件由前端按当前页面状态导出，含当前专家复核记录；后端 S4 原始产物以 pipeline 输出目录为准。</p>
+  <p class="meta">数据源：${html(reportSourceText)}；${html(configSourceText)}。本文件为当前页面导出的评审报告，含当前专家复核记录。</p>
 
   <h2>并排表</h2>
   <div class="table-wrap">
@@ -2503,7 +2650,7 @@
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "技术标辅助评审报告快照-" + new Date().toISOString().replace(/[:.]/g, "-") + ".html";
+    link.download = "技术标辅助评审报告-" + new Date().toISOString().replace(/[:.]/g, "-") + ".html";
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -2519,7 +2666,7 @@
         return;
       }
       if (!state.run.started) {
-        ensureRunStarted("页面①点击下一步：解析，开始前端计时和事件流播放准备");
+        ensureRunStarted("页面①点击下一步：解析，开始计时和评审准备");
       }
       setRoute("#/confirm");
       return;
@@ -2546,7 +2693,7 @@
     const exportReport = event.target.closest("[data-export-report]");
     if (exportReport) {
       if (!state.run.finished) {
-        window.alert("评审事件流播放完成后才能导出报告快照。当前结果页仅作为运行快照查看。");
+        window.alert("评审完成后才能导出报告。当前结果页仅作为运行过程查看。");
         return;
       }
       downloadReport();
