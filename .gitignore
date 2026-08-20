@@ -22,3 +22,13 @@ env/
 .DS_Store
 Thumbs.db
 原始资料/
+
+# 真实投标文件的衍生物：12 家技术标全文，约 66 MB，且开标评标期间不宜进仓库。
+# 见 issue #5 第 1 条。重建流程见 data/README.md。样例数据（_sample-docx）不在此列，
+# 它是 tests/test_s2_regression.py 的输入，必须进 git。
+data/projects/jiyang-epc/sections/
+data/projects/jiyang-epc/evidence/
+
+# sections_all.json 一律不进 git（任何项目）：它是各家 sections.json 的合并副本，
+# 同一份正文在仓库里存两遍。产出确定性且只要 1 秒，用 merge_sections.py 重建即可。
+data/projects/*/sections_all.json

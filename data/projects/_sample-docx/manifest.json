@@ -1,0 +1,21 @@
+{
+  "project": "软件信息化样例标书（非真实项目）",
+  "project_slug": "_sample-docx",
+  "data_schema_version": "1.0",
+  "created_at": "2026-08-19",
+  "source_dir": "原始资料/公司的临时样例文件仅作参考/ss投标/技术部分",
+  "note": "本 slug 下全部是软件信息化类样例数据，与济阳区实验高级中学 EPC 工程无关。仅用于验证 S1/S2 代码能否跑通，不可用于验证检索效果，见 README §9.4。下划线前缀表示这不是一个真实项目。",
+  "bidders": [
+    {
+      "id": "sample-docx",
+      "name": "软件信息化样例标书（docx）",
+      "source": "原始资料/公司的临时样例文件仅作参考/ss投标/技术部分",
+      "note": "docx 路径，非 PDF；真实标书全部为 PDF"
+    }
+  ],
+  "artifacts": {
+    "sections_all": "sections_all.json",
+    "sections_dir": "sections",
+    "evidence_dir": "evidence"
+  }
+}

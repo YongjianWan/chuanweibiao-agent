@@ -1,0 +1,390 @@
+project: 济阳区实验高级中学项目工程总承包（EPC）
+source: 招标文件.pdf 第 33~37 页（评标办法技术标部分）
+rules:
+- 内容不全酌情扣分
+- 若此条缺项不得分
+items:
+- id: T-01
+  guid: 75bd5598-9f76-4e3b-8a0a-d494380d4d9d
+  name: 设计任务书优化
+  max_score: 20.0
+  tiers:
+  - tier: 优
+    min: 17.0
+    max: 20.0
+  - tier: 良
+    min: 14.0
+    max: 17.0
+  - tier: 一般
+    min: 10.0
+    max: 14.0
+  aspects:
+  - 设计需求深度解析与目标对齐
+  - 优化建议的具体性与可行性
+  - 工程设计要求满足度
+  - 设计质量保证措施
+  synonyms: []
+- id: T-02
+  guid: 108d538f-85b8-4c7d-b32c-f6acdaa187b9
+  name: 进度管理方案
+  max_score: 4.0
+  tiers:
+  - tier: 优
+    min: 3.0
+    max: 4.0
+  - tier: 良
+    min: 2.0
+    max: 3.0
+  - tier: 一般
+    min: 1.0
+    max: 2.0
+  aspects:
+  - 施工进度计划编制与关键路径分析
+  - 设计进度管理与协同机制
+  - 进度保障措施与资源配置
+  - 进度监测、预警与纠偏机制
+  synonyms: []
+- id: T-03
+  guid: 9e60551f-c8b5-4b2b-81aa-ceb4b4a86d2d
+  name: 费用及资金管理方案
+  max_score: 3.0
+  tiers:
+  - tier: 优
+    min: 2.5
+    max: 3.0
+  - tier: 良
+    min: 1.7
+    max: 2.5
+  - tier: 一般
+    min: 1.2
+    max: 1.7
+  aspects:
+  - 费用预算编制与成本控制体系
+  - 资金筹措与使用计划
+  - 财务风险防控与应急预案
+  - 资金监管与审计配合机制
+  synonyms: []
+- id: T-04
+  guid: 255bb711-dc0e-4968-bf39-2a61b0abc8eb
+  name: 质量管理方案
+  max_score: 4.0
+  tiers:
+  - tier: 优
+    min: 3.0
+    max: 4.0
+  - tier: 良
+    min: 2.0
+    max: 3.0
+  - tier: 一般
+    min: 1.0
+    max: 2.0
+  aspects:
+  - 工程整体质量管控体系
+  - 进场材料设备质量标准管控
+  - 材料设备品牌档次管控措施
+  - 规格型号一致性管控
+  synonyms: []
+- id: T-05
+  guid: acabee9d-b7e9-4461-9491-1ee7dacefac3
+  name: 安全、职业健康和环境管理方案
+  max_score: 4.0
+  tiers:
+  - tier: 优
+    min: 3.0
+    max: 4.0
+  - tier: 良
+    min: 2.0
+    max: 3.0
+  - tier: 一般
+    min: 1.0
+    max: 2.0
+  aspects:
+  - 安全管理体系与组织架构
+  - 安全风险管控与防护措施
+  - 职业健康管理方案
+  - 环境保护与文明施工措施
+  synonyms: []
+- id: T-06
+  guid: 8dc6e95d-ae6a-4422-8ff7-b7b2939ff724
+  name: 调试、试运行与移交管理方案
+  max_score: 4.0
+  tiers:
+  - tier: 优
+    min: 3.0
+    max: 4.0
+  - tier: 良
+    min: 2.0
+    max: 3.0
+  - tier: 一般
+    min: 1.0
+    max: 2.0
+  aspects:
+  - 调试组织与实施策略
+  - 多方协调与配合机制
+  - 试运行保障与应急预案
+  - 移交管理与资料归档
+  synonyms: []
+- id: T-07
+  guid: 51f11a77-e946-4abd-ba0f-b5f47ceb9e04
+  name: 风险管理方案
+  max_score: 3.0
+  tiers:
+  - tier: 优
+    min: 2.5
+    max: 3.0
+  - tier: 良
+    min: 1.7
+    max: 2.5
+  - tier: 一般
+    min: 1.2
+    max: 1.7
+  aspects:
+  - 风险识别与评估体系
+  - 风险应对策略与措施
+  - 应急响应与处置机制
+  - 风险监控与动态管理
+  synonyms: []
+- id: T-08
+  guid: 83e39679-fabf-4dd1-ba31-224dc2d2d51f
+  name: 沟通协调方案
+  max_score: 3.0
+  tiers:
+  - tier: 优
+    min: 2.5
+    max: 3.0
+  - tier: 良
+    min: 2.0
+    max: 2.5
+  - tier: 一般
+    min: 1.5
+    max: 2.0
+  aspects:
+  - 行政审批协助与手续办理机制
+  - 职能部门沟通策略与承诺办法
+  - 外部关系协调与冲突解决机制
+  - 信息反馈与闭环管理体系
+  synonyms: []
+- id: T-09
+  guid: 3a101949-3b00-4c83-a62a-fafe13ac376e
+  name: 合同管理与信息管理方案，有完善的信息管理系统
+  max_score: 3.0
+  tiers:
+  - tier: 优
+    min: 2.0
+    max: 3.0
+  - tier: 良
+    min: 1.0
+    max: 2.0
+  - tier: 一般
+    min: 0.5
+    max: 1.0
+  aspects:
+  - 合同全生命周期管理体系
+  - 信息管理系统的功能完备性
+  - 信息安全与数据保障机制
+  - 系统实施运维与培训服务
+  synonyms: []
+- id: T-10
+  guid: ae93a6c8-1c01-4ab8-a43b-11f4cbc40a3c
+  name: 各专业施工图设计的安排、协调、时间保证措施
+  max_score: 2.0
+  tiers:
+  - tier: 优
+    min: 1.5
+    max: 2.0
+  - tier: 良
+    min: 0.7
+    max: 1.5
+  - tier: 一般
+    min: 0.2
+    max: 0.7
+  aspects:
+  - 各专业施工图设计进度安排与计划管理
+  - 多专业协同设计与接口协调机制
+  - 设计进度延误预警与纠偏措施
+  - 现场平面管理与设计配合方案
+  synonyms: []
+- id: T-11
+  guid: 123a9226-d66e-4ace-8dc4-65a76a8282fa
+  name: 施工方案及技术措施
+  max_score: 8.0
+  tiers:
+  - tier: 优
+    min: 6.0
+    max: 8.0
+  - tier: 良
+    min: 3.0
+    max: 6.0
+  - tier: 一般
+    min: 1.0
+    max: 3.0
+  aspects:
+  - 总体施工部署与流程规划
+  - 核心工程技术方案针对性
+  - 质量保证体系与控制措施
+  - 安全文明施工与环境保护
+  - 资源配备与进度保障机制
+  synonyms: []
+- id: T-12
+  guid: c105b81a-3fca-42a1-a0fa-c55332f11e62
+  name: 安全施工、文明施工和绿色施工措施
+  max_score: 8.0
+  tiers:
+  - tier: 优
+    min: 6.0
+    max: 8.0
+  - tier: 良
+    min: 3.0
+    max: 6.0
+  - tier: 一般
+    min: 1.0
+    max: 3.0
+  aspects:
+  - 安全施工管理体系与风险防控
+  - 文明施工标准化与现场环境管理
+  - 绿色施工技术与资源节约措施
+  synonyms: []
+- id: T-13
+  guid: 80d2c3d4-2628-4f0c-88ed-77fbc129aa4c
+  name: 环境保护及防尘施工措施
+  max_score: 4.0
+  tiers:
+  - tier: 优
+    min: 3.0
+    max: 4.0
+  - tier: 良
+    min: 2.0
+    max: 3.0
+  - tier: 一般
+    min: 1.0
+    max: 2.0
+  aspects:
+  - 扬尘控制专项方案
+  - 噪声与振动污染防治
+  - 水污染与固体废弃物管理
+  - 管理体系与应急响应
+  synonyms: []
+- id: T-14
+  guid: fafc867a-6a90-4765-b0d0-6ebfd818d218
+  name: 施工总进度计划及保证措施
+  max_score: 8.0
+  tiers:
+  - tier: 优
+    min: 6.0
+    max: 8.0
+  - tier: 良
+    min: 3.0
+    max: 6.0
+  - tier: 一般
+    min: 1.0
+    max: 3.0
+  aspects:
+  - 施工进度计划编制科学性
+  - 进度保证组织管理体系
+  - 技术与资源保障措施
+  - 动态监控与纠偏机制
+  synonyms: []
+- id: T-15
+  guid: 4c62f8e4-d847-4cb9-bca0-9b4f78d9573e
+  name: 施工现场总平面布置
+  max_score: 4.0
+  tiers:
+  - tier: 优
+    min: 3.0
+    max: 4.0
+  - tier: 良
+    min: 2.0
+    max: 3.0
+  - tier: 一般
+    min: 1.0
+    max: 2.0
+  aspects:
+  - 功能分区与空间布局合理性
+  - 交通组织与物流动线规划
+  - 临时设施配置与标准化建设
+  - 水电管网与环保消防设施
+  - 动态调整与图示表达质量
+  synonyms: []
+- id: T-16
+  guid: ffd783a2-78cf-4fd6-81ef-812298958298
+  name: 施工质量措施计划
+  max_score: 8.0
+  tiers:
+  - tier: 优
+    min: 6.0
+    max: 8.0
+  - tier: 良
+    min: 3.0
+    max: 6.0
+  - tier: 一般
+    min: 1.0
+    max: 3.0
+  aspects:
+  - 质量管理体系与组织架构
+  - 关键工序与质量控制点措施
+  - 材料设备进场检验与管理
+  - 质量检测与验收管理计划
+  - 质量持续改进与应急处理
+  synonyms: []
+- id: T-17
+  guid: c43a82b9-31a1-4f6b-acf5-a9af954b6816
+  name: 材料采购管理方案
+  max_score: 4.0
+  tiers:
+  - tier: 优
+    min: 2.0
+    max: 4.0
+  - tier: 良
+    min: 1.0
+    max: 2.0
+  - tier: 一般
+    min: 0.5
+    max: 1.0
+  aspects:
+  - 采购组织架构与职责分工
+  - 供应商管理与资源保障
+  - 采购流程控制与质量保证
+  - 成本控制与资金支付管理
+  - 仓储物流与现场管理
+  synonyms: []
+- id: T-18
+  guid: 6c230e96-2e06-4c28-a648-0181e132707f
+  name: 货物采购管理方案
+  max_score: 3.0
+  tiers:
+  - tier: 优
+    min: 2.0
+    max: 3.0
+  - tier: 良
+    min: 1.0
+    max: 2.0
+  - tier: 一般
+    min: 0.5
+    max: 1.0
+  aspects:
+  - 采购组织架构与职责分工
+  - 采购流程与控制措施
+  - 质量控制与验收标准
+  - 仓储物流与供应保障
+  - 成本控制与档案管理
+  synonyms: []
+- id: T-19
+  guid: e1c9c784-0683-45a4-a123-08a7f4084f86
+  name: 服务采购管理方案
+  max_score: 3.0
+  tiers:
+  - tier: 优
+    min: 2.0
+    max: 3.0
+  - tier: 良
+    min: 1.0
+    max: 2.0
+  - tier: 一般
+    min: 0.5
+    max: 1.0
+  aspects:
+  - 采购策划与需求分析
+  - 供应商管理与评价体系
+  - 采购过程控制与合规管理
+  - 合同管理与后续服务保障
+  synonyms: []
