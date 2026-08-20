@@ -736,8 +736,14 @@
     return fileOrdinal + "#" + blockOrdinal;
   }
 
-  function seedForItem(itemIndex) {
+  function seedForItem(bidder, item, itemIndex) {
     if (!LOCATED_SEED.length) return null;
+    const sameBidderAndItem = LOCATED_SEED.find((row) =>
+      row && row.item_id === item.id && (row.bidder === bidder.name || row.bidder_id === bidder.id)
+    );
+    if (sameBidderAndItem) return sameBidderAndItem;
+    const sameItem = LOCATED_SEED.find((row) => row && row.item_id === item.id);
+    if (sameItem) return sameItem;
     return LOCATED_SEED[itemIndex % LOCATED_SEED.length];
   }
 
@@ -788,9 +794,9 @@
     return seed.picked.slice(0, 4).map((row) => ({
       section_id: row.section_id,
       file: row.file,
-      item_id: item.id,
-      item_guid: item.guid,
-      bidder: bidder.name,
+      item_id: row.item_id || item.id,
+      item_guid: row.item_guid || item.guid,
+      bidder: row.bidder === bidder.name ? row.bidder : bidder.name,
       bidder_id: bidder.id,
       page: row.page || null,
       level: row.level || (Array.isArray(row.path) ? row.path.length : 1),
@@ -832,7 +838,7 @@
 
   function makeEvidencePackage(bidder, item, bidderIndex, itemIndex, resultStatus, score) {
     const noEvidence = resultStatus === "unrated" || score === 0;
-    const seed = seedForItem(itemIndex);
+    const seed = seedForItem(bidder, item, itemIndex);
     const budget = evidenceBudgetFor(item);
     const rawPicked = noEvidence ? [] : (seedPickedRows(seed, bidder, item) || fallbackPickedRows(bidder, item, bidderIndex, itemIndex));
     const picked = fitPickedRowsToBudget(rawPicked, budget);
@@ -859,7 +865,8 @@
       bidder: bidder.name,
       bidder_id: bidder.id,
       name: item.name,
-      source_point_id: seed ? seed.point_id : null,
+      source_item_id: seed ? seed.item_id || null : null,
+      source_bidder: seed ? seed.bidder || null : null,
       source_name: seed ? seed.name : null,
       candidates: noEvidence ? 0 : seed && typeof seed.candidates === "number" ? seed.candidates : 18 + ((bidderIndex + itemIndex) % 15),
       units: noEvidence ? 0 : picked.length,

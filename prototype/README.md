@@ -30,11 +30,11 @@ Mock 数据统一放在 `prototype/js/mock-data.js`，通过全局对象 `window
 
 数据字段尽量贴近 README §4 的数据契约，保留了 `item_guid`、`section_id`、`page`、`match_score`、`hit`、`tier`、`aspects` 等后续对接字段；界面默认不向用户暴露这些内部技术字段。
 
-`prototype/js/located-seed.js` 与 `data/interim/mock/review_results.json` 由 `scripts/build-prototype-mock.js` 从 `data/interim/located.json`、`data/interim/sections.json` 生成。当前 `located.json` 是早期软件标样例，缺少真实多投标人的 `bidder` / `item_id` / `item_guid` / PDF 页码，因此原型只取其 `section_id`、证据文件名、章节路径、命中词、截断状态和章节文本作为打底证据；`bidder`、`item_id`、`item_guid` 仍由当前 19 项评分表 Mock 映射补齐。T8 产出真实证据包后，应重新运行脚本生成。
+`prototype/js/located-seed.js` 与 `data/interim/mock/review_results.json` 由 `scripts/build-prototype-mock.js` 生成。脚本优先读取 `data/projects/jiyang-epc/evidence/<bidder>/located.json` 与 `data/projects/jiyang-epc/sections/<bidder>/sections.json`，拿真实 S2 证据包里的 `bidder` / `item_id` / `item_guid` / PDF 页码作为种子；这些产物不存在时，才回退到早期 `data/interim/located.json`、`data/interim/sections.json` 样例。
 
-低置信度阈值统一为 `confidence < 0.85`。Mock 评分逻辑按 README §4：先由模型侧判定 `tier`，再用 `score = tier.min + 得分率 × (tier.max - tier.min)` 生成档内连续分；`confidence` 从 1.0 起按降级、截断、重试三个因素相乘，不再使用随机低基线。
+低置信度阈值统一为 `confidence < 0.85`。Mock 评分结果只用于前端演示：`tier` 与 `score` 均模拟模型输出，`score` 保持在档位区间内；`confidence` 从 1.0 起按降级、截断、重试三个因素相乘，不再使用随机低基线，也不再展示要素加权定分。
 
-`sectionBlocks` 提供章节块层级 Mock 数据。早期软件标样例没有 PDF 页码，页面⑤会显示“页码未采集”；T0/T8 真实 PDF 链路产出 `picked[].page` 后会透传展示。`section_id` 按 README §4 使用 `文件序号#块顺序号`，`#` 后保持纯整数。
+`sectionBlocks` 提供章节块层级数据。真实 PDF 链路产出 `picked[].page` 后会透传展示；回退到早期样例时，没有页码的证据会显示“页码未采集”。`section_id` 按 README §4 使用 `文件序号#块顺序号`，`#` 后保持纯整数。
 
 当前仓库已有 `config/projects/济阳区实验高级中学.yaml`；静态原型仍使用 `mock-data.js` 内置评分表作为可离线演示数据，评分项、分值、三档区间、`criteria` 与 `aspects` 已按该项目 YAML 同步。页面②的档位说明 `desc` 是评审专家补充说明，默认空，不是招标文件原文；后续接入真实链路时，应改为从项目 YAML 生成或注入评分表，而不是手工维护 Mock。
 

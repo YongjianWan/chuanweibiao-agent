@@ -92,9 +92,7 @@
             ? item.criteria
             : typeof savedItem.criteria === "string"
               ? savedItem.criteria
-              : typeof savedItem.tier_quote === "string"
-                ? savedItem.tier_quote
-                : "",
+              : "",
           tiers: item.tiers.map((tier, index) => {
             const savedTier = Array.isArray(savedItem.tiers) ? savedItem.tiers[index] : null;
             if (!savedTier) return tier;
