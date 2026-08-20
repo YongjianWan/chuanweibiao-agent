@@ -698,7 +698,7 @@
     return score;
   }
 
-  function confidenceFromFactors({ fallback, truncated, retried }) {
+  function confidenceFromFactors({ fallback, truncated }) {
     let confidence = 1;
     const factors = [];
     if (fallback) {
@@ -709,10 +709,9 @@
       confidence *= 0.9;
       factors.push("截断");
     }
-    if (retried) {
-      confidence *= 0.9;
-      factors.push("重试");
-    }
+    // 与 src/s3_review.py 的 _score_and_confidence 保持一致：重试不打折
+    // （2026-08-21 移除，重试是过程指标不是判分质量指标，理由见该函数 docstring）。
+    // mock 若继续乘 0.9，排练模式的复核清单口径会和真实端点不一致。
     return {
       confidence: round3(confidence),
       factors
@@ -924,8 +923,7 @@
         ? { confidence: 1, factors: ["缺文件"] }
         : confidenceFromFactors({
           fallback: evidencePackage.fallback,
-          truncated: evidencePackage.picked.some((row) => row.truncated),
-          retried: attempts > 1
+          truncated: evidencePackage.picked.some((row) => row.truncated)
         });
 
       const result = {

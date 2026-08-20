@@ -46,7 +46,9 @@ prototype/index.html
 
 `prototype/js/located-seed.js` 与 `prototype/js/real-results.js` 由 `scripts/build-prototype-mock.js` 生成。脚本优先读取 `data/projects/jiyang-epc/evidence/<bidder>/located.json` 与 `data/projects/jiyang-epc/sections/<bidder>/sections.json`，拿真实 S2 证据包里的 `bidder` / `item_id` / `item_guid` / PDF 页码作为种子；这些产物不存在时，才回退到早期 `data/interim/located.json`、`data/interim/sections.json` 样例。若存在 `data/out/report/report.json`，页面④与导出报告直接使用该 S4 正式报告；`data/projects/jiyang-epc/reviews/reviews.json` 只用于补充运行进度事件和逐项详情。
 
-低置信度阈值统一为 `confidence < 0.85`。真实结果直接使用 S3 输出的 `tier` / `score` / `confidence` / `reason` / `cite`；Mock 评分结果只用于前端演示：`tier` 与 `score` 均模拟模型输出，`score` 保持在档位区间内；`confidence` 从 1.0 起按降级、截断、重试三个因素相乘，不再使用随机低基线，也不再展示要素加权定分。
+低置信度阈值统一为 `confidence < 0.85`。真实结果直接使用 S3 输出的 `tier` / `score` / `confidence` / `reason` / `cite`；Mock 评分结果只用于前端演示：`tier` 与 `score` 均模拟模型输出，`score` 保持在档位区间内；`confidence` 从 1.0 起按降级、截断两个因素相乘（**重试于 2026-08-21 移除**——
+它衡量调用过程而非判分质量，理由见 `docs/data-contract.md` 的 `confidence` 条），
+不再使用随机低基线，也不再展示要素加权定分。
 
 `sectionBlocks` 提供章节块层级数据。真实 PDF 链路产出 `picked[].page` 后会透传展示；回退到早期样例时，没有页码的证据会显示“页码未采集”。`section_id` 按 README §4 使用 `文件序号#块顺序号`，`#` 后保持纯整数。
 

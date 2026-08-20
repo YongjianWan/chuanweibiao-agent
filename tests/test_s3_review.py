@@ -168,7 +168,8 @@ def test_invalid_json_retries_and_includes_previous_error():
 
     assert result["status"] == "rated"
     assert result["attempts"] == 2
-    assert result["confidence"] == 0.9
+    # 重试不再打折（2026-08-21）：重试成功说明模型最终给了合规输出，判分依据没变差。
+    assert result["confidence"] == 1.0
     assert sleeps == [2.0]
     retry_request = json.loads(client.messages[1][-1]["content"])
     assert "JSON 解析失败" in retry_request["previous_error"]
@@ -197,7 +198,12 @@ def test_endpoint_failures_exhaust_to_unrated():
     assert result["last_error"] == "timeout"
 
 
-def test_confidence_applies_fallback_truncation_retry():
+def test_confidence_applies_fallback_and_truncation_but_not_retry():
+    """降级 ×0.7、截断 ×0.9 都打折；重试不打折。
+
+    这条守的是 2026-08-21 的决定：`confidence` 只衡量证据质量，
+    重试属于调用过程，用 `attempts` 单独表达。理由见
+    `src/s3_review.py` 的 `_score_and_confidence` docstring。"""
     evidence = {
         **EVIDENCE,
         "fallback": True,
@@ -207,7 +213,7 @@ def test_confidence_applies_fallback_truncation_retry():
 
     result = review_one(evidence, ITEM, "摘要", [], SECTIONS, client, sleep=lambda _: None)
 
-    assert result["confidence"] == 0.567
+    assert result["confidence"] == 0.63  # 0.7 × 0.9，重试那一次不参与
     assert result["attempts"] == 2
 
 

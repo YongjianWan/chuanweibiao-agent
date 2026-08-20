@@ -667,7 +667,17 @@ def _score_and_confidence(
     """根据模型给出的档位和分数计算置信度。
 
     score 由模型在档位区间内直接给出，程序只做区间校验，不再按要素加权计算。
-    置信度从 1.0 开始，按三因素相乘：降级 ×0.7 / 截断 ×0.9 / 重试 ×0.9。
+    置信度从 1.0 开始，按两因素相乘：降级 ×0.7 / 截断 ×0.9。
+
+    **重试曾是第三个因素（×0.9），2026-08-21 移除。** 理由：`confidence` 衡量的是
+    「这个判分有多可信」，而重试反映的是「调用过程顺不顺」，两者不是一回事。
+    重试成功意味着模型最终给出了合规输出，判分依据并没有变差；重试失败则走 `unrated`，
+    根本不会到这里。实测佐证：某次全量 228 项中 46 项被标「建议复核」，
+    **全部**由重试触发（截断 0.9 × 重试 0.9 = 0.81 掉到 0.85 阈值下），
+    而截断是 budget 的必然结果、156 项都有——等于「重试过一次就必然进复核清单」，
+    真正该看的证据质量问题反被噪声淹没。那批重试里 63/64 是「重试后即成功」，
+    多数还是端点并发压力导致的 5xx，与判分质量无关。
+    重试次数仍完整保留在 `attempts` 字段与页面③的实时指标里，信息没有丢，只是不再打折。
     """
     score = float(validated["score"])
 
@@ -679,9 +689,7 @@ def _score_and_confidence(
     if any(row.get("truncated") is True for row in evidence.get("picked") or []):
         confidence *= 0.9
         factors.append("截断")
-    if attempts > 1:
-        confidence *= 0.9
-        factors.append("重试")
+    # 重试不打折，理由见本函数 docstring。attempts 仍原样落盘。
     return score, round(confidence, 3), factors
 
 

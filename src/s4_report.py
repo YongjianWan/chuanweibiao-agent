@@ -24,7 +24,8 @@ from typing import Any, Mapping, Sequence
 
 import yaml
 
-# confidence 低于该值的项进 review_flags 与页面④的 ⚠（§6，阈值由三因素表算出）
+# confidence 低于该值的项进 review_flags 与页面④的 ⚠（§6，阈值由两因素表算出，
+# 推导见 docs/data-contract.md 的 confidence 条）
 REVIEW_FLAG_THRESHOLD = 0.85
 
 # 未采集字段的占位口径：不得省略、不得估算（§7，同 ui-spec.md 页面③约定）
@@ -67,11 +68,17 @@ def _flag_why(result: Mapping[str, Any]) -> str:
     parts: list[str] = []
     if result.get("miss_reason") == "not_found":
         parts.append("检索未命中（文件在但证据定位未找到），把「写了」判成「没写」的风险位")
+    if not parts:
+        # 默认理由写死「证据降级」依赖一个隐式前提：当前两因素（降级 0.7 / 截断 0.9）
+        # 口径下，rated 且 confidence < 0.85 的项必然含降级（仅截断是 0.90，不进清单）。
+        # 将来若调整因素或乘数，这个默认理由要跟着重审——data-contract 里
+        # 「改因素必须重算阈值表」的规矩覆盖不到这行文案。
+        parts.append("证据降级（细粒度检索词未命中，退回评分项名重检索），证据可能不对题")
+    # 重试次数不再是打折原因（2026-08-21，见 s3_review._score_and_confidence 的 docstring），
+    # 但它是排查线索，附在后面，不单独构成进 review_flags 的理由。
     attempts = result.get("attempts") or 0
     if attempts > 1:
-        parts.append(f"经 {attempts} 次尝试才成功（重试过）")
-    if not parts:
-        parts.append("置信度低于阈值（证据降级或截断，见对应证据包）")
+        parts.append(f"另：该项调用重试过 {attempts - 1} 次（不影响置信度）")
     return "；".join(parts)
 
 
