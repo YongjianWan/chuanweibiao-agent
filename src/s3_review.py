@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -176,6 +177,136 @@ class OpenAICompatibleClient:
         )
 
 
+class AgentFactoryClient:
+    """智能体工厂（`/api/agents/test/{agent}/chat`）客户端。
+
+    该端点与 OpenAI Chat Completions 有四处硬差异，逐条对应本类的处理：
+
+    1. **没有 system role**，请求体只有一个 ``message`` 字符串 —— 把 system 与 user
+       拼成一条发送。
+    2. **不传 ``thread_id`` 并非每次独立**（平台文档写的是「不传每次独立」，2026-08-20
+       实测为错）：前一次调用种下的内容会被后一次读到。228 次评审若共用上下文，
+       各家标书会互相污染，撞 README §0「只做每家独立打分」。因此**每次调用都传一个
+       本进程内唯一的 ``thread_id``**，重跑换新 ``run_id``，不复用历史会话。
+    3. **响应没有 token 计数**（``usage`` 恒为 null），故 in/out token 由字符数估算，
+       估算口径见 ``_estimate_tokens``，报告中必须注明是估算值而非端点返回值。
+    4. **必须绕过 HTTP 代理**：端点是内网地址，而 ``urllib`` 默认读 ``HTTP_PROXY``
+       环境变量，走代理会直接超时且报不出原因（实测排查成本极高）。
+
+    另有一处不可控：该端点不接受 ``temperature``，同一输入多次调用分数会有小幅波动
+    （实测同一证据包三次判分 3.6 / 3.7，档位一致）。档位内差异按 README §1 的 P0
+    口径可接受，但报告里不要声称结果逐位可复现。
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str,
+        agent_id: str,
+        timeout: float = 300.0,
+        run_id: str = "",
+    ) -> None:
+        if not base_url or not api_key or not agent_id:
+            raise ValueError("base_url、api_key 和 agent_id 均不能为空")
+        self.endpoint = f"{base_url.rstrip('/')}/api/agents/test/{agent_id}/chat"
+        self.api_key = api_key
+        self.agent_id = agent_id
+        self.timeout = timeout
+        self.name = agent_id
+        # run_id 隔离不同批次：重跑时换一个，避免读到上一批的会话内容。
+        self.run_id = run_id or f"s3-{int(time.time())}"
+        self._seq = 0
+        self._seq_lock = threading.Lock()
+        # 显式空代理：内网端点不能走 HTTP_PROXY，否则超时。
+        self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+    @classmethod
+    def from_env(cls, timeout: float = 300.0) -> "AgentFactoryClient":
+        missing = [
+            key
+            for key in ("AF_BASE_URL", "AF_API_KEY", "AF_AGENT_ID")
+            if not os.environ.get(key)
+        ]
+        if missing:
+            raise ValueError(f"缺少智能体工厂环境变量：{', '.join(missing)}")
+        return cls(
+            os.environ["AF_BASE_URL"],
+            os.environ["AF_API_KEY"],
+            os.environ["AF_AGENT_ID"],
+            timeout=timeout,
+        )
+
+    def _next_thread_id(self) -> str:
+        with self._seq_lock:
+            self._seq += 1
+            return f"{self.run_id}-{self._seq:04d}"
+
+    @staticmethod
+    def _estimate_tokens(text: str) -> int:
+        """端点不返回 usage，按中文约 1.5 字/token 估算，宁可高估不低估。
+
+        这是估算不是实测，交付报告里必须标注来源，不得与端点返回的真实计数混列。
+        """
+        return max(1, round(len(text) / 1.5))
+
+    def complete(self, messages: Sequence[Mapping[str, str]]) -> ModelResponse:
+        merged = "\n\n".join(message["content"] for message in messages)
+        body = json.dumps(
+            {
+                "message": merged,
+                "thread_id": self._next_thread_id(),
+                "stream": False,
+            },
+            ensure_ascii=False,
+        ).encode("utf-8")
+        request = urllib.request.Request(
+            self.endpoint,
+            data=body,
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        started = time.perf_counter()
+        try:
+            with self._opener.open(request, timeout=self.timeout) as response:
+                raw = response.read(MAX_RESPONSE_BYTES + 1)
+                if len(raw) > MAX_RESPONSE_BYTES:
+                    raise RuntimeError("智能体工厂响应超过 2 MiB 上限")
+                try:
+                    payload = json.loads(raw.decode("utf-8"))
+                except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                    raise RuntimeError("智能体工厂响应不是有效的 UTF-8 JSON") from exc
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")[:500]
+            raise RuntimeError(f"智能体工厂 HTTP {exc.code}: {detail}") from exc
+        except (urllib.error.URLError, TimeoutError) as exc:
+            raise RuntimeError(f"智能体工厂连接失败：{exc}") from exc
+
+        latency_ms = round((time.perf_counter() - started) * 1000)
+        content = payload.get("response")
+        if not isinstance(content, str) or not content.strip():
+            raise RuntimeError(f"智能体工厂响应缺少 response 正文：{str(payload)[:200]}")
+        usage = payload.get("usage") or {}
+        in_tokens = usage.get("prompt_tokens")
+        out_tokens = usage.get("completion_tokens")
+        return ModelResponse(
+            content=content,
+            in_tokens=(
+                _non_negative_int(in_tokens, "prompt_tokens")
+                if in_tokens is not None
+                else self._estimate_tokens(merged)
+            ),
+            out_tokens=(
+                _non_negative_int(out_tokens, "completion_tokens")
+                if out_tokens is not None
+                else self._estimate_tokens(content)
+            ),
+            latency_ms=latency_ms,
+        )
+
+
 def _non_negative_int(value: Any, name: str) -> int:
     if isinstance(value, bool):
         raise RuntimeError(f"{name} 不是非负整数")
@@ -305,9 +436,46 @@ def build_messages(
     ]
 
 
+def _extract_json_object(text: str) -> "str | None":
+    """从夹带自然语言的文本里抠出第一个花括号平衡的 JSON 对象。
+
+    有些端点（如智能体工厂）会在正式答案前吐一段思考过程，或把 JSON 裹进
+    ``` 代码块且围栏前后还有文字，此时整段既不是 JSON 也不以 ``` 开头。
+    字符串内的花括号与转义要跳过，否则 reason 里出现 "}" 会截错位置。
+    """
+    start = text.find("{")
+    if start < 0:
+        return None
+    depth = 0
+    in_string = False
+    escaped = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : index + 1]
+    return None
+
+
 def _parse_json_object(content: str) -> dict[str, Any]:
-    """解析 JSON，并兼容模型偶尔附加的 Markdown ```json 代码块。"""
+    """解析 JSON，兼容 Markdown ```json 代码块与正文前后夹带的思考过程。"""
     text = content.strip()
+    # 部分端点把思考过程与正答用 </think> 分隔，取最后一段。
+    if "</think>" in text:
+        text = text.rsplit("</think>", 1)[1].strip()
     if text.startswith("```"):
         lines = text.splitlines()
         if len(lines) >= 3 and lines[-1].strip() == "```":
@@ -317,7 +485,14 @@ def _parse_json_object(content: str) -> dict[str, Any]:
     try:
         payload = json.loads(text)
     except json.JSONDecodeError as exc:
-        raise ReviewError(f"JSON 解析失败：{exc.msg}") from exc
+        # 整段不是 JSON 时，退而求其次抠出其中第一个 JSON 对象再试一次。
+        candidate = _extract_json_object(text)
+        if candidate is None:
+            raise ReviewError(f"JSON 解析失败：{exc.msg}") from exc
+        try:
+            payload = json.loads(candidate)
+        except json.JSONDecodeError as inner:
+            raise ReviewError(f"JSON 解析失败：{inner.msg}") from inner
     if not isinstance(payload, dict):
         raise ReviewError("模型输出必须是 JSON 对象")
     return payload
@@ -665,7 +840,12 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("sections", type=Path, help="S1 章节 JSON，用于回填证据正文")
     parser.add_argument("output", type=Path, help="review_results.json 输出路径")
     parser.add_argument("--mock", action="store_true", help="使用本地确定性 Mock 模型")
-    parser.add_argument("--timeout", type=float, default=60.0, help="真实模型请求超时秒数")
+    parser.add_argument(
+        "--agent-factory",
+        action="store_true",
+        help="使用智能体工厂端点（读 AF_BASE_URL / AF_API_KEY / AF_AGENT_ID）",
+    )
+    parser.add_argument("--timeout", type=float, default=300.0, help="真实模型请求超时秒数")
     parser.add_argument("--max-attempts", type=int, default=DEFAULT_MAX_ATTEMPTS)
     parser.add_argument(
         "--max-retry-rounds",
@@ -685,9 +865,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise ValueError("评分表 YAML 顶层必须是对象")
     summary = args.project_summary.read_text(encoding="utf-8").strip()
     sections = _extract_sections(_read_json(args.sections))
-    client: ModelClient = (
-        MockModelClient() if args.mock else OpenAICompatibleClient.from_env(args.timeout)
-    )
+    if args.mock:
+        client: ModelClient = MockModelClient()
+    elif args.agent_factory:
+        client = AgentFactoryClient.from_env(args.timeout)
+    else:
+        client = OpenAICompatibleClient.from_env(args.timeout)
     output = review_all(
         evidence,
         scoring_table,
