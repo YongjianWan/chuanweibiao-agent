@@ -1,0 +1,23 @@
+{
+  "item_id": "T-18",
+  "bidder": "中国建筑第五工程局有限公司8002423",
+  "item_guid": "6c230e96-2e06-4c28-a648-0181e132707f",
+  "status": "rated",
+  "tier": "优",
+  "score": 2.6,
+  "miss_reason": null,
+  "cite": [
+    0,
+    1,
+    2
+  ],
+  "reason": "风险管理方案从费用风险（变更签证管理、材料价格锁定、分包合同风险转移）等维度开展，措施具体、具备可操作性，覆盖全过程管理，内容完整充实，符合'优'（2.5-3 分）档要求。",
+  "confidence": 0.9,
+  "attempts": 1,
+  "last_error": "",
+  "perf": {
+    "in_tokens": 3905,
+    "out_tokens": 91,
+    "latency_ms": 2031
+  }
+}

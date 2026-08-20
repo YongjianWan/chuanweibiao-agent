@@ -1,0 +1,24 @@
+{
+  "item_id": "T-05",
+  "bidder": "中冶建工集团有限公司8010856",
+  "item_guid": "acabee9d-b7e9-4461-9491-1ee7dacefac3",
+  "status": "rated",
+  "tier": "优",
+  "score": 3.5,
+  "miss_reason": null,
+  "cite": [
+    0,
+    1,
+    3,
+    4
+  ],
+  "reason": "投标文件安全、职业健康和环境管理方案内容详实，覆盖劳动保护用品配备与全流程管控、医疗卫生与防疫联动、环境卫生清扫保洁、食堂卫生专项监管等多项职业健康措施，内容完整、针对性强，体现较好的管理深度，符合'优'档评分要求，综合评定为该档偏低水平。",
+  "confidence": 0.81,
+  "attempts": 2,
+  "last_error": "",
+  "perf": {
+    "in_tokens": 7445,
+    "out_tokens": 299,
+    "latency_ms": 11740
+  }
+}

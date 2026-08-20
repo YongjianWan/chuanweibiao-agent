@@ -1,0 +1,25 @@
+{
+  "item_id": "T-17",
+  "bidder": "中铁二十一局集团有限公司8009331",
+  "item_guid": "c43a82b9-31a1-4f6b-acf5-a9af954b6816",
+  "status": "rated",
+  "tier": "优",
+  "score": 3.5,
+  "miss_reason": null,
+  "cite": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "reason": "投标文件材料采购管理方案内容完整详实，涵盖材料领用审批流程、限额领料制度、材料使用追踪、损耗控制及余料回收管理等全周期管理环节，具备可操作性且与项目装配式构件、钢结构等具体材料特点相结合，整体达到优档水平。",
+  "confidence": 0.9,
+  "attempts": 1,
+  "last_error": "",
+  "perf": {
+    "in_tokens": 3681,
+    "out_tokens": 113,
+    "latency_ms": 2374
+  }
+}

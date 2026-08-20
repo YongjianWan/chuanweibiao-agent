@@ -1,0 +1,23 @@
+{
+  "item_id": "T-07",
+  "bidder": "中铁二十一局集团有限公司8009331",
+  "item_guid": "51f11a77-e946-4abd-ba0f-b5f47ceb9e04",
+  "status": "rated",
+  "tier": "优",
+  "score": 2.6,
+  "miss_reason": null,
+  "cite": [
+    0,
+    1,
+    2
+  ],
+  "reason": "风险管理方案从费用风险（变更签证管理、材料价格锁定、分包合同风险转移）等维度开展，措施具体、具备可操作性，覆盖全过程管理，内容完整充实，符合'优'（2.5-3 分）档要求。",
+  "confidence": 0.9,
+  "attempts": 1,
+  "last_error": "",
+  "perf": {
+    "in_tokens": 2856,
+    "out_tokens": 91,
+    "latency_ms": 2032
+  }
+}

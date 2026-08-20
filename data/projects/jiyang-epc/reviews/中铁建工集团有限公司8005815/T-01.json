@@ -1,0 +1,30 @@
+{
+  "item_id": "T-01",
+  "bidder": "中铁建工集团有限公司8005815",
+  "item_guid": "75bd5598-9f76-4e3b-8a0a-d494380d4d9d",
+  "status": "rated",
+  "tier": "优",
+  "score": 17.5,
+  "miss_reason": null,
+  "cite": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    12,
+    13,
+    20,
+    21
+  ],
+  "reason": "投标文件从建筑、结构、暖通等各专业对设计任务书进行了系统性细化优化，提出的优化建议具体可行。设计任务书优化内容完整，满足工程设计要求，并设有完善的设计质量保证措施，",
+  "confidence": 0.81,
+  "attempts": 3,
+  "last_error": "",
+  "perf": {
+    "in_tokens": 30117,
+    "out_tokens": 489,
+    "latency_ms": 12137
+  }
+}

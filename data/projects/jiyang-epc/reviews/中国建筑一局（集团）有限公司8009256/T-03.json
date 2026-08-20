@@ -1,0 +1,23 @@
+{
+  "item_id": "T-03",
+  "bidder": "中国建筑一局（集团）有限公司8009256",
+  "item_guid": "9e60551f-c8b5-4b2b-81aa-ceb4b4a86d2d",
+  "status": "rated",
+  "tier": "优",
+  "score": 2.7,
+  "miss_reason": null,
+  "cite": [
+    0,
+    1,
+    2
+  ],
+  "reason": "费用及资金管理方案内容完整、系统，覆盖资金统筹调度与风控合规、收支全流程透明化与专款专用、多级联签审批及内审监督、以及成本控制与竣工决算评价等全过程管理，体系健全、措施具体，符合'优'档（2.5-3分）水平。",
+  "confidence": 0.81,
+  "attempts": 3,
+  "last_error": "",
+  "perf": {
+    "in_tokens": 9039,
+    "out_tokens": 471,
+    "latency_ms": 6651
+  }
+}

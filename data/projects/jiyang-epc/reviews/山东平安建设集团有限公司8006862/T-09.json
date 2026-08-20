@@ -1,0 +1,32 @@
+{
+  "item_id": "T-09",
+  "bidder": "山东平安建设集团有限公司8006862",
+  "item_guid": "3a101949-3b00-4c83-a62a-fafe13ac376e",
+  "status": "rated",
+  "tier": "优",
+  "score": 2.5,
+  "miss_reason": null,
+  "cite": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11
+  ],
+  "reason": "投标文件设有完善的信息管理系统（第三节），涵盖档案管理、文件归档、借阅、保密及信息网络平台建设，体系完整、内容详实，符合'优'档（2-3分）要求，故评2.5分。",
+  "confidence": 0.9,
+  "attempts": 1,
+  "last_error": "",
+  "perf": {
+    "in_tokens": 4102,
+    "out_tokens": 113,
+    "latency_ms": 1903
+  }
+}

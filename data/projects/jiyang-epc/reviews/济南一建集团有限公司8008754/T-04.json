@@ -1,0 +1,24 @@
+{
+  "item_id": "T-04",
+  "bidder": "济南一建集团有限公司8008754",
+  "item_guid": "255bb711-dc0e-4968-bf39-2a61b0abc8eb",
+  "status": "rated",
+  "tier": "优",
+  "score": 3.5,
+  "miss_reason": null,
+  "cite": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "reason": "投标文件在施工现场总平面布置中从现场围挡及出入口、生活区、办公区、临时用电等多个方面进行了较为全面细致的布置，内容完整且与项目特征（临近教学区、安全文明施工要求高）相匹配，达到“优”档水平。",
+  "confidence": 0.9,
+  "attempts": 1,
+  "last_error": "",
+  "perf": {
+    "in_tokens": 6001,
+    "out_tokens": 105,
+    "latency_ms": 2018
+  }
+}
