@@ -732,15 +732,11 @@
     return fileOrdinal + "#" + blockOrdinal;
   }
 
-  function seedForItem(bidder, item, itemIndex) {
+  function seedForItem(bidder, item) {
     if (!LOCATED_SEED.length) return null;
-    const sameBidderAndItem = LOCATED_SEED.find((row) =>
+    return LOCATED_SEED.find((row) =>
       row && row.item_id === item.id && (row.bidder === bidder.name || row.bidder_id === bidder.id)
-    );
-    if (sameBidderAndItem) return sameBidderAndItem;
-    const sameItem = LOCATED_SEED.find((row) => row && row.item_id === item.id);
-    if (sameItem) return sameItem;
-    return LOCATED_SEED[itemIndex % LOCATED_SEED.length];
+    ) || null;
   }
 
   function fallbackPickedRows(bidder, item, bidderIndex, itemIndex) {
@@ -790,10 +786,10 @@
     return seed.picked.slice(0, 4).map((row) => ({
       section_id: row.section_id,
       file: row.file,
-      item_id: row.item_id || item.id,
-      item_guid: row.item_guid || item.guid,
-      bidder: row.bidder === bidder.name ? row.bidder : bidder.name,
-      bidder_id: bidder.id,
+      item_id: row.item_id || seed.item_id || item.id,
+      item_guid: row.item_guid || seed.item_guid || item.guid,
+      bidder: row.bidder || seed.bidder || bidder.name,
+      bidder_id: row.bidder_id || seed.bidder_id || bidder.id,
       page: row.page || null,
       level: row.level || (Array.isArray(row.path) ? row.path.length : 1),
       path: Array.isArray(row.path) && row.path.length ? row.path : ["未命名章节"],
@@ -834,7 +830,7 @@
 
   function makeEvidencePackage(bidder, item, bidderIndex, itemIndex, resultStatus, score) {
     const noEvidence = resultStatus === "unrated" || score === 0;
-    const seed = seedForItem(bidder, item, itemIndex);
+    const seed = seedForItem(bidder, item);
     const budget = evidenceBudgetFor(item);
     const rawPicked = noEvidence ? [] : (seedPickedRows(seed, bidder, item) || fallbackPickedRows(bidder, item, bidderIndex, itemIndex));
     const picked = fitPickedRowsToBudget(rawPicked, budget);
