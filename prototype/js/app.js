@@ -2087,14 +2087,13 @@
     const liveValue = Number(LIVE.concurrency);
     if (liveActive() && Number.isFinite(liveValue) && liveValue > 0) return liveValue;
     if (liveConnecting()) return null;
-    const value = DATA.reportData && DATA.reportData.perf ? Number(DATA.reportData.perf.concurrency) : NaN;
-    return Number.isFinite(value) && value > 0 ? value : null;
+    return null;
   }
 
   function concurrencyLabel() {
     if (liveConnecting()) return "接入中";
     const value = numericConcurrency();
-    return value ? value + " 路" : html((DATA.reportData.perf && DATA.reportData.perf.concurrency) || "未采集");
+    return value ? value + " 路" : "未采集";
   }
 
   // ================= T10/T11：实时运行（README §3.8）=================
