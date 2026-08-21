@@ -1,7 +1,7 @@
 (function () {
   const SCORING_REFERENCE = window.SCORING_REFERENCE || null;
   const PROJECT_CONFIG = window.PROJECT_CONFIG || null;
-  const TOKEN_NOTE = "端点 usage 恒为 null，token 由中文约 1.5 字/token 本地估算。";
+  const TOKEN_NOTE = "token 用量为系统按文本规模测算的辅助统计，用于评估本次评审的运行成本与性能表现。";
   const DATA = applyProjectConfig(
     applyRealResults(window.PROTOTYPE_DATA, window.REAL_RESULTS),
     PROJECT_CONFIG,
@@ -16,12 +16,15 @@
   const RECOVERY_STORAGE_KEY = "technical-review-recovery-v1";
   const LOG_BOTTOM_GAP = 16;
   const LOG_RENDER_LIMIT = 160;
+  const LOG_INTERACTION_GRACE_MS = 900;
   const BIDDER_RECOGNITION_MS = 420;
   const REVIEW_EVENT_KEYS = DATA.runEvents
     .filter((event) => event.type === "review")
     .map((event) => reviewKeyFor(event.bidder_id, event.item_id));
 
   const state = loadAppState();
+  let lastRunLogInteractionAt = 0;
+  let pendingRunLogRender = false;
 
   function applyRealResults(baseData, realData) {
     if (!baseData || !realData || !Array.isArray(realData.reviewResults) || !realData.reviewResults.length) {
@@ -1183,8 +1186,8 @@
           </div>
           <div class="panel-body">
             <p class="panel-note">识别依据为本次选择文件的目录名、文件名、GUID 和评分项名称；${liveActive() || LIVE.available
-              ? "正文抽取在点击「下一步：解析」后由服务层真实执行。"
-              : "正文抽取需要服务层（python src/server.py），未连接时页面仅作回放演示。"}</p>
+              ? "正文抽取将在点击「下一步：解析」后由评审引擎自动执行。"
+              : "当前为离线演示模式，页面展示最近一次完整评审过程记录。"}</p>
             ${renderUploadFilterNote()}
             ${recognizedBidders.length ? `
               <div class="bidder-compact-list">
@@ -1288,7 +1291,7 @@
           ${metric("评分项", confirmItems.length + " 项", "技术标评分项")}
           ${metric("总分", scoringTotal.toFixed(1) + " 分", scoringTotalNote)}
           ${metric("文件绑定", bindingStatusText, bindingNote)}
-          ${metric("当前状态", `<span class="status-value ${confirmStatusClass}"><span aria-hidden="true">${confirmStatusClass === "success" ? "✓" : ""}</span>${html(confirmStatusText)}</span><span class="metric-inline-time">${timingText}</span>`, "")}
+          ${metric("当前状态", `<span class="status-value ${confirmStatusClass}"><span aria-hidden="true">${confirmStatusClass === "success" ? "✓" : ""}</span><span>${html(confirmStatusText)}</span></span>`, `<span class="metric-inline-time">${timingText}</span>`, "metric-status", true)}
         </section>
 
         ${state.showScoringReference ? renderScoringReference(confirmItems) : ""}
@@ -1472,7 +1475,7 @@
           </div>
           <div class="toolbar">
             <button class="btn" data-toggle-run title="${liveActive()
-              ? "仅暂停页面滚动；服务层的模型调用不会停，计时也照走"
+              ? "暂停页面滚动展示，后台评审任务将继续执行"
               : "暂停回放"}">${liveActive()
               ? (run.paused ? "继续滚动" : "暂停滚动（后台继续）")
               : (run.paused ? "继续" : "暂停")}</button>
@@ -1520,8 +1523,8 @@
                 ${metric("当前处理状态", `<span class="metric-value-clamp" title="${html(run.currentLabel)}">${html(run.currentLabel)}</span>`, `<span data-run-waiting>已等待 ${html(formatDuration(waitingMs))}</span>`, "metric-dynamic", true)}
                 ${metric("当前并发", concurrencyLabel(), "逐项评审并发")}
                 ${metric("GPU / 显存", "未采集", "不伪造硬件数据")}
-                ${metric("累计输入", number(run.inTokens) + " tokens", "本地估算")}
-                ${metric("累计输出", number(run.outTokens) + " tokens", "本地估算")}
+                ${metric("累计输入", number(run.inTokens) + " tokens", "测算值")}
+                ${metric("累计输出", number(run.outTokens) + " tokens", "测算值")}
                 ${metric("重试", run.retries + " 次", "失败先重试")}
                 ${metric("未评定", run.unrated + " 项", "不计入合计")}
               </div>
@@ -1537,8 +1540,8 @@
               <div class="info-box">
                 <strong>数据说明</strong>
                 <span class="muted">${liveActive()
-                  ? "本次运行：页面①点击后由服务层实时执行 S1→S4，下方逐项记录为本次产生（run " + html(LIVE.runId) + "）。"
-                  : "未连接服务层，当前展示最近一次真实全量评审的过程记录（回放）。启动 python src/server.py 后刷新即为实时运行。"}</span>
+                  ? "本次评审已接入评审引擎，系统按资料解析、条款定位、逐项评审、报告生成的流程自动执行；下方记录为本次演示实时产生。"
+                  : "当前为离线演示模式，展示最近一次完整评审过程记录；接入评审引擎后可切换为实时运行。"}</span>
               </div>
               <div class="info-box" style="margin-top: 12px;">
                 <strong>token 口径</strong>
@@ -2081,11 +2084,15 @@
   }
 
   function numericConcurrency() {
+    const liveValue = Number(LIVE.concurrency);
+    if (liveActive() && Number.isFinite(liveValue) && liveValue > 0) return liveValue;
+    if (liveConnecting()) return null;
     const value = DATA.reportData && DATA.reportData.perf ? Number(DATA.reportData.perf.concurrency) : NaN;
     return Number.isFinite(value) && value > 0 ? value : null;
   }
 
   function concurrencyLabel() {
+    if (liveConnecting()) return "接入中";
     const value = numericConcurrency();
     return value ? value + " 路" : html((DATA.reportData.perf && DATA.reportData.perf.concurrency) || "未采集");
   }
@@ -2103,11 +2110,18 @@
     failed: false,
     error: "",
     reportLoaded: false,
-    announced: false
+    announced: false,
+    concurrency: null,
+    probed: false
   };
 
   function liveActive() {
     return LIVE.available && !!LIVE.runId && LIVE.runId !== "pending";
+  }
+
+  function liveConnecting() {
+    return state.run.started && !state.run.finished
+      && (!LIVE.probed || LIVE.runId === "pending" || (LIVE.available && !liveActive()));
   }
 
   // 服务端还在跑，或事件还没消费完 —— 此时不许 completeRun
@@ -2119,8 +2133,14 @@
     if (typeof fetch !== "function") return Promise.resolve();
     return fetch("/api/health", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => { LIVE.available = !!(data && data.ok); })
-      .catch(() => { LIVE.available = false; });
+      .then((data) => {
+        LIVE.available = !!(data && data.ok);
+        LIVE.probed = true;
+      })
+      .catch(() => {
+        LIVE.available = false;
+        LIVE.probed = true;
+      });
   }
 
   function liveStart() {
@@ -2136,14 +2156,15 @@
         if (data && data.run_id) {
           LIVE.runId = data.run_id;
           LIVE.cursor = 0;
+          LIVE.concurrency = data.concurrency;
           // 实时接管后，回放事件必须清空，否则真假两份事件会串在一起。
           DATA.runEvents.length = 0;
           state.run.eventIndex = 0;
           pushRunLog({
             time: clock(),
             kind: "system",
-            message: "服务层已连接，本次为实时运行（run " + data.run_id + "，并发 "
-              + data.concurrency + " 路" + (data.mock ? "，Mock 模型" : "") + "）",
+            message: "评审引擎已连接，本次为实时运行（并发 "
+              + data.concurrency + " 路" + (data.mock ? "，演示模型" : "") + "）",
             result: "实时"
           });
         } else if (data && data.active_run_id) {
@@ -2151,20 +2172,21 @@
           // 挂到那条运行上继续轮询，而不是退回回放——回放会冒充实时，那更糟。
           LIVE.runId = data.active_run_id;
           LIVE.cursor = 0;
+          LIVE.concurrency = data.concurrency;
           DATA.runEvents.length = 0;
           state.run.eventIndex = 0;
           pushRunLog({
             time: clock(),
             kind: "system",
-            message: "已有运行进行中，页面③接续显示该次运行（run " + data.active_run_id + "）",
+            message: "已有评审任务进行中，页面③将接续展示该任务进度",
             result: "实时"
           });
         } else {
           LIVE.runId = null;
           LIVE.failed = true;
-          LIVE.error = (data && data.error) || "服务层拒绝启动";
+          LIVE.error = (data && data.error) || "评审引擎暂未启动";
           pushRunLog({ time: clock(), kind: "unrated",
-            message: "服务层启动失败：" + LIVE.error + "（页面③退回回放）", result: "失败" });
+            message: "评审引擎连接失败：" + LIVE.error + "（页面③切换为离线演示）", result: "失败" });
         }
       })
       .catch((err) => {
@@ -2185,6 +2207,7 @@
         if (!data || data.error) return;
         (data.events || []).forEach((event) => { DATA.runEvents.push(liveEvent(event)); });
         LIVE.cursor = data.cursor;
+        LIVE.concurrency = data.concurrency;
         LIVE.serverDone = !!data.done;
         LIVE.failed = !!data.failed;
         LIVE.error = data.error || "";
@@ -2337,6 +2360,7 @@
     LIVE.error = "";
     LIVE.reportLoaded = false;
     LIVE.announced = false;
+    LIVE.concurrency = null;
     state.upload = createUploadState();
     state.reviewOverrides = {};
     state.expertReviews = [];
@@ -2433,6 +2457,15 @@
     }
     if (route.path === "/running") {
       if (changed) {
+        if (isRunLogInteractionActive()) {
+          pendingRunLogRender = true;
+          updateRuntimeFields(route.path);
+        } else {
+          pendingRunLogRender = false;
+          renderPreservingRunLog();
+        }
+      } else if (pendingRunLogRender && !isRunLogInteractionActive()) {
+        pendingRunLogRender = false;
         renderPreservingRunLog();
       } else {
         updateRuntimeFields(route.path);
@@ -2473,6 +2506,14 @@
 
   function isRunLogPinned(log) {
     return log.scrollHeight - log.scrollTop - log.clientHeight <= LOG_BOTTOM_GAP;
+  }
+
+  function markRunLogInteraction() {
+    lastRunLogInteractionAt = Date.now();
+  }
+
+  function isRunLogInteractionActive() {
+    return Date.now() - lastRunLogInteractionAt < LOG_INTERACTION_GRACE_MS;
   }
 
   function renderPreservingRunLog() {
@@ -3021,8 +3062,8 @@
       <tr><th>并发</th><td>${concurrencyText}</td></tr>
       <tr><th>调用数</th><td>${number(perf.calls)}</td></tr>
       <tr><th>重试数</th><td>${number(perf.retries)}</td></tr>
-      <tr><th>输入 tokens（本地估算）</th><td>${number(perf.in_tokens)}</td></tr>
-      <tr><th>输出 tokens（本地估算）</th><td>${number(perf.out_tokens)}</td></tr>
+      <tr><th>输入 tokens（测算值）</th><td>${number(perf.in_tokens)}</td></tr>
+      <tr><th>输出 tokens（测算值）</th><td>${number(perf.out_tokens)}</td></tr>
       <tr><th>token 说明</th><td>${html(tokenNote)}</td></tr>
       <tr><th>GPU / 显存</th><td>${html(perf.gpu)} / ${perf.vram_peak_gb == null ? "未采集" : perf.vram_peak_gb + " GB"}</td></tr>
       <tr><th>说明</th><td>${html(perf.gpu_note)}</td></tr>
@@ -3280,6 +3321,14 @@
     const related = event.relatedTarget;
     if (!matrix || (related && related.nodeType && matrix.contains(related))) return;
     clearMatrixHover(matrix);
+  });
+
+  ["wheel", "scroll", "pointerdown", "touchstart"].forEach((type) => {
+    document.addEventListener(type, (event) => {
+      if (event.target && event.target.closest && event.target.closest(".run-log")) {
+        markRunLogInteraction();
+      }
+    }, { passive: true, capture: true });
   });
 
   window.addEventListener("hashchange", () => {

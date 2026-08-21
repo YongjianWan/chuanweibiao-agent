@@ -115,6 +115,7 @@ class Run:
             "done": self.done,
             "failed": self.failed,
             "error": self.error,
+            "concurrency": self.concurrency,
             "elapsed_sec": round((self.finished_at or time.time()) - self.started_at, 1),
         }
 
@@ -348,7 +349,7 @@ class Handler(BaseHTTPRequestHandler):
         if active is not None:
             return self.send_json(
                 {"error": f"已有运行进行中（run {active.id}），等它跑完再发起",
-                 "active_run_id": active.id}, 409)
+                 "active_run_id": active.id, "concurrency": active.concurrency}, 409)
 
         run = Run(
             run_id=uuid.uuid4().hex[:12],
