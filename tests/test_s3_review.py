@@ -217,14 +217,60 @@ def test_confidence_applies_fallback_and_truncation_but_not_retry():
     assert result["attempts"] == 2
 
 
-def test_score_out_of_tier_triggers_retry():
-    # "良" 档区间为 [2.0, 3.0)，3.0 应被判越界。
-    client = SequenceClient([model_payload(score=3.0)] * 4)
+def test_score_outside_all_tiers_triggers_retry():
+    """score 落在全部档位之外才算越界。
+
+    档位区间合起来是 [1.0, 4.0]，0.5 不属于任何一档。注意「0 分」不走这条路——
+    没有证据时由 `_no_evidence()` 直接给 0，不调模型（见 test_no_file_miss…）。
+    """
+    client = SequenceClient([model_payload(score=0.5)] * 4)
 
     result = review_one(EVIDENCE, ITEM, "摘要", [], SECTIONS, client, sleep=lambda _: None)
 
     assert result["status"] == "unrated"
-    assert "不在档位 良 的有效区间内" in result["last_error"]
+    assert "不落在任何档位区间内" in result["last_error"]
+
+
+def test_tier_is_derived_from_score_not_taken_from_model():
+    """tier 由 score 反推，模型自报的 tier 一律忽略。
+
+    这条守的是 2026-08-21 的决定：tier 是 score 的函数，不是模型的独立输出。
+    改回「读模型的 tier 再校验一致性」，就把「tier 与 score 自相矛盾」这个
+    状态请了回来——它曾让一整项 4 次重试后判 unrated（济南一建 / T-12，
+    模型给 tier=优 配 score=3.5）。理由见 `_tier_of_score` 的 docstring。
+    """
+    # 模型说「一般」，但 3.5 落在「优」档 [3.0, 4.0]，以 score 为准。
+    client = SequenceClient([model_payload(tier="一般", score=3.5)])
+
+    result = review_one(EVIDENCE, ITEM, "摘要", [], SECTIONS, client)
+
+    assert result["status"] == "rated"
+    assert result["tier"] == "优"
+    assert result["score"] == 3.5
+    assert result["attempts"] == 1  # 不再因矛盾而重试
+
+
+def test_tier_boundary_belongs_to_the_higher_tier():
+    """区间边界值归上一档：3.0 是「优」的 min，也是「良」的 max（右开），判「优」。"""
+    client = SequenceClient([model_payload(score=3.0)])
+
+    result = review_one(EVIDENCE, ITEM, "摘要", [], SECTIONS, client)
+
+    assert result["status"] == "rated"
+    assert result["tier"] == "优"
+
+
+def test_model_tier_field_is_not_required():
+    """模型不再需要输出 tier，缺这个字段不算格式错。"""
+    payload = json.dumps(
+        {"score": 2.6, "cite": [0], "reason": "含关键路径。"}, ensure_ascii=False
+    )
+    client = SequenceClient([payload])
+
+    result = review_one(EVIDENCE, ITEM, "摘要", [], SECTIONS, client)
+
+    assert result["status"] == "rated"
+    assert result["tier"] == "良"
 
 
 def test_highest_tier_uses_closed_interval():

@@ -66,11 +66,11 @@ class MockModelClient:
         tier_index = len(tiers) // 2
         tier = tiers[tier_index]
         # score 落在该档位区间内，取中点；最高档为闭区间，其余左闭右开。
+        # 不输出 tier——档位由 score 反推（`_tier_of_score`），mock 照新契约来。
         score = (float(tier["min"]) + float(tier["max"])) / 2
         if tier_index > 0 and score >= float(tier["max"]):
             score = float(tier["max"]) - 0.05
         payload = {
-            "tier": tier["tier"],
             "score": round(score, 1),
             "cite": [0] if picked else [],
             "reason": "Mock 评审结果：证据覆盖主要要求，真实结论需接入模型端点后生成。",
@@ -422,13 +422,19 @@ def build_messages(
 
     # ===== 固定 System Prompt：模型侧调优时优先检查和修改这里 =====
     # 模型只返回引用编号，原文由系统从 evidence 回填，避免模型改写或编造引用。
-    # 档位判定以 item.criteria 原文为唯一依据；score 必须落在该档位区间内。
+    # 档位判定以 item.criteria 原文为唯一依据。
+    #
+    # **不要求模型输出 tier**（2026-08-21）：档位由 score 反推，见 `_tier_of_score`。
+    # 仍要求它「先判档、再在档内给分」——那是评标办法本身的思路，去掉会让分数失去锚点；
+    # 判的是哪一档写进 reason，人能看见，但它不再是一个能与 score 打架的独立字段。
     system = (
         "你是工程建设技术标辅助评审模型。严格对照招标文件评审标准和项目事实评审。"
         "只能引用 evidence 中已有的 index，不得生成或改写原文。"
-        "只输出一个 JSON 对象，字段为 tier、score、cite、reason。"
-        "tier 必须是评分档位之一；score 必须是一个数字，且落在 tier 对应的分值区间内；"
-        "cite 是证据编号数组，无相关证据时可为空；reason 说明判分理由。"
+        "先按 scoring_item.criteria 判定该项属于哪一档，再在该档的分值区间内给出具体分数。"
+        "只输出一个 JSON 对象，字段为 score、cite、reason。"
+        "score 必须是一个数字，且落在 scoring_item.tiers 中某一档的 min~max 区间内；"
+        "cite 是证据编号数组，无相关证据时可为空；"
+        "reason 说明判分理由，并写明判定的档位名称。"
     )
     return [
         {"role": "system", "content": system},
@@ -530,8 +536,9 @@ def _parse_json_object(content: str) -> dict[str, Any]:
     4. 抠出第一个 JSON 对象后解析，仍失败则再修一次 —— 零损失，只削外围噪声
 
     **不做「逐段砍尾」那一级。** 参考实现（`js/app.js` 的 `parseJSON`）有第五级：
-    从末尾一个个砍掉不完整的片段直到能解析。那是**有损**的——评审结果只有
-    tier/score/cite/reason 四个字段，砍掉任何一个都不是「少显示一点」而是判分失效。
+    从末尾一个个砍掉不完整的片段直到能解析。那是**有损**的——模型只输出
+    score/cite/reason 三个字段（tier 由 score 反推），砍掉任何一个都不是
+    「少显示一点」而是判分失效。
     该前端没有重试、用户在页面上等着，才必须有损抢救；本项目有 §3.6 的重试，
     直接失败重来更便宜也更安全。
     """
@@ -594,18 +601,40 @@ def _score_in_tier(score: float, tier: Mapping[str, Any], tier_index: int) -> bo
     return tier_min <= score < tier_max
 
 
+def _tier_of_score(score: float, tiers: Sequence[Mapping[str, Any]]) -> str | None:
+    """由 score 反推档位；不落在任何一档时返回 None。
+
+    **tier 是 score 的函数，不是模型的独立输出（2026-08-21）。**
+    档位区间由招标文件写死，一个分数只可能属于一档，让模型把同一个信息再说一遍，
+    换来的是「tier 与 score 自相矛盾」这一整类失败：模型给 ``tier=优`` 配
+    ``score=3.5``，系统校验不通过 → 重试 4 次 → 整项判 unrated。
+    实测代价是济阳区实验高级中学项目 228 项里丢掉 1 项（济南一建 / T-12）。
+
+    改成反推之后那个状态不存在了——不需要一致性校验、不需要为此重试、
+    不会为此判 unrated。**这是消除边界情况，不是增加容错**。
+
+    对下游的输出契约一个字段都没变：结果里仍有 ``tier``，只是它的来源从
+    「模型说的」变成「按区间算的」，所以 S4、导出脚本和前端一行都不用改。
+
+    边界归属沿用 `_score_in_tier`：最高档闭区间、其余左闭右开，
+    因此区间端点（如 3.0 同时是「优」的 min 与「良」的 max）归上一档。
+    """
+    for index, tier in enumerate(tiers):
+        if _score_in_tier(score, tier, index):
+            return str(tier["tier"])
+    return None
+
+
 def _validate_model_output(
     payload: Mapping[str, Any],
     item: Mapping[str, Any],
     evidence_count: int,
 ) -> dict[str, Any]:
-    """校验模型输出字段，并阻止错误档位、越界分数、越界引用进入结果。"""
-    tier_names = [tier["tier"] for tier in item["tiers"]]
-    tier = payload.get("tier")
-    if tier not in tier_names:
-        raise ReviewError(f"tier 必须是以下之一：{', '.join(tier_names)}")
-    tier_index = tier_names.index(tier)
+    """校验模型输出字段，并阻止越界分数、越界引用进入结果。
 
+    **不读模型自报的 tier**，档位由 score 反推，见 `_tier_of_score`。
+    模型即便多吐一个 ``tier`` 字段也会被忽略，不构成格式错误。
+    """
     reason = payload.get("reason")
     if not isinstance(reason, str) or not reason.strip():
         raise ReviewError("reason 必须是非空字符串")
@@ -626,10 +655,12 @@ def _validate_model_output(
     if isinstance(score, bool) or not isinstance(score, (int, float)):
         raise ReviewError("score 必须是数字")
     score = float(score)
-    if not _score_in_tier(score, item["tiers"][tier_index], tier_index):
-        raise ReviewError(
-            f"score {score} 不在档位 {tier} 的有效区间内"
+    tier = _tier_of_score(score, item["tiers"])
+    if tier is None:
+        ranges = "、".join(
+            f"{t['tier']} {t['min']}-{t['max']}" for t in item["tiers"]
         )
+        raise ReviewError(f"score {score} 不落在任何档位区间内，有效区间：{ranges}")
 
     return {"tier": tier, "reason": reason.strip(), "cite": clean_cite, "score": score}
 
