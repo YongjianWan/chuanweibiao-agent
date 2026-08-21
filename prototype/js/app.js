@@ -2251,8 +2251,11 @@
       run.stages["PDF 入库"] = "已完成";
       run.stages["证据定位"] = "已完成";
       saveState();
-      liveStart();
     }
+    // 挪到条件外：刷新页面后 run.started 已是 true，若启动时的重连失败，
+    // 这里再不补一次 liveStart，服务端运行就成孤儿、页面悄悄退回回放。
+    // liveStart 幂等（runId 已在则早退），重复调无代价。
+    liveStart();
   }
 
   function startReview() {
@@ -3287,7 +3290,19 @@
     }
   });
 
-  liveProbe();
+  liveProbe().then(() => {
+    // 刷新页面后重连服务端运行：LIVE 是内存态，刷新即丢。
+    // liveStart 幂等——LIVE.runId 已在或服务不可用就早退；服务端防重入
+    // 会返回 active_run_id 挂回正在跑的那条（见 liveStart 与 server.py）。
+    // 不重连的话，刷新后页面只能冻结或退回回放——回放冒充实时是 §1 的 P0。
+    // 服务不可用（LIVE.available=false）时不调 liveStart，走既有回放兜底。
+    if (state.run.started && !state.run.finished && LIVE.available) {
+      liveStart();
+    }
+    if (state.run.started && !state.run.finished) {
+      ensureRunStarted();
+    }
+  });
 
   if (!location.hash) {
     location.hash = "#/create";
@@ -3298,8 +3313,5 @@
   }
   if (state.upload.selected && !state.upload.parsed) {
     startUploadRecognitionTimer();
-  }
-  if (state.run.startedAt && !state.run.finished) {
-    ensureRunStarted();
   }
 })();
