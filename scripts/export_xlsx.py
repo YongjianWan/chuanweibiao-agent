@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -130,9 +131,11 @@ def sheet_evidence(wb, report, evidence_index) -> None:
                   f"“{UNRATED_MARK}”表示未评定，与 0 分含义不同。").font = NOTE_FONT
     ws.append([])
 
+    # 编号列已移除（2026-08-21）：cite 下标对甲方无独立价值，[n] 前缀已嵌在
+    # 「依据出处」列里；出处无法还原时该列也会写上编号。单列一列只是重复。
     header = ["投标人", "评分项", "满分", "得分", "档位",
               "判分理由", "依据出处（投标文件 · 页码 · 章节）",
-              "编号", "0 分原因", "置信度", "调用次数"]
+              "0 分原因", "置信度", "调用次数"]
     ws.append(header)
     head_row = ws.max_row
     style_header(ws, head_row, len(header))
@@ -153,7 +156,6 @@ def sheet_evidence(wb, report, evidence_index) -> None:
             (row.get("reason") or "") if rated else
             f"未评定：{row.get('last_error') or '重试耗尽'}",
             cite_sources(row, evidence_index),
-            "、".join(str(c) for c in (row.get("cite") or [])),
             miss_label.get(row.get("miss_reason"), ""),
             row.get("confidence"),
             row.get("attempts"),
@@ -168,7 +170,7 @@ def sheet_evidence(wb, report, evidence_index) -> None:
             for cell in cells:
                 cell.fill = WARN_FILL
 
-    set_widths(ws, [24, 28, 6, 7, 7, 68, 62, 12, 30, 8, 9])
+    set_widths(ws, [24, 28, 6, 7, 7, 68, 62, 30, 8, 9])
     ws.freeze_panes = ws.cell(row=head_row + 1, column=3)
     ws.auto_filter.ref = f"A{head_row}:{get_column_letter(len(header))}{ws.max_row}"
 
@@ -329,6 +331,8 @@ def build(report: dict, evidence_index: dict | None = None) -> Workbook:
 
 
 def main(argv=None) -> int:
+    # Windows 中文终端默认 GBK，⚠ 等字符打不出来会崩在最后一步提示上。
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description="把 S4 报告导成 Excel")
     parser.add_argument("report", type=Path, help="report.json 路径")
     parser.add_argument("-o", "--output", type=Path, default=None,
