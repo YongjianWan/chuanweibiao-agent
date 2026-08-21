@@ -13,7 +13,9 @@
   const LOW_CONFIDENCE_THRESHOLD = DATA.lowConfidenceThreshold || 0.85;
   const stageNames = ["PDF 入库", "证据定位", "逐项评审", "结果汇总"];
   const STORAGE_KEY = "technical-review-state-v7";
+  const RECOVERY_STORAGE_KEY = "technical-review-recovery-v1";
   const LOG_BOTTOM_GAP = 16;
+  const LOG_RENDER_LIMIT = 160;
   const BIDDER_RECOGNITION_MS = 420;
   const REVIEW_EVENT_KEYS = DATA.runEvents
     .filter((event) => event.type === "review")
@@ -228,6 +230,22 @@
     saveState();
   }
 
+  function hasWorkflowData(snapshot = state) {
+    const run = snapshot && snapshot.run ? snapshot.run : {};
+    const upload = snapshot && snapshot.upload ? snapshot.upload : {};
+    return Boolean(
+      upload.selected ||
+      upload.parsed ||
+      run.started ||
+      run.reviewStarted ||
+      run.finished ||
+      run.completedReviews ||
+      (Array.isArray(run.logs) && run.logs.length) ||
+      (snapshot && snapshot.reviewOverrides && Object.keys(snapshot.reviewOverrides).length) ||
+      (Array.isArray(snapshot && snapshot.expertReviews) && snapshot.expertReviews.length)
+    );
+  }
+
   function loadAppState() {
     const initial = {
       run: createRunState(),
@@ -241,7 +259,7 @@
 
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (!raw) return initial;
+      if (!raw) return loadRecoverySnapshot() || initial;
       const saved = JSON.parse(raw);
       const run = hydrateRunState(saved.run);
       return {
@@ -254,11 +272,8 @@
         showScoringReference: false
       };
     } catch (error) {
-      try {
-        window.localStorage.removeItem(STORAGE_KEY);
-      } catch (storageError) {
-        // 存储不可用时降级为内存状态，保证页面仍可运行。
-      }
+      const recovered = loadRecoverySnapshot();
+      if (recovered) return recovered;
       return initial;
     }
   }
@@ -273,7 +288,7 @@
     if (!saved || typeof saved !== "object") return run;
 
     run.eventIndex = Math.min(Math.max(0, Math.floor(finiteNumber(saved.eventIndex, 0))), DATA.runEvents.length);
-    run.logs = Array.isArray(saved.logs) ? saved.logs.slice(-DATA.runEvents.length - 20) : [];
+    run.logs = Array.isArray(saved.logs) ? saved.logs.slice(-LOG_RENDER_LIMIT) : [];
     run.started = Boolean(saved.started);
     run.reviewStarted = Boolean(saved.reviewStarted);
     run.paused = Boolean(saved.paused);
@@ -293,6 +308,14 @@
     run.currentLabel = typeof saved.currentLabel === "string" ? saved.currentLabel : run.currentLabel;
     run.stages = { ...run.stages, ...(saved.stages && typeof saved.stages === "object" ? saved.stages : {}) };
     run.timer = null;
+
+    if (!run.reviewStarted && !run.completedReviews && !run.finished) {
+      run.startedAt = null;
+      run.lastEventAt = null;
+      run.paused = false;
+      run.pausedAt = null;
+      run.pausedTotalMs = 0;
+    }
 
     if (run.finished) {
       run.paused = false;
@@ -352,6 +375,9 @@
 
   function saveState() {
     const run = { ...state.run, timer: null };
+    if (Array.isArray(run.logs)) {
+      run.logs = run.logs.slice(-LOG_RENDER_LIMIT);
+    }
     const upload = { ...state.upload, timer: null };
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -363,6 +389,86 @@
     } catch (error) {
       // 存储不可用时降级为内存状态，保证页面仍可运行。
     }
+  }
+
+  function serializeWorkflowState(reason) {
+    return {
+      version: 1,
+      reason: reason || "auto",
+      savedAt: Date.now(),
+      run: { ...state.run, timer: null },
+      upload: { ...state.upload, timer: null },
+      reviewOverrides: state.reviewOverrides,
+      expertReviews: state.expertReviews
+    };
+  }
+
+  function hydrateWorkflowSnapshot(saved) {
+    if (!saved || typeof saved !== "object") return null;
+    const run = hydrateRunState(saved.run);
+    const snapshot = {
+      run,
+      upload: hydrateUploadState(saved.upload, run),
+      reviewOverrides: saved.reviewOverrides && typeof saved.reviewOverrides === "object" ? saved.reviewOverrides : {},
+      expertReviews: Array.isArray(saved.expertReviews) ? saved.expertReviews : [],
+      activeSectionId: "",
+      activeCriteriaId: "",
+      showScoringReference: false
+    };
+    return hasWorkflowData(snapshot) ? snapshot : null;
+  }
+
+  function saveRecoverySnapshot(reason) {
+    if (!hasWorkflowData()) return false;
+    try {
+      window.localStorage.setItem(RECOVERY_STORAGE_KEY, JSON.stringify(serializeWorkflowState(reason)));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function loadRecoverySnapshot() {
+    try {
+      const raw = window.localStorage.getItem(RECOVERY_STORAGE_KEY);
+      if (!raw) return null;
+      return hydrateWorkflowSnapshot(JSON.parse(raw));
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function recoverySnapshotMeta() {
+    try {
+      const raw = window.localStorage.getItem(RECOVERY_STORAGE_KEY);
+      if (!raw) return null;
+      const saved = JSON.parse(raw);
+      const snapshot = hydrateWorkflowSnapshot(saved);
+      if (!snapshot) return null;
+      return {
+        savedAt: finiteNumber(saved.savedAt, 0) || null,
+        run: snapshot.run,
+        upload: snapshot.upload
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function restoreRecoverySnapshot() {
+    const recovered = loadRecoverySnapshot();
+    if (!recovered) return false;
+    clearRunTimer();
+    clearUploadRecognitionTimer();
+    Object.assign(state, recovered);
+    saveState();
+    if (state.upload.selected && !state.upload.parsed) {
+      startUploadRecognitionTimer();
+    }
+    if (state.run.startedAt && !state.run.finished) {
+      ensureRunStarted();
+    }
+    return true;
   }
 
   function html(value) {
@@ -410,6 +516,22 @@
     const minutes = Math.floor(total / 60);
     const seconds = total % 60;
     return pad(minutes) + ":" + pad(seconds);
+  }
+
+  function formatDateTime(timestamp) {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return "";
+    return [
+      date.getFullYear(),
+      "-",
+      pad(date.getMonth() + 1),
+      "-",
+      pad(date.getDate()),
+      " ",
+      pad(date.getHours()),
+      ":",
+      pad(date.getMinutes())
+    ].join("");
   }
 
   function clock() {
@@ -903,7 +1025,7 @@
         </div>
         <nav class="nav" aria-label="页面导航">
           ${links.map((link) => link.enabled ? `
-            <a class="${activePath === link.path ? "active" : ""}" href="#${link.path}">${link.label}</a>
+            <a class="${activePath === link.path ? "active" : ""}" href="#${link.path}"${link.path === "/create" && activePath !== "/create" && state.run.finished ? " data-new-review" : ""}>${link.label}</a>
           ` : `
             <span class="nav-disabled" aria-disabled="true" title="请先完成前置步骤">${link.label}</span>
           `).join("")}
@@ -919,9 +1041,6 @@
     if (blockedHash) {
       setRoute(blockedHash);
       return;
-    }
-    if (route.path === "/create" && state.run.finished) {
-      resetWorkflowState();
     }
     if (route.path === "/create") {
       app.innerHTML = shell(route.path, renderCreate());
@@ -974,10 +1093,21 @@
     // 评审进行中禁止重新选择文件：beginUploadRecognition 会重置前端状态，
     // 但服务端的旧运行还在跑，再选一次就会起第二条流水线，两条并发打向端点——
     // 实测端点 12 路就崩（README §6 阶段二）。等本轮跑完（finished）才解锁。
-    const uploadLocked = state.run.started && !state.run.finished;
+    const uploadLocked = state.run.reviewStarted && !state.run.finished;
     const uploadLockTitle = "评审进行中，等本轮跑完再选择新文件";
+    const recoveryMeta = !hasWorkflowData() ? recoverySnapshotMeta() : null;
+    const recoveryBanner = recoveryMeta ? `
+        <section class="recovery-banner" aria-label="可恢复评审">
+          <div>
+            <strong>检测到上一轮评审快照</strong>
+            <span>可恢复 ${recoveryMeta.run.finished ? "已完成" : "未完成"} 的评审状态${recoveryMeta.savedAt ? "，保存于 " + html(formatDateTime(recoveryMeta.savedAt)) : ""}。</span>
+          </div>
+          <button class="btn" type="button" data-restore-recovery>恢复上一轮</button>
+        </section>
+    ` : "";
     return `
       <main class="page">
+        ${recoveryBanner}
         <section class="page-header">
           <div>
             <h2 class="page-title">新建评审任务</h2>
@@ -1136,7 +1266,9 @@
       : confirmItems.length + " 项均为 " + DATA.bidders.length + "/" + DATA.bidders.length;
     const confirmStatusText = state.run.reviewStarted ? "评审进行中" : mismatch ? "待确认" : "校验通过";
     const confirmStatusClass = state.run.reviewStarted ? "running" : mismatch ? "pending" : "success";
-    const elapsedText = state.run.startedAt ? formatDuration(elapsed) : "未开始";
+    const timingText = state.run.reviewStarted
+      ? `评审用时 <span data-run-elapsed>${html(formatDuration(elapsed))}</span>`
+      : "评审计时 未开始";
     return `
       <main class="page page-confirm">
         <section class="page-header">
@@ -1156,7 +1288,7 @@
           ${metric("评分项", confirmItems.length + " 项", "技术标评分项")}
           ${metric("总分", scoringTotal.toFixed(1) + " 分", scoringTotalNote)}
           ${metric("文件绑定", bindingStatusText, bindingNote)}
-          ${metric("当前状态", `<span class="status-value ${confirmStatusClass}"><span aria-hidden="true">${confirmStatusClass === "success" ? "✓" : ""}</span>${html(confirmStatusText)}</span><span class="metric-inline-time">核验耗时 <span data-run-elapsed>${html(elapsedText)}</span></span>`, "")}
+          ${metric("当前状态", `<span class="status-value ${confirmStatusClass}"><span aria-hidden="true">${confirmStatusClass === "success" ? "✓" : ""}</span>${html(confirmStatusText)}</span><span class="metric-inline-time">${timingText}</span>`, "")}
         </section>
 
         ${state.showScoringReference ? renderScoringReference(confirmItems) : ""}
@@ -1384,8 +1516,8 @@
               </div>
 
               <div class="summary-strip" style="margin-top: 18px;">
-                ${metric("已用时间", formatDuration(elapsed), "预计剩余 " + formatDuration(estimatedMs) + " · 按当前吞吐估算")}
-                ${metric("当前处理状态", html(run.currentLabel), "已等待 " + formatDuration(waitingMs))}
+                ${metric("已用时间", `<span data-run-elapsed>${html(formatDuration(elapsed))}</span>`, `<span data-run-estimated>预计剩余 ${html(formatDuration(estimatedMs))} · 按当前吞吐估算</span>`, "", true)}
+                ${metric("当前处理状态", `<span class="metric-value-clamp" title="${html(run.currentLabel)}">${html(run.currentLabel)}</span>`, `<span data-run-waiting>已等待 ${html(formatDuration(waitingMs))}</span>`, "metric-dynamic", true)}
                 ${metric("当前并发", concurrencyLabel(), "逐项评审并发")}
                 ${metric("GPU / 显存", "未采集", "不伪造硬件数据")}
                 ${metric("累计输入", number(run.inTokens) + " tokens", "本地估算")}
@@ -1432,7 +1564,7 @@
                 <div>事件</div>
                 <div class="log-result">结果</div>
               </div>
-              ${run.logs.length ? run.logs.map(renderLogRow).join("") : `<div class="empty">等待评审事件进入滚动区</div>`}
+              ${renderRunLogs(run.logs)}
             </div>
           </div>
         </section>
@@ -1484,7 +1616,7 @@
         <section class="summary-strip">
           ${metric("投标人", DATA.bidders.length + " 家", "独立评分结果")}
           ${metric("已完成", completedCount + " / " + TOTAL_REVIEWS, pendingCount ? pendingCount + " 项评审中" : "全部完成")}
-          ${metric("用时", formatDuration(elapsed), state.run.startedAt ? "从页面①下一步：解析起算" : "尚未开始")}
+          ${metric("用时", formatDuration(elapsed), state.run.startedAt ? "从开始评审起算" : "尚未开始")}
           ${metric("建议复核", (visibleReviewFlags.length + visibleAuditFlags.length) + " 项", "低置信 " + visibleReviewFlags.length + " / 无区分度 " + visibleAuditFlags.length)}
         </section>
 
@@ -1897,15 +2029,26 @@
     `;
   }
 
-  function metric(label, value, note) {
+  function metric(label, value, note, className, noteIsHtml) {
     return `
-      <div class="metric">
+      <div class="metric ${className || ""}">
         <div class="metric-label">${html(label)}</div>
         <div class="metric-value">${value}</div>
-        ${note ? `<div class="metric-note">${html(note)}</div>` : ""}
+        ${note ? `<div class="metric-note">${noteIsHtml ? note : html(note)}</div>` : ""}
       </div>
     `;
   }
+
+  function renderRunLogs(logs) {
+    if (!logs.length) return `<div class="empty">等待评审事件进入滚动区</div>`;
+    const hiddenCount = Math.max(0, logs.length - LOG_RENDER_LIMIT);
+    const visibleLogs = logs.slice(-LOG_RENDER_LIMIT);
+    return `
+      ${hiddenCount ? `<div class="log-trimmed">已折叠较早 ${hiddenCount} 条记录，仅显示最近 ${LOG_RENDER_LIMIT} 条</div>` : ""}
+      ${visibleLogs.map(renderLogRow).join("")}
+    `;
+  }
+
 
   function totalScore() {
     return scoringItems().reduce((sum, item) => sum + item.max_score, 0);
@@ -1924,6 +2067,16 @@
   function reportElapsedMs() {
     const wallClock = DATA.reportData && DATA.reportData.perf ? DATA.reportData.perf.wall_clock_sec : null;
     return state.run.startedAt ? runElapsedMs() : typeof wallClock === "number" ? wallClock * 1000 : 0;
+  }
+
+  function startReviewClock(run, message) {
+    if (!run.startedAt) {
+      run.startedAt = Date.now();
+      run.lastEventAt = run.startedAt;
+      run.currentLabel = message || run.currentLabel;
+      run.pausedTotalMs = 0;
+      run.pausedAt = null;
+    }
   }
 
   function numericConcurrency() {
@@ -2080,8 +2233,6 @@
     const run = state.run;
     if (!run.started) {
       run.started = true;
-      run.startedAt = Date.now();
-      run.lastEventAt = Date.now();
       run.currentLabel = message || "开始读取 12 家投标技术标 PDF";
       run.stages["PDF 入库"] = "进行中";
       saveState();
@@ -2092,9 +2243,23 @@
     }
   }
 
-  function startReview() {
-    ensureRunStarted("确认完成，开始逐项评审");
+  function prepareRunForConfirm() {
     const run = state.run;
+    if (!run.started) {
+      run.started = true;
+      run.currentLabel = "等待人工确认开始逐项评审";
+      run.stages["PDF 入库"] = "已完成";
+      run.stages["证据定位"] = "已完成";
+      saveState();
+      liveStart();
+    }
+  }
+
+  function startReview() {
+    prepareRunForConfirm();
+    const run = state.run;
+    startReviewClock(run, "确认完成，开始逐项评审");
+    ensureRunStarted();
     if (run.paused) {
       toggleRunPaused();
     }
@@ -2149,6 +2314,7 @@
       clearInterval(run.timer);
       run.timer = null;
     }
+    saveRecoverySnapshot("run-finished");
   }
 
   function beginUploadRecognition(fileList) {
@@ -2262,8 +2428,10 @@
       return;
     }
     if (route.path === "/running") {
-      if (changed || (!run.paused && !run.finished)) {
+      if (changed) {
         renderPreservingRunLog();
+      } else {
+        updateRuntimeFields(route.path);
       }
       return;
     }
@@ -2275,10 +2443,27 @@
   }
 
   function updateRuntimeFields(path) {
-    if (path !== "/confirm") return;
-    const elapsed = document.querySelector("[data-run-elapsed]");
-    if (elapsed) {
-      elapsed.textContent = state.run.startedAt ? formatDuration(runElapsedMs()) : "未开始";
+    if (path !== "/confirm" && path !== "/running") return;
+    const elapsedText = state.run.startedAt ? formatDuration(runElapsedMs()) : "未开始";
+    document.querySelectorAll("[data-run-elapsed]").forEach((elapsed) => {
+      elapsed.textContent = elapsedText;
+    });
+
+    if (path === "/running") {
+      const run = state.run;
+      const elapsed = runElapsedMs();
+      const estimatedMs = run.completedReviews
+        ? (elapsed / Math.max(1, run.completedReviews)) * Math.max(0, TOTAL_REVIEWS - run.completedReviews)
+        : 0;
+      const waitingMs = run.lastEventAt ? runTimestampNow(run) - run.lastEventAt : 0;
+      const estimated = document.querySelector("[data-run-estimated]");
+      if (estimated) {
+        estimated.textContent = "预计剩余 " + formatDuration(estimatedMs) + " · 按当前吞吐估算";
+      }
+      const waiting = document.querySelector("[data-run-waiting]");
+      if (waiting) {
+        waiting.textContent = "已等待 " + formatDuration(waitingMs);
+      }
     }
   }
 
@@ -2321,6 +2506,9 @@
 
   function pushRunLog(row) {
     state.run.logs.push(row);
+    if (state.run.logs.length > LOG_RENDER_LIMIT) {
+      state.run.logs = state.run.logs.slice(-LOG_RENDER_LIMIT);
+    }
   }
 
   function processWaitEvent(event, bidder, item) {
@@ -2864,6 +3052,30 @@
   }
 
   document.addEventListener("click", (event) => {
+    const newReview = event.target.closest("[data-new-review]");
+    if (newReview) {
+      event.preventDefault();
+      if (!window.confirm("当前评审已完成。确定要新建评审吗？系统会先保存上一轮恢复快照，取消则继续保留当前结果。")) {
+        return;
+      }
+      saveRecoverySnapshot("new-review");
+      resetWorkflowState();
+      setRoute("#/create");
+      render();
+      return;
+    }
+
+    const restoreRecovery = event.target.closest("[data-restore-recovery]");
+    if (restoreRecovery) {
+      if (!restoreRecoverySnapshot()) {
+        window.alert("未找到可恢复的上一轮评审快照。");
+        return;
+      }
+      setRoute(state.run.finished ? "#/results" : "#/running");
+      render();
+      return;
+    }
+
     const parse = event.target.closest("[data-start-parse]");
     if (parse) {
       event.preventDefault();
@@ -2871,9 +3083,7 @@
         window.alert("请先选择投标文件，并确认已识别到全部投标人。");
         return;
       }
-      if (!state.run.started) {
-        ensureRunStarted("页面①点击下一步：解析，开始计时和评审准备");
-      }
+      prepareRunForConfirm();
       setRoute("#/confirm");
       return;
     }
@@ -2939,6 +3149,7 @@
       if (!window.confirm(modeText("确定重置当前流程、运行进度和计时器吗？此操作会让现场运行状态归零。", "确定重置演示运行进度和计时器吗？此操作会让现场运行状态归零。"))) {
         return;
       }
+      saveRecoverySnapshot("manual-reset");
       resetWorkflowState();
       render();
       return;
@@ -2984,13 +3195,20 @@
     const input = event.target && event.target.closest ? event.target.closest("[data-file-input]") : null;
     if (!input) return;
     if (input.files && input.files.length === 0) return;
-    if (state.run.started && !state.run.finished) {
+    if (state.run.reviewStarted && !state.run.finished) {
       // 兜底：正常 UI 已锁（见 renderCreatePage 的 uploadLocked），
       // 这里防的是手改 DOM 之类绕过界面的情况。重新选择会重置前端状态，
       // 但服务端旧运行还在跑，再放行就会两条流水线同时打端点。
       window.alert("评审进行中，等本轮跑完再选择新文件。");
       input.value = "";
       return;
+    }
+    if (hasWorkflowData()) {
+      if (!window.confirm("重新选择投标文件会开始一轮新评审。系统会先保存当前恢复快照，确定继续吗？")) {
+        input.value = "";
+        return;
+      }
+      saveRecoverySnapshot("file-reselect");
     }
     beginUploadRecognition(input.files);
   });
@@ -3081,7 +3299,7 @@
   if (state.upload.selected && !state.upload.parsed) {
     startUploadRecognitionTimer();
   }
-  if (state.run.started && !state.run.finished) {
+  if (state.run.startedAt && !state.run.finished) {
     ensureRunStarted();
   }
 })();
