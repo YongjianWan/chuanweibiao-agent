@@ -42,10 +42,18 @@ COMPUTE_NOTES = {
 
 
 def load_results(reviews_dir: Path) -> dict[tuple[str, str], dict[str, Any]]:
-    """读取 reviews 目录下全部 <bidder>/<item_id>.json，键从文件路径还原。"""
+    """读取评审结果。支持两种输入：
+    - 目录：读取其下全部 <bidder>/<item_id>.json，键从文件路径还原
+    - 单文件 reviews.json：读取其 review_results 数组，键从记录字段还原
+    """
     results: dict[tuple[str, str], dict[str, Any]] = {}
     if not reviews_dir.exists():
-        raise FileNotFoundError(f"reviews 目录不存在: {reviews_dir}")
+        raise FileNotFoundError(f"reviews 路径不存在: {reviews_dir}")
+    if reviews_dir.is_file():
+        data = json.loads(reviews_dir.read_text(encoding="utf-8"))
+        for r in data.get("review_results", []):
+            results[(r["bidder"], r["item_id"])] = r
+        return results
     for item_file in sorted(reviews_dir.glob("*/*.json")):
         key = (item_file.parent.name, item_file.stem)
         results[key] = json.loads(item_file.read_text(encoding="utf-8"))
@@ -237,14 +245,18 @@ def build_report(
 
     # 优先读取调度器写进 reviews.json 顶层的 wall_clock_sec / concurrency；
     # 缺失时保留占位口径，不估算。
-    reviews_meta_path = reviews_dir / "reviews.json"
     reviews_perf = {}
-    if reviews_meta_path.exists():
-        try:
-            reviews_meta = json.loads(reviews_meta_path.read_text(encoding="utf-8"))
+    try:
+        if reviews_dir.is_file():
+            reviews_meta = json.loads(reviews_dir.read_text(encoding="utf-8"))
             reviews_perf = reviews_meta.get("perf") or {}
-        except (json.JSONDecodeError, OSError):
-            pass
+        else:
+            reviews_meta_path = reviews_dir / "reviews.json"
+            if reviews_meta_path.exists():
+                reviews_meta = json.loads(reviews_meta_path.read_text(encoding="utf-8"))
+                reviews_perf = reviews_meta.get("perf") or {}
+    except (json.JSONDecodeError, OSError):
+        pass
 
     wall_clock_sec = reviews_perf.get("wall_clock_sec")
     concurrency = reviews_perf.get("concurrency")
