@@ -428,6 +428,10 @@ def main(argv=None) -> int:
         httpd.serve_forever()
     except KeyboardInterrupt:
         print("\n已停止")
+    except Exception as exc:
+        # 捕获并打印任何导致服务退出的隐藏异常，避免终端里「静默退出」
+        print(f"\n服务异常退出：{type(exc).__name__}: {exc}", file=sys.stderr)
+        return 1
     return 0
 
 
