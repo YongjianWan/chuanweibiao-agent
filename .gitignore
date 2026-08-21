@@ -38,3 +38,6 @@ out.json
 # 服务层每次运行的产出（sections/evidence/reviews/report 全套，单次约数百 MB）。
 data/runs/
 *.local
+
+# Runtime logs
+*.log

@@ -8,7 +8,8 @@ P2「分数与专家一致」本次不追求）。所以表的排布刻意把依
 | 判分与依据 | 228 行，一行一个判分。**得分紧挨着判分理由和证据出处**，出处精确到「PDF 文件 · 第几页 · 章节路径」。这是本文件的主体 |
 | 评分汇总 | 19 项 × 12 家矩阵 + 合计。给要看总分的人，**不是重点** |
 | 未评定 | 系统没能判出来的项，单列（README §3.6：不得记 0 分、不混进分数统计） |
-| 建议复核 | 证据降级项 + 无区分度项，附原因 |
+| 建议复核 | 需要人做判断的项（证据降级 / 检索未命中），附原因。**不含无区分度** |
+| 区分度自检 | 各家判成同一档的评分项。不是错误清单，见 `sheet_audit()` 的 docstring |
 | 性能与算力 | 耗时、调用数、token（标注估算）、GPU、算力归属 |
 
 **证据出处怎么来的**：评审结果里的 `cite` 是证据包 `picked` 数组的下标（模型只选编号、
@@ -250,27 +251,61 @@ def sheet_unrated(wb, report) -> None:
 
 
 def sheet_flags(wb, report) -> None:
+    """建议复核：**只装需要人做判断的项**。
+
+    2026-08-21 把 `audit`（无区分度）从这张表拆出去，理由是分类错误：
+    「12 家全部判优档」不是判分质量问题，人来复核也改变不了什么——
+    它可能就是事实（各家确实都写得全）。它是**系统自检信号**，
+    回答「这个评分项有没有区分力」，与「请人来看这个分对不对」是两件事。
+    混在一起会让复核清单被自检信号填满，真正需要人看的项被淹没——
+    和 2026-08-21 移除「重试」置信因子时踩的是同一个坑。
+    """
     ws = wb.create_sheet("建议复核")
     ws.cell(row=1, column=1,
-            value="系统标出、交人复核，不替人改分。两类：置信度偏低；某评分项各家判成同一档、区分不出来。").font = NOTE_FONT
+            value="系统标出、交人复核，不替人改分。空表表示本次没有需要复核的判分，"
+                  "不表示系统认为自己一定对——评分项的区分度分析见「区分度自检」表。").font = NOTE_FONT
     ws.append([])
-    header = ["类型", "投标人", "评分项编号", "置信度 / 档位分布", "原因"]
+    header = ["投标人", "评分项编号", "置信度", "原因"]
     ws.append(header)
     style_header(ws, ws.max_row, len(header))
 
     for row in report.get("review_flags") or []:
-        ws.append(["低置信", row.get("bidder", ""), row.get("item_id", ""),
+        ws.append([row.get("bidder", ""), row.get("item_id", ""),
                    row.get("confidence"), row.get("why", "")])
+    for r in range(4, ws.max_row + 1):
+        for col in range(1, len(header) + 1):
+            ws.cell(row=r, column=col).border = BORDER
+
+    set_widths(ws, [26, 12, 10, 68])
+    ws.auto_filter.ref = f"A3:{get_column_letter(len(header))}{ws.max_row}"
+
+
+def sheet_audit(wb, report) -> None:
+    """区分度自检：某评分项各家判成同一档，系统在此如实标出。
+
+    **这不是错误清单。** 各家都写得全时全判同一档是正确结果；
+    它提示的是「这一项对本次评标没有产生区分」，供评标组判断是否需要
+    在该项上人工细分，而不是提示判分可能有误。
+    """
+    ws = wb.create_sheet("区分度自检")
+    ws.cell(row=1, column=1,
+            value="某评分项各家判成同一档，说明该项未产生区分。这不是判分错误——"
+                  "各家都写得完整时，全判同一档就是正确结果。").font = NOTE_FONT
+    ws.append([])
+    header = ["评分项编号", "档位分布", "说明"]
+    ws.append(header)
+    style_header(ws, ws.max_row, len(header))
+
     for row in report.get("audit") or []:
         dist = row.get("tier_dist") or {}
-        ws.append(["无区分度", "（全部投标人）", row.get("item_id", ""),
+        ws.append([row.get("item_id", ""),
                    "　".join(f"{k} {v}" for k, v in dist.items()),
                    row.get("detail", "")])
     for r in range(4, ws.max_row + 1):
         for col in range(1, len(header) + 1):
             ws.cell(row=r, column=col).border = BORDER
 
-    set_widths(ws, [12, 26, 12, 26, 52])
+    set_widths(ws, [14, 30, 60])
     ws.auto_filter.ref = f"A3:{get_column_letter(len(header))}{ws.max_row}"
 
 
@@ -326,6 +361,7 @@ def build(report: dict, evidence_index: dict | None = None) -> Workbook:
     sheet_summary(wb, report)
     sheet_unrated(wb, report)
     sheet_flags(wb, report)
+    sheet_audit(wb, report)
     sheet_perf(wb, report)
     return wb
 
@@ -359,7 +395,8 @@ def main(argv=None) -> int:
     print(f"已生成 {output}")
     print(f"  {len(report.get('bidders', []))} 家 × {len(report.get('matrix', []))} 项"
           f"　未评定 {len(report.get('unrated') or [])} 项"
-          f"　建议复核 {len(report.get('review_flags') or []) + len(report.get('audit') or [])} 项")
+          f"　建议复核 {len(report.get('review_flags') or [])} 项"
+          f"　区分度自检 {len(report.get('audit') or [])} 项")
     if evidence_index:
         print(f"  证据出处已还原（读到 {len(evidence_index)} 个证据包）")
     else:

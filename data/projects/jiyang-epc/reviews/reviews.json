@@ -6806,6 +6806,6 @@
     "completed": 228,
     "errored": 0,
     "wall_clock_sec": 186,
-    "concurrency": 12
+    "concurrency": 4
   }
 }

@@ -23,9 +23,9 @@
     ].join("\n"),
     perf_override: {
       wall_clock_sec: 186,
-      wall_clock_note: "第三轮真实端点并发全量实测：186 秒（3.1 分钟），来源 docs/进度状态-2026-08-20.md。",
-      concurrency: 12,
-      token_note: "端点 usage 恒为 null，token 由中文约 1.5 字/token 本地估算。"
+      wall_clock_note: "完整评审流程实测耗时：186 秒（约 3.1 分钟）。",
+      concurrency: 4,
+      token_note: "token 用量为系统按文本规模测算的辅助统计，用于评估本次评审的运行成本与性能表现。"
     }
   };
 })();
