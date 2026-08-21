@@ -76,16 +76,22 @@ def load_manifest(path: Path | None) -> Manifest:
 
 def save_manifest(path: Path, manifest: Manifest):
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
     content = json.dumps(manifest.to_dict(), ensure_ascii=False, indent=2)
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.{time.time_ns()}.tmp")
     with open(tmp, "w", encoding="utf-8") as f:
         f.write(content)
         f.flush()
         os.fsync(f.fileno())
-    _replace_with_retry(tmp, path)
+    try:
+        _replace_with_retry(tmp, path)
+    except PermissionError:
+        # Windows 上偶发 tmp 文件被 Defender/索引器长时间占用，os.replace 会持续失败。
+        # manifest 只是断点续跑索引，结果本体已经逐项落盘；这里退化为直接写目标文件，
+        # 优先保证评审流水线不中断。
+        path.write_text(content, encoding="utf-8")
 
 
-def _replace_with_retry(src: Path, dst: Path, max_attempts: int = 5, backoff: float = 0.1) -> None:
+def _replace_with_retry(src: Path, dst: Path, max_attempts: int = 8, backoff: float = 0.15) -> None:
     """os.replace 的 Windows 加固：Defender/索引器会瞬时占用刚写完的 tmp 文件，
     PermissionError 时按指数退避有限重试；其他异常（如磁盘满）照常抛出。"""
     for attempt in range(max_attempts):

@@ -230,6 +230,7 @@
     state.activeSectionId = "";
     state.activeCriteriaId = "";
     state.showScoringReference = false;
+    resetLiveState();
     saveState();
   }
 
@@ -387,7 +388,8 @@
         run,
         upload,
         reviewOverrides: state.reviewOverrides,
-        expertReviews: state.expertReviews
+        expertReviews: state.expertReviews,
+        live: serializeLiveState()
       }));
     } catch (error) {
       // 存储不可用时降级为内存状态，保证页面仍可运行。
@@ -402,7 +404,8 @@
       run: { ...state.run, timer: null },
       upload: { ...state.upload, timer: null },
       reviewOverrides: state.reviewOverrides,
-      expertReviews: state.expertReviews
+      expertReviews: state.expertReviews,
+      live: serializeLiveState()
     };
   }
 
@@ -1581,6 +1584,7 @@
     const completedCount = Math.min(state.run.finished ? TOTAL_REVIEWS : state.run.completedReviews, TOTAL_REVIEWS);
     const pendingCount = Math.max(0, TOTAL_REVIEWS - completedCount);
     const canExportReport = Boolean(state.run.finished);
+    const canExportHtmlReport = canExportReport && (!liveActive() || LIVE.reportLoaded);
     const resultsTitle = pendingCount ? "评审结果（运行中）" : "评审结果汇总";
     const resultsDesc = "集中展示 " + DATA.bidders.length + " 家投标人的独立评分结果；各投标文件分别评审，互不影响。";
     const visibleReviewFlags = reviewFlagRows(completedKeys);
@@ -1611,8 +1615,8 @@
           </div>
           <div class="toolbar">
             <a class="btn" href="#/running">返回运行监视</a>
-            <button class="btn primary" data-export-report ${canExportReport ? "" : "disabled"} title="${canExportReport ? "导出静态 HTML 报告" : "评审完成后才能导出报告"}">导出报告</button>
-            ${liveActive() ? `<button class="btn" data-export-xlsx ${canExportReport ? "" : "disabled"} title="${canExportReport ? "导出 Excel（判分与依据 / 评分汇总 / 未评定 / 建议复核 / 区分度自检 / 性能）" : "评审完成后才能导出"}">导出 Excel</button>` : ""}
+            <button class="btn primary" data-export-report ${canExportHtmlReport ? "" : "disabled"} title="${canExportHtmlReport ? "导出静态 HTML 报告" : liveActive() && canExportReport ? "正在加载正式报告数据" : "评审完成后才能导出报告"}">导出报告</button>
+            <button class="btn" data-export-xlsx ${canExportReport ? "" : "disabled"} title="${canExportReport ? "导出 Excel（判分与依据 / 评分汇总 / 未评定 / 建议复核 / 区分度自检 / 性能）" : "评审完成后才能导出"}">导出 Excel</button>
           </div>
         </section>
 
@@ -2109,10 +2113,84 @@
     failed: false,
     error: "",
     reportLoaded: false,
+    reportLoading: false,
     announced: false,
     concurrency: null,
     probed: false
   };
+
+  function resetLiveState() {
+    LIVE.runId = null;
+    LIVE.cursor = 0;
+    LIVE.serverDone = false;
+    LIVE.failed = false;
+    LIVE.error = "";
+    LIVE.reportLoaded = false;
+    LIVE.reportLoading = false;
+    LIVE.announced = false;
+    LIVE.concurrency = null;
+    DATA.reportRunId = "";
+  }
+
+  function serializeLiveState() {
+    const reportRunId = DATA.reportRunId || "";
+    if ((!LIVE.runId || LIVE.runId === "pending") && !reportRunId) return null;
+    return {
+      runId: LIVE.runId && LIVE.runId !== "pending" ? LIVE.runId : reportRunId,
+      reportRunId,
+      cursor: LIVE.cursor,
+      serverDone: LIVE.serverDone,
+      failed: LIVE.failed,
+      error: LIVE.error,
+      concurrency: LIVE.concurrency,
+      savedAt: Date.now()
+    };
+  }
+
+  function hydrateLiveState(saved) {
+    if (!saved || typeof saved !== "object" || !saved.runId || saved.runId === "pending") {
+      return null;
+    }
+    return {
+      runId: String(saved.runId),
+      reportRunId: saved.reportRunId ? String(saved.reportRunId) : String(saved.runId),
+      cursor: Math.max(0, Math.floor(finiteNumber(saved.cursor, 0))),
+      serverDone: Boolean(saved.serverDone),
+      failed: Boolean(saved.failed),
+      error: typeof saved.error === "string" ? saved.error : "",
+      concurrency: finiteNumber(saved.concurrency, null)
+    };
+  }
+
+  function loadSavedLiveState() {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const saved = JSON.parse(raw);
+      return hydrateLiveState(saved.live);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function restoreLiveState() {
+    const saved = loadSavedLiveState();
+    if (!saved || !state.run.started) return false;
+    LIVE.runId = saved.runId;
+    LIVE.cursor = saved.cursor;
+    LIVE.serverDone = saved.serverDone;
+    LIVE.failed = saved.failed;
+    LIVE.error = saved.error;
+    LIVE.concurrency = saved.concurrency;
+    DATA.reportRunId = saved.reportRunId || saved.runId;
+    // 页面刷新后 DATA 会重新变成静态脚本里的报告，必须重新拉服务端 report.json。
+    LIVE.reportLoaded = false;
+    LIVE.reportLoading = false;
+    // 恢复实时运行后只消费服务端 cursor 之后的新事件，避免刷新后混入静态回放事件。
+    DATA.runEvents.length = 0;
+    state.run.eventIndex = 0;
+    return true;
+  }
 
   function liveActive() {
     return LIVE.available && !!LIVE.runId && LIVE.runId !== "pending";
@@ -2166,6 +2244,7 @@
               + data.concurrency + " 路" + (data.mock ? "，演示模型" : "") + "）",
             result: "实时"
           });
+          saveState();
         } else if (data && data.active_run_id) {
           // 服务端防重入（见 server.py）：已有一条在跑，多半是重复点击。
           // 挂到那条运行上继续轮询，而不是退回回放——回放会冒充实时，那更糟。
@@ -2180,12 +2259,14 @@
             message: "已有评审任务进行中，页面③将接续展示该任务进度",
             result: "实时"
           });
+          saveState();
         } else {
           LIVE.runId = null;
           LIVE.failed = true;
           LIVE.error = (data && data.error) || "评审引擎暂未启动";
           pushRunLog({ time: clock(), kind: "unrated",
             message: "评审引擎连接失败：" + LIVE.error + "（页面③切换为离线演示）", result: "失败" });
+          saveState();
         }
       })
       .catch((err) => {
@@ -2193,6 +2274,7 @@
         LIVE.available = false;
         LIVE.failed = true;
         LIVE.error = String(err);
+        saveState();
       });
   }
 
@@ -2210,10 +2292,12 @@
         LIVE.serverDone = !!data.done;
         LIVE.failed = !!data.failed;
         LIVE.error = data.error || "";
+        saveState();
         if (LIVE.failed && LIVE.error && !LIVE.announced) {
           LIVE.announced = true;
           pushRunLog({ time: clock(), kind: "unrated",
             message: "运行失败：" + LIVE.error, result: "失败" });
+          saveState();
         }
         if (LIVE.serverDone && !LIVE.reportLoaded) liveLoadReport();
       })
@@ -2238,7 +2322,8 @@
   }
 
   function liveLoadReport() {
-    LIVE.reportLoaded = true;
+    if (!liveActive() || LIVE.reportLoaded || LIVE.reportLoading) return;
+    LIVE.reportLoading = true;
     fetch("/api/report?run_id=" + LIVE.runId, { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -2246,9 +2331,14 @@
         // 与前端 reportBidderKey() 的取键规则一致，可直接覆盖。
         if (data && Array.isArray(data.matrix)) {
           DATA.reportData = Object.assign({}, DATA.reportData, data);
+          DATA.reportRunId = LIVE.runId;
+          LIVE.reportLoaded = true;
+          saveState();
+          if (getRoute().path === "/results") render();
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => { LIVE.reportLoading = false; });
   }
   // ================= 实时运行到此为止 =================
 
@@ -2352,14 +2442,7 @@
     // 服务层不会收到新的 POST /api/run，页面③会把上一轮的事件当成新运行回放——
     // 那正是 §1 P0 要防的「预跑好当场播放」。F5 刷新能绕过（LIVE 是内存态），
     // 但演示现场不该依赖人记得刷新。
-    LIVE.runId = null;
-    LIVE.cursor = 0;
-    LIVE.serverDone = false;
-    LIVE.failed = false;
-    LIVE.error = "";
-    LIVE.reportLoaded = false;
-    LIVE.announced = false;
-    LIVE.concurrency = null;
+    resetLiveState();
     state.upload = createUploadState();
     state.reviewOverrides = {};
     state.expertReviews = [];
@@ -3165,8 +3248,13 @@
         window.alert("评审完成后才能导出报告。");
         return;
       }
+      const exportRunId = DATA.reportRunId || LIVE.runId;
+      if (!exportRunId || exportRunId === "pending") {
+        window.alert("当前没有可导出的报告");
+        return;
+      }
       // 调用后端 /api/export 生成评审结果_正式.xlsx，前端用 fetch 接收 blob 后触发下载
-      fetch("/api/export?run_id=" + LIVE.runId)
+      fetch("/api/export?run_id=" + encodeURIComponent(exportRunId))
         .then((res) => {
           if (!res.ok) {
             return res.text().then((text) => { throw new Error(text || "导出失败"); });
@@ -3193,6 +3281,11 @@
     if (exportReport) {
       if (!state.run.finished) {
         window.alert("评审完成后才能导出报告。当前结果页仅作为运行过程查看。");
+        return;
+      }
+      if (liveActive() && !LIVE.reportLoaded) {
+        liveLoadReport();
+        window.alert("正式报告数据正在加载，请稍后再导出。");
         return;
       }
       downloadReport();
@@ -3360,11 +3453,19 @@
 
   liveProbe().then(() => {
     // 刷新页面后重连服务端运行：LIVE 是内存态，刷新即丢。
-    // liveStart 幂等——LIVE.runId 已在或服务不可用就早退；服务端防重入
-    // 会返回 active_run_id 挂回正在跑的那条（见 liveStart 与 server.py）。
+    // 先恢复已保存的 run_id；没有 run_id 时再走 liveStart 防重入接续。
     // 不重连的话，刷新后页面只能冻结或退回回放——回放冒充实时是 §1 的 P0。
     // 服务不可用（LIVE.available=false）时不调 liveStart，走既有回放兜底。
-    if (state.run.started && !state.run.finished && LIVE.available) {
+    const restoredLive = LIVE.available && restoreLiveState();
+    if (restoredLive && liveActive()) {
+      if (state.run.finished || LIVE.serverDone) {
+        liveLoadReport();
+      } else {
+        livePoll();
+      }
+      render();
+    }
+    if (state.run.started && !state.run.finished && LIVE.available && !liveActive()) {
       liveStart();
     }
     if (state.run.started && !state.run.finished) {

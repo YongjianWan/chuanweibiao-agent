@@ -70,6 +70,12 @@ RUNS: dict[str, "Run"] = {}
 RUNS_LOCK = threading.Lock()
 
 
+def console_print(message: str, *, error: bool = False) -> None:
+    stream = sys.stderr if error else sys.stdout
+    if stream is not None:
+        print(message, file=stream)
+
+
 class Run:
     """一次评审运行的全部状态。events 只追加不修改，前端按 cursor 增量取。"""
 
@@ -253,7 +259,8 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         # 轮询每秒一次，默认日志会刷屏，只留非轮询请求
         if "/api/progress" not in (self.path or ""):
-            sys.stderr.write("%s - %s\n" % (datetime.now().strftime("%H:%M:%S"), fmt % args))
+            if sys.stderr is not None:
+                sys.stderr.write("%s - %s\n" % (datetime.now().strftime("%H:%M:%S"), fmt % args))
 
     def send_json(self, payload: dict, status: int = 200) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -450,16 +457,16 @@ def main(argv=None) -> int:
     httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     httpd.mock_mode = args.mock
     mode = "Mock 模型" if args.mock else "真实端点（需 AF_BASE_URL / AF_AGENT_ID / AF_API_KEY）"
-    print(f"服务已启动：http://{args.host}:{args.port}/    模式：{mode}")
-    print(f"投标文件目录：{DEFAULT_SOURCE}")
-    print("  " + ("存在" if DEFAULT_SOURCE.exists() else "不存在——页面①点下一步会报错"))
+    console_print(f"服务已启动：http://{args.host}:{args.port}/    模式：{mode}")
+    console_print(f"投标文件目录：{DEFAULT_SOURCE}")
+    console_print("  " + ("存在" if DEFAULT_SOURCE.exists() else "不存在——页面①点下一步会报错"))
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\n已停止")
+        console_print("\n已停止")
     except Exception as exc:
         # 捕获并打印任何导致服务退出的隐藏异常，避免终端里「静默退出」
-        print(f"\n服务异常退出：{type(exc).__name__}: {exc}", file=sys.stderr)
+        console_print(f"\n服务异常退出：{type(exc).__name__}: {exc}", error=True)
         return 1
     return 0
 
