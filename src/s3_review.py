@@ -11,6 +11,7 @@ import argparse
 import json
 import os
 import threading
+import uuid
 import time
 import urllib.error
 import urllib.request
@@ -214,7 +215,10 @@ class AgentFactoryClient:
         self.timeout = timeout
         self.name = agent_id
         # run_id 隔离不同批次：重跑时换一个，避免读到上一批的会话内容。
-        self.run_id = run_id or f"s3-{int(time.time())}"
+        # **默认必须含随机段，不能只用时间戳**：scheduler 为每个评审项新建一个
+        # client，秒级时间戳会让同一秒内创建的多个实例拿到相同 run_id，
+        # 叠加各自从 0 起算的 _seq，thread_id 完全碰撞。见 _next_thread_id。
+        self.run_id = run_id or f"s3-{uuid.uuid4().hex[:12]}"
         self._seq = 0
         self._seq_lock = threading.Lock()
         # 显式空代理：内网端点不能走 HTTP_PROXY，否则超时。
@@ -237,9 +241,25 @@ class AgentFactoryClient:
         )
 
     def _next_thread_id(self) -> str:
+        """每次调用一个全新的会话 id，**跨实例、跨进程都不许碰撞**。
+
+        这个端点不传 thread_id 并非每次独立（见类 docstring 第 2 条），
+        传了但重复同样不独立——端点按 id 认会话，两次调用给同一个 id
+        就是同一个会话，后一次能读到前一次的内容。
+
+        原实现是 ``{秒级时间戳}-{实例内自增序号}``。单实例内没问题，
+        但 `scheduler.py` 每个评审项新建一个 client：并发 4 路时同一秒
+        创建的 4 个实例 run_id 相同、_seq 都从 0 起算，**四条 thread_id
+        逐字相同**，四道题共用一个会话。实测症状是同一份证据六次判分呈双峰，
+        低分那几次的 reason 讲的是别的评分项——模型拿着上一题的上下文在答。
+
+        所以序号只保留可读性，唯一性由 uuid 承担；两者都留是为了排查端点日志时
+        还能看出是同一批的第几次调用。
+        """
         with self._seq_lock:
             self._seq += 1
-            return f"{self.run_id}-{self._seq:04d}"
+            seq = self._seq
+        return f"{self.run_id}-{seq:04d}-{uuid.uuid4().hex}"
 
     @staticmethod
     def _estimate_tokens(text: str) -> int:
@@ -778,29 +798,23 @@ def _miss_result(
     }
 
 
-def review_one(
+def _sample_once(
     evidence: Mapping[str, Any],
     item: Mapping[str, Any],
     project_summary: str,
     project_rules: Sequence[str],
     section_index: Mapping[tuple[str, str], str],
     client: ModelClient,
-    *,
-    max_attempts: int = DEFAULT_MAX_ATTEMPTS,
-    sleep: Callable[[float], None] = time.sleep,
-) -> dict[str, Any]:
-    """评审一个证据包，返回 README §4 定义的单项评审结果。"""
-    _validate_scoring_item(item)
-    if max_attempts < 1:
-        raise ValueError("max_attempts 必须大于等于 1")
-    identity = _identity(evidence, item)
-    picked = evidence.get("picked") or []
-    if not picked:
-        return _miss_result(identity, evidence)
+    picked_count: int,
+    max_attempts: int,
+    sleep: Callable[[float], None],
+    perf: dict[str, int],
+) -> tuple[dict[str, Any] | None, int, str]:
+    """取一次有效判分：调用模型，格式或校验出错就按 §3.6 重试。
 
-    # 若证据元数据无法还原正文，先失败再调用模型，避免花 token 评审空内容。
-    _evidence_with_text(evidence, section_index)
-    total_perf = {"in_tokens": 0, "out_tokens": 0, "latency_ms": 0}
+    返回 ``(validated 或 None, 实际调用次数, 最后一次错误)``。
+    ``perf`` 就地累加，调用方负责把多次采样的开销合并。
+    """
     last_error = ""
     # 默认共调用 4 次：首次调用 + 3 次重试，重试等待时间为 2/4/8 秒。
     for attempt in range(1, max_attempts + 1):
@@ -814,34 +828,122 @@ def review_one(
         )
         try:
             response = client.complete(messages)
-            total_perf["in_tokens"] += response.in_tokens
-            total_perf["out_tokens"] += response.out_tokens
-            total_perf["latency_ms"] += response.latency_ms
+            perf["in_tokens"] += response.in_tokens
+            perf["out_tokens"] += response.out_tokens
+            perf["latency_ms"] += response.latency_ms
             # 先解析并校验模型结果，再进行确定性的分数与置信度计算。
             validated = _validate_model_output(
-                _parse_json_object(response.content), item, len(picked)
+                _parse_json_object(response.content), item, picked_count
             )
-            score, confidence, _ = _score_and_confidence(
-                validated, evidence, attempt
-            )
-            return {
-                **identity,
-                "status": "rated",
-                "tier": validated["tier"],
-                "score": score,
-                "miss_reason": None,
-                "cite": validated["cite"],
-                "reason": validated["reason"],
-                "confidence": confidence,
-                "attempts": attempt,
-                "last_error": "",
-                "perf": total_perf,
-            }
+            return validated, attempt, ""
         except (ReviewError, RuntimeError, TimeoutError, ConnectionError, OSError) as exc:
             # 只重试预期的端点或返回格式错误；程序自身 bug 必须直接暴露，不能静默记未评定。
             last_error = str(exc) or exc.__class__.__name__
             if attempt < max_attempts:
                 sleep(BACKOFF_SECONDS[min(attempt - 1, len(BACKOFF_SECONDS) - 1)])
+    return None, max_attempts, last_error
+
+
+def count_retries(result: Mapping[str, Any]) -> int:
+    """一项的重试次数 = 总调用次数 - 拿到有效判分的次数。
+
+    不能简单写成 ``attempts - 1``：那是 ``samples == 1`` 时的特例。
+    采样 K 次时 ``attempts`` 至少是 K，减 1 会把 K-1 次正常采样算成重试。
+    未评定项没有 ``sampling``，全部调用都算重试。
+    """
+    attempts = int(result.get("attempts", 0))
+    valid = int((result.get("sampling") or {}).get("n", 1 if result.get("status") == "rated" else 0))
+    return max(attempts - valid, 0)
+
+
+def review_one(
+    evidence: Mapping[str, Any],
+    item: Mapping[str, Any],
+    project_summary: str,
+    project_rules: Sequence[str],
+    section_index: Mapping[tuple[str, str], str],
+    client: ModelClient,
+    *,
+    max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    samples: int = 1,
+    sleep: Callable[[float], None] = time.sleep,
+) -> dict[str, Any]:
+    """评审一个证据包，返回 README §4 定义的单项评审结果。
+
+    **`samples` 是压方差的手段，不是重试**（2026-08-21 新增）。两者解决的问题不同：
+    `max_attempts` 处理「这次调用坏了」（格式错、超时、5xx），拿到一个有效判分就停；
+    `samples` 处理「这次调用好了，但换个时刻问会得到别的答案」——同一份证据跑 K 次，
+    取分数的中位数。
+
+    为什么必须在我方压：该端点**不接受** ``temperature`` / ``top_p`` / ``seed``
+    （2026-08-21 实测三者均被忽略，请求体照收但输出照样发散），
+    所以模型侧没有关掉随机性的开关。实测同一份代码、同一份证据跑两次，
+    19 项里档位只有 10 项一致——撞的是 README §1 的 P0「档位不能错」。
+
+    取**下中位数**而不是平均：平均会造出一个没有任何一次调用与之对应的分数，
+    那样 ``reason`` 和 ``cite`` 就只能张冠李戴地从别的采样里借。下中位数保证
+    ``score`` / ``reason`` / ``cite`` 三者来自同一次真实判分。
+
+    副产品是 ``sampling.agreement``（K 次里与中位同档的比例），它按比例压低
+    ``confidence``。**这是复核清单目前唯一有区分度的信号**——截断 ×0.9 实测
+    82% 的包都适用，全部落在 0.85 阈值上方，等于一面旗都不举。
+
+    ``samples=1``（默认）时 ``agreement`` 恒为 1.0，行为与本次改动前完全一致。
+    """
+    _validate_scoring_item(item)
+    if max_attempts < 1:
+        raise ValueError("max_attempts 必须大于等于 1")
+    if samples < 1:
+        raise ValueError("samples 必须大于等于 1")
+    identity = _identity(evidence, item)
+    picked = evidence.get("picked") or []
+    if not picked:
+        return _miss_result(identity, evidence)
+
+    # 若证据元数据无法还原正文，先失败再调用模型，避免花 token 评审空内容。
+    _evidence_with_text(evidence, section_index)
+    total_perf = {"in_tokens": 0, "out_tokens": 0, "latency_ms": 0}
+    valid: list[dict[str, Any]] = []
+    attempts = 0
+    last_error = ""
+    for _ in range(samples):
+        validated, used, error = _sample_once(
+            evidence, item, project_summary, project_rules, section_index,
+            client, len(picked), max_attempts, sleep, total_perf,
+        )
+        attempts += used
+        if validated is None:
+            last_error = error
+        else:
+            valid.append(validated)
+
+    if valid:
+        # 下中位数：排序后取第 (n-1)//2 个，n 为偶数时偏低的那个。
+        ordered = sorted(valid, key=lambda v: v["score"])
+        chosen = ordered[(len(ordered) - 1) // 2]
+        tiers = [v["tier"] for v in valid]
+        agreement = tiers.count(chosen["tier"]) / len(tiers)
+        score, confidence, _ = _score_and_confidence(chosen, evidence, attempts)
+        confidence = round(confidence * agreement, 3)
+        return {
+            **identity,
+            "status": "rated",
+            "tier": chosen["tier"],
+            "score": score,
+            "miss_reason": None,
+            "cite": chosen["cite"],
+            "reason": chosen["reason"],
+            "confidence": confidence,
+            "attempts": attempts,
+            "last_error": "",
+            "sampling": {
+                "n": len(valid),
+                "scores": [v["score"] for v in valid],
+                "tiers": tiers,
+                "agreement": round(agreement, 3),
+            },
+            "perf": total_perf,
+        }
 
     return {
         **identity,
@@ -936,7 +1038,7 @@ def review_all(
         "review_results": results,
         "perf": {
             "calls": len(results),
-            "retries": sum(max(result["attempts"] - 1, 0) for result in results),
+            "retries": sum(count_retries(result) for result in results),
             "in_tokens": sum(result["perf"]["in_tokens"] for result in results),
             "out_tokens": sum(result["perf"]["out_tokens"] for result in results),
             "latency_ms": sum(result["perf"]["latency_ms"] for result in results),

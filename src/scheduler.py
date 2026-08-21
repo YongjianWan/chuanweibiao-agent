@@ -267,7 +267,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     """
     import argparse
     import yaml
-    from s3_review import _index_sections, _extract_sections, _extract_evidence_packages, MockModelClient, OpenAICompatibleClient, AgentFactoryClient
+    from s3_review import _index_sections, _extract_sections, _extract_evidence_packages, MockModelClient, OpenAICompatibleClient, AgentFactoryClient, count_retries
 
     parser = argparse.ArgumentParser(description="T3: 并发调度器")
     parser.add_argument("--evidence", type=Path, required=True, help="单家或全项目's evidence 目录")
@@ -354,7 +354,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         except (json.JSONDecodeError, OSError, TypeError, ValueError):
             previous_wall = 0.0
     wall_clock_sec = round(previous_wall + wall_clock_sec, 3)
-    total_retries = sum(max(r.get("attempts", 0) - 1, 0) for r in all_results.values())
+    total_retries = sum(count_retries(r) for r in all_results.values())
     output = {
         "project": scoring_table.get("project", ""),
         "generated_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),

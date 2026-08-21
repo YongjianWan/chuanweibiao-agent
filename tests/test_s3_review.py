@@ -478,3 +478,122 @@ def test_parse_json_object_does_not_truncate_to_salvage():
         _parse_json_object('{"tier":"优","score":')
     with pytest.raises(ReviewError):
         _parse_json_object('{"tier":"优","cite":[0],"reason":')
+
+
+# ===== 多次采样取中位（2026-08-21）=====
+# 背景：端点不接受 temperature/top_p/seed（实测三者均被忽略），同一份证据
+# 跑两次档位一致率仅 10/19。方差只能在我方压，手段是同一项采样 K 次取中位。
+
+
+def test_sampling_takes_median_and_keeps_matching_reason():
+    """取下中位数，且 reason / cite 必须跟随中位那一次，不许张冠李戴。"""
+    client = SequenceClient([
+        model_payload(score=3.5, cite=[0]),
+        model_payload(score=2.2, cite=[0]),
+        model_payload(score=2.6, cite=[0]),
+    ])
+    # 让三次的 reason 可区分
+    client.responses = deque(
+        json.dumps({"score": s, "cite": [0], "reason": f"第 {s} 分的理由"}, ensure_ascii=False)
+        for s in (3.5, 2.2, 2.6)
+    )
+
+    result = review_one(EVIDENCE, ITEM, "摘要", [], SECTIONS, client, samples=3)
+
+    assert result["score"] == 2.6          # 三次排序 2.2 / 2.6 / 3.5，中位是 2.6
+    assert result["reason"] == "第 2.6 分的理由"
+    assert result["sampling"]["n"] == 3
+    assert sorted(result["sampling"]["scores"]) == [2.2, 2.6, 3.5]
+
+
+def test_sampling_agreement_discounts_confidence():
+    """K 次里与中位不同档的那些，按比例压低 confidence。
+
+    这是复核清单唯一有区分度的信号——截断 ×0.9 全线适用（实测 82% 的包都被
+    截断），落在 0.85 阈值上方，等于一面旗都不举。采样一致度才真正区分
+    「模型有把握」与「模型在猜」。
+    """
+    # 2.2 与 2.6 同属「良」[2,3)，3.5 属「优」[3,4] —— 2/3 同档
+    client = SequenceClient([])
+    client.responses = deque(
+        json.dumps({"score": s, "cite": [0], "reason": "理由"}, ensure_ascii=False)
+        for s in (3.5, 2.2, 2.6)
+    )
+
+    result = review_one(EVIDENCE, ITEM, "摘要", [], SECTIONS, client, samples=3)
+
+    # agreement 与 confidence 都 round 到 3 位，落盘数据不带浮点尾巴
+    assert result["sampling"]["agreement"] == 0.667
+    assert result["confidence"] == 0.667
+
+
+def test_sampling_all_same_tier_does_not_discount():
+    client = SequenceClient([])
+    client.responses = deque(
+        json.dumps({"score": s, "cite": [0], "reason": "理由"}, ensure_ascii=False)
+        for s in (2.2, 2.5, 2.8)
+    )
+
+    result = review_one(EVIDENCE, ITEM, "摘要", [], SECTIONS, client, samples=3)
+
+    assert result["sampling"]["agreement"] == 1.0
+    assert result["confidence"] == 1.0
+    assert result["tier"] == "良"
+
+
+def test_sampling_tolerates_partial_failure():
+    """K 次里有失败的，用成功的那些取中位，不整项作废。"""
+    client = SequenceClient([])
+    client.responses = deque([
+        json.dumps({"score": 2.2, "cite": [0], "reason": "第一次"}, ensure_ascii=False),
+        "彻底不是 JSON", "还不是", "仍然不是", "第四次也不是",   # 第二次采样重试耗尽
+        json.dumps({"score": 2.8, "cite": [0], "reason": "第三次"}, ensure_ascii=False),
+    ])
+
+    result = review_one(EVIDENCE, ITEM, "摘要", [], SECTIONS, client,
+                        samples=3, sleep=lambda _: None)
+
+    assert result["status"] == "rated"
+    assert result["sampling"]["n"] == 2          # 只有两次成功
+    assert result["score"] == 2.2                # 偶数取下中位，保证 reason 对得上
+    assert result["reason"] == "第一次"
+
+
+def test_sampling_defaults_to_one_and_keeps_old_behaviour():
+    """samples 默认 1：单次采样时 agreement 恒为 1.0，一切行为与改动前一致。"""
+    client = SequenceClient([model_payload()])
+
+    result = review_one(EVIDENCE, ITEM, "摘要", [], SECTIONS, client)
+
+    assert result["sampling"] == {"n": 1, "scores": [2.6], "tiers": ["良"], "agreement": 1.0}
+    assert result["confidence"] == 1.0
+    assert result["score"] == 2.6
+
+
+def test_thread_id_is_unique_across_client_instances():
+    """thread_id 必须跨实例唯一，不能只在单个 client 内递增。
+
+    这条守的是 2026-08-21 修掉的一个 P0：`scheduler.py` 为每个评审项新建一个
+    AgentFactoryClient，而 run_id 原本取秒级时间戳、_seq 从 0 起算——并发时
+    同一秒创建的多个 client 生成完全相同的 thread_id，端点据此认为是同一个会话，
+    于是**上下文互串，模型拿着 A 题的历史评 B 题**。
+
+    实测症状：同一份证据六次判分呈双峰（T-16 得过 2.5 也得过 7.5），
+    低分那几次的 reason 讲的是别的评分项（T-05 / T-12 的内容）。
+    档位一致率因此只有 68%，总分极差 14.8 分。
+    """
+    clients = [
+        AgentFactoryClient("http://x", "k", "agent-1"),
+        AgentFactoryClient("http://x", "k", "agent-1"),
+        AgentFactoryClient("http://x", "k", "agent-1"),
+    ]
+    ids = [c._next_thread_id() for c in clients for _ in range(4)]
+
+    assert len(set(ids)) == len(ids), f"thread_id 碰撞：{ids}"
+
+
+def test_thread_id_keeps_run_id_prefix():
+    """显式传入 run_id 时仍作前缀保留，便于按批次排查端点日志。"""
+    client = AgentFactoryClient("http://x", "k", "agent-1", run_id="run-abc")
+
+    assert client._next_thread_id().startswith("run-abc-")
