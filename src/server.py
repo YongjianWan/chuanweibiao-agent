@@ -286,6 +286,34 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"error": "run_id 不存在"}, 404)
             cursor = int((query.get("cursor") or ["0"])[0])
             return self.send_json(run.snapshot(cursor))
+        if path == "/api/export":
+            # 前端「导出 Excel」新入口：调用 scripts/export_xlsx.py 生成评审结果_正式.xlsx
+            run = self._lookup(query)
+            if run is None:
+                return self.send_json({"error": "run_id 不存在"}, 404)
+            report_file = run.report_dir / "report.json"
+            if not report_file.exists():
+                return self.send_json({"error": "报告尚未生成"}, 404)
+            xlsx = run.report_dir / "评审结果_正式.xlsx"
+            try:
+                # 与其他步骤一致走 CLI：出问题时命令能原样贴进终端复现
+                run_cli(run, ["scripts/export_xlsx.py", str(report_file),
+                              "-o", str(xlsx)], "导出 Excel")
+            except RuntimeError as exc:
+                return self.send_json({"error": str(exc)}, 500)
+            data = xlsx.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type",
+                             "application/vnd.openxmlformats-officedocument."
+                             "spreadsheetml.sheet")
+            # 文件名走 RFC 5987，中文名各浏览器都能正确落盘
+            self.send_header("Content-Disposition",
+                             "attachment; filename=ping-shen-jie-guo-zheng-shi.xlsx; "
+                             "filename*=UTF-8''%E8%AF%84%E5%AE%A1%E7%BB%93%E6%9E%9C%E6%AD%A3%E5%BC%8F.xlsx")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return None
         if path == "/api/report.xlsx":
             run = self._lookup(query)
             if run is None:

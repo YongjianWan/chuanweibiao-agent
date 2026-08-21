@@ -3124,8 +3124,27 @@
         window.alert("评审完成后才能导出报告。");
         return;
       }
-      // 服务端设了 Content-Disposition: attachment，交给浏览器下载即可
-      window.location.href = "/api/report.xlsx?run_id=" + LIVE.runId;
+      // 调用后端 /api/export 生成评审结果_正式.xlsx，前端用 fetch 接收 blob 后触发下载
+      fetch("/api/export?run_id=" + LIVE.runId)
+        .then((res) => {
+          if (!res.ok) {
+            return res.text().then((text) => { throw new Error(text || "导出失败"); });
+          }
+          return res.blob();
+        })
+        .then((blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "评审结果_正式.xlsx";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        })
+        .catch((err) => {
+          window.alert("导出失败：" + err.message);
+        });
       return;
     }
 
