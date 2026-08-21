@@ -74,11 +74,12 @@ def _flag_why(result: Mapping[str, Any]) -> str:
         # 将来若调整因素或乘数，这个默认理由要跟着重审——data-contract 里
         # 「改因素必须重算阈值表」的规矩覆盖不到这行文案。
         parts.append("证据降级（细粒度检索词未命中，退回评分项名重检索），证据可能不对题")
-    # 重试次数不再是打折原因（2026-08-21，见 s3_review._score_and_confidence 的 docstring），
-    # 但它是排查线索，附在后面，不单独构成进 review_flags 的理由。
-    attempts = result.get("attempts") or 0
-    if attempts > 1:
-        parts.append(f"另：该项调用重试过 {attempts - 1} 次（不影响置信度）")
+    # **不要把重试次数附在这里**（2026-08-21 移除）。复核清单的每一行都应当对应
+    # 一个明确的人工动作，而重试与判分质量无关——重试只由格式错、cite 越界、
+    # 端点 5xx 触发，三者都在模型看到的证据之外，重试成功那一刻输入与第一次逐字相同。
+    # 实测佐证：修复串题后的全量里，重试过的 8 项得分率均值 0.901，
+    # 一次过的 220 项为 0.876，重试过的反而略高。
+    # 重试信息属于运维视图，已由 perf.retries、attempts 字段和页面③的实时计数承担。
     return "；".join(parts)
 
 

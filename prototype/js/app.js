@@ -1591,7 +1591,7 @@
         <tr class="${audit ? "row-warning" : ""}">
           <td class="sticky-item" data-score-col="0">
             <strong>${html(item.name)}</strong>
-            ${audit ? `<div class="small muted">无区分度，建议复核 · ${html(audit.detail)}</div>` : ""}
+            ${audit ? `<div class="small muted">未产生区分 · ${html(audit.detail)}</div>` : ""}
           </td>
           <td class="sticky-max" data-score-col="1">${item.max_score.toFixed(1)}</td>
           ${DATA.bidders.map((bidder, index) => renderScoreCell(bidder, item, index, completedKeys)).join("")}
@@ -1609,7 +1609,7 @@
           <div class="toolbar">
             <a class="btn" href="#/running">返回运行监视</a>
             <button class="btn primary" data-export-report ${canExportReport ? "" : "disabled"} title="${canExportReport ? "导出静态 HTML 报告" : "评审完成后才能导出报告"}">导出报告</button>
-            ${liveActive() ? `<button class="btn" data-export-xlsx ${canExportReport ? "" : "disabled"} title="${canExportReport ? "导出 Excel（评分汇总 / 逐项明细 / 未评定 / 建议复核 / 性能）" : "评审完成后才能导出"}">导出 Excel</button>` : ""}
+            ${liveActive() ? `<button class="btn" data-export-xlsx ${canExportReport ? "" : "disabled"} title="${canExportReport ? "导出 Excel（判分与依据 / 评分汇总 / 未评定 / 建议复核 / 区分度自检 / 性能）" : "评审完成后才能导出"}">导出 Excel</button>` : ""}
           </div>
         </section>
 
@@ -1617,7 +1617,8 @@
           ${metric("投标人", DATA.bidders.length + " 家", "独立评分结果")}
           ${metric("已完成", completedCount + " / " + TOTAL_REVIEWS, pendingCount ? pendingCount + " 项评审中" : "全部完成")}
           ${metric("用时", formatDuration(elapsed), state.run.startedAt ? "从开始评审起算" : "尚未开始")}
-          ${metric("建议复核", (visibleReviewFlags.length + visibleAuditFlags.length) + " 项", "低置信 " + visibleReviewFlags.length + " / 无区分度 " + visibleAuditFlags.length)}
+          ${metric("建议复核", visibleReviewFlags.length + " 项", visibleReviewFlags.length ? "置信度偏低，需人工判断" : "本次无需复核的判分")}
+          ${metric("区分度自检", visibleAuditFlags.length + " 项", "各家判成同一档，非判分错误")}
         </section>
 
         ${pendingCount ? `
@@ -1670,7 +1671,7 @@
               <span>— = 未评定，系统未能给出判断，不计入合计</span>
               <span>评审中 = 结果尚未到达，运行完成前不生成总分</span>
               <span>复核 = confidence &lt; ${LOW_CONFIDENCE_THRESHOLD}，建议人工复核</span>
-              <span>无区分度 = 12 家落在同一档，建议复核</span>
+              <span>未产生区分 = 12 家落在同一档；各家都写得完整时这是正确结果，不是判分错误</span>
               <span>人工 = 专家改判值，与系统判分并存</span>
               <span>* = 该家存在未评定项，合计不完整</span>
             </div>
@@ -2841,7 +2842,7 @@
         <tr class="${audit ? "audit-row" : ""}">
           <td>
             ${html(item.name)}
-            ${audit ? `<div class="note">无区分度，建议复核：${html(audit.detail)}</div>` : ""}
+            ${audit ? `<div class="note">未产生区分：${html(audit.detail)}</div>` : ""}
           </td>
           <td>${item.max_score.toFixed(1)}</td>
           ${DATA.bidders.map((bidder) => {
