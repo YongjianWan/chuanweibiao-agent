@@ -240,6 +240,20 @@ button:disabled {
   font-weight: 700;
 }
 
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.panel-hint {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .panel-body {
   padding: 18px;
 }
@@ -444,6 +458,32 @@ button:disabled {
 
 .btn.primary:hover {
   background: var(--primary-strong);
+}
+
+.btn.danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn.danger:hover {
+  background: #8f1d14;
+}
+
+.btn.danger-subtle {
+  border-color: #D14343;
+  background: #D14343;
+  color: #FFFFFF;
+}
+
+.btn.danger-subtle:hover {
+  border-color: #B93636;
+  background: #B93636;
+}
+
+.btn.danger-subtle:active {
+  border-color: #9F2F2F;
+  background: #9F2F2F;
 }
 
 .btn.ghost {

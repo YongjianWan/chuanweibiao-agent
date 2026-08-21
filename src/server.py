@@ -37,10 +37,13 @@ import sys
 import threading
 import time
 import uuid
+import tempfile
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
+
+import psutil
 
 ROOT = Path(__file__).resolve().parent.parent
 PROTOTYPE_DIR = ROOT / "prototype"
@@ -70,6 +73,10 @@ RUNS: dict[str, "Run"] = {}
 RUNS_LOCK = threading.Lock()
 
 
+class RunCancelled(RuntimeError):
+    """运行被用户主动终止。"""
+
+
 def console_print(message: str, *, error: bool = False) -> None:
     stream = sys.stderr if error else sys.stdout
     if stream is not None:
@@ -91,9 +98,14 @@ class Run:
         self.done = False
         self.failed = False
         self.error = ""
+        self.paused = False
+        self.cancel_requested = False
+        self.cancel_reason = ""
+        self.current_proc: subprocess.Popen | None = None
         self.started_at = time.time()
         self.finished_at: float | None = None
         self.lock = threading.Lock()
+        self.control = threading.Condition(threading.Lock())
         # 页面②是全流程唯一的人工介入点（README §5.2）。S1/S2 在人核对评分表期间就跑，
         # 但 **S3 必须等确认**——否则人还没点确认、后台已经评完，页面③会一次性刷完
         # 228 项，看起来正是 §1 P0 要避免的「预跑好当场播放」。
@@ -121,21 +133,130 @@ class Run:
             "done": self.done,
             "failed": self.failed,
             "error": self.error,
+            "paused": self.paused,
             "concurrency": self.concurrency,
             "elapsed_sec": round((self.finished_at or time.time()) - self.started_at, 1),
         }
+
+    def attach_process(self, proc: subprocess.Popen) -> None:
+        with self.control:
+            self.current_proc = proc
+            if self.cancel_requested:
+                self._terminate_process_tree(proc)
+            elif self.paused:
+                self._suspend_process_tree(proc)
+
+    def detach_process(self, proc: subprocess.Popen) -> None:
+        with self.control:
+            if self.current_proc is proc:
+                self.current_proc = None
+
+    def wait_if_paused(self) -> None:
+        with self.control:
+            while self.paused and not self.cancel_requested:
+                self.control.wait(0.5)
+            if self.cancel_requested:
+                raise RunCancelled(self.cancel_reason or "运行已取消")
+
+    def set_paused(self, paused: bool) -> None:
+        with self.control:
+            if self.done:
+                return
+            if self.paused == paused:
+                return
+            self.paused = paused
+            proc = self.current_proc
+            if proc is not None and proc.poll() is None:
+                if paused:
+                    self._suspend_process_tree(proc)
+                else:
+                    self._resume_process_tree(proc)
+            self.control.notify_all()
+        self.emit({
+            "type": "control",
+            "action": "paused" if paused else "resumed",
+            "message": "后台评审任务已暂停" if paused else "后台评审任务已继续",
+        })
+
+    def request_cancel(self, reason: str) -> None:
+        with self.control:
+            self.cancel_requested = True
+            self.cancel_reason = reason
+            self.paused = False
+            self.confirmed.set()
+            proc = self.current_proc
+            if proc is not None and proc.poll() is None:
+                self._resume_process_tree(proc)
+                self._terminate_process_tree(proc)
+            self.control.notify_all()
+        self.emit({"type": "control", "action": "cancelled", "message": reason})
+
+    @staticmethod
+    def _process_tree(proc: subprocess.Popen) -> list[psutil.Process]:
+        try:
+            root = psutil.Process(proc.pid)
+            return root.children(recursive=True) + [root]
+        except psutil.Error:
+            return []
+
+    @classmethod
+    def _suspend_process_tree(cls, proc: subprocess.Popen) -> None:
+        for child in cls._process_tree(proc):
+            try:
+                child.suspend()
+            except psutil.Error:
+                continue
+
+    @classmethod
+    def _resume_process_tree(cls, proc: subprocess.Popen) -> None:
+        for child in cls._process_tree(proc):
+            try:
+                child.resume()
+            except psutil.Error:
+                continue
+
+    @classmethod
+    def _terminate_process_tree(cls, proc: subprocess.Popen) -> None:
+        processes = cls._process_tree(proc)
+        for child in processes:
+            try:
+                child.terminate()
+            except psutil.Error:
+                continue
+        gone, alive = psutil.wait_procs(processes, timeout=5)
+        for child in alive:
+            try:
+                child.kill()
+            except psutil.Error:
+                continue
 
 
 def run_cli(run: Run, args: list[str], step: str) -> None:
     """跑一条 CLI，失败就抛。stdout 不进事件流——页面③要的是评审进度，不是脚本日志。"""
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
-    proc = subprocess.run(
-        [sys.executable, *args],
-        cwd=str(ROOT), env=env, capture_output=True,
-        encoding="utf-8", errors="replace",
-    )
+    run.wait_if_paused()
+    with tempfile.TemporaryFile("w+b") as stdout, tempfile.TemporaryFile("w+b") as stderr:
+        proc = subprocess.Popen(
+            [sys.executable, *args],
+            cwd=str(ROOT), env=env, stdout=stdout, stderr=stderr,
+        )
+        run.attach_process(proc)
+        try:
+            while proc.poll() is None:
+                run.wait_if_paused()
+                time.sleep(0.2)
+        finally:
+            run.detach_process(proc)
+
+        stdout.seek(0)
+        stderr.seek(0)
+        out_text = stdout.read().decode("utf-8", errors="replace")
+        err_text = stderr.read().decode("utf-8", errors="replace")
+
+    if run.cancel_requested:
+        raise RunCancelled(run.cancel_reason or "运行已取消")
     if proc.returncode != 0:
-        tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-8:]
+        tail = (err_text or out_text or "").strip().splitlines()[-8:]
         raise RuntimeError(f"{step} 失败（exit {proc.returncode}）：" + " / ".join(tail))
 
 
@@ -203,11 +324,13 @@ def orchestrate(run: Run) -> None:
     try:
         run.dir.mkdir(parents=True, exist_ok=True)
 
+        run.wait_if_paused()
         run.stage(STAGE_INGEST, "running", "开始读取 12 家投标技术标 PDF")
         run_cli(run, ["src/s1_ingest.py", "--project", str(run.source), str(run.dir)], "S1 入库")
         run_cli(run, ["scripts/merge_sections.py", str(run.dir)], "章节合并")
         run.stage(STAGE_INGEST, "done", "全部投标文件入库完成")
 
+        run.wait_if_paused()
         run.stage(STAGE_LOCATE, "running", "按 GUID 绑定关系，在单个 PDF 内部定位证据")
         run_cli(run, ["src/s2_locate.py", "--project", str(run.dir),
                       "--scoring-table", str(SCORING_TABLE)], "S2 证据定位")
@@ -218,6 +341,7 @@ def orchestrate(run: Run) -> None:
         if not run.confirmed.wait(timeout=1800):
             raise RuntimeError("等待页面②确认超时（30 分钟）")
 
+        run.wait_if_paused()
         run.stage(STAGE_REVIEW, "running", "逐项评审开始")
         stop = threading.Event()
         watcher = threading.Thread(target=watch_reviews, args=(run, stop), daemon=True)
@@ -238,12 +362,15 @@ def orchestrate(run: Run) -> None:
             scan_reviews(run)  # 收尾补扫：最后几项可能落在最后一次轮询之后
         run.stage(STAGE_REVIEW, "done", "全部评分项评审完成")
 
+        run.wait_if_paused()
         run.stage(STAGE_REPORT, "running", "汇总报告")
         run_cli(run, ["src/s4_report.py",
                       "--reviews", str(run.reviews_dir),
                       "--scoring-table", str(SCORING_TABLE),
                       "--output", str(run.report_dir)], "S4 报告")
         run.stage(STAGE_REPORT, "done", "报告已生成")
+    except RunCancelled as exc:
+        run.error = str(exc)
     except Exception as exc:  # noqa: BLE001 —— 任何失败都要如实回传给页面③，不吞
         run.failed = True
         run.error = str(exc)
@@ -367,9 +494,21 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"error": "run_id 不存在"}, 404)
             run.confirmed.set()
             return self.send_json({"ok": True, "run_id": run.id})
+        if path == "/api/pause":
+            run = self._lookup(parse_qs(urlparse(self.path).query))
+            if run is None:
+                return self.send_json({"error": "run_id 不存在"}, 404)
+            body = self.read_json()
+            paused = bool(body.get("paused", True))
+            run.set_paused(paused)
+            return self.send_json({"ok": True, "run_id": run.id, "paused": run.paused})
+        if path == "/api/restart":
+            return self.restart_run()
         if path != "/api/run":
             return self.send_json({"error": "not found"}, 404)
-        body = self.read_json()
+        return self.start_run(self.read_json())
+
+    def start_run(self, body: dict, *, skip_active: bool = False):
         source = Path(body.get("source") or DEFAULT_SOURCE)
         if not source.is_absolute():
             source = ROOT / source
@@ -379,12 +518,13 @@ class Handler(BaseHTTPRequestHandler):
         # 同时只允许一条流水线在跑。两条 4 路并发叠加 = 8 路打向端点，
         # 而 12 路那晚 228 项全灭过（README §6 阶段二），离出过事的区间不远。
         # 演示现场双击/连点页面①是真实会发生的事，不能靠人小心。
-        with RUNS_LOCK:
-            active = next((r for r in RUNS.values() if not r.done), None)
-        if active is not None:
-            return self.send_json(
-                {"error": f"已有运行进行中（run {active.id}），等它跑完再发起",
-                 "active_run_id": active.id, "concurrency": active.concurrency}, 409)
+        if not skip_active:
+            with RUNS_LOCK:
+                active = next((r for r in RUNS.values() if not r.done and not r.cancel_requested), None)
+            if active is not None:
+                return self.send_json(
+                    {"error": f"已有运行进行中（run {active.id}），等它跑完再发起",
+                     "active_run_id": active.id, "concurrency": active.concurrency}, 409)
 
         run = Run(
             run_id=uuid.uuid4().hex[:12],
@@ -394,9 +534,28 @@ class Handler(BaseHTTPRequestHandler):
         )
         with RUNS_LOCK:
             RUNS[run.id] = run
+        if body.get("confirmed"):
+            run.confirmed.set()
         threading.Thread(target=orchestrate, args=(run,), daemon=True).start()
         return self.send_json({"run_id": run.id, "source": str(source),
                                "concurrency": run.concurrency, "mock": run.mock})
+
+    def restart_run(self):
+        query = parse_qs(urlparse(self.path).query)
+        old = self._lookup(query)
+        if old is None:
+            return self.send_json({"error": "run_id 不存在"}, 404)
+        body = self.read_json()
+        old.request_cancel("用户重新开始，本轮运行已终止")
+        source = body.get("source") or str(old.source)
+        concurrency = body.get("concurrency") or old.concurrency
+        mock = body.get("mock") if "mock" in body else old.mock
+        return self.start_run({
+            "source": source,
+            "concurrency": concurrency,
+            "mock": mock,
+            "confirmed": bool(body.get("confirmed", True)),
+        }, skip_active=True)
 
     def _lookup(self, query):
         """按 run_id 找运行；内存里没有就回退到磁盘。

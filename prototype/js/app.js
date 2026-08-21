@@ -159,6 +159,7 @@
       started: false,
       reviewStarted: false,
       paused: false,
+      backendPaused: false,
       finished: false,
       completedReviews: 0,
       retries: 0,
@@ -170,6 +171,8 @@
       finishedAt: null,
       pausedAt: null,
       pausedTotalMs: 0,
+      backendPausedAt: null,
+      backendPausedTotalMs: 0,
       lastEventAt: null,
       waitUntil: null,
       currentLabel: "等待开始",
@@ -296,6 +299,7 @@
     run.started = Boolean(saved.started);
     run.reviewStarted = Boolean(saved.reviewStarted);
     run.paused = Boolean(saved.paused);
+    run.backendPaused = Boolean(saved.backendPaused);
     run.finished = Boolean(saved.finished);
     run.completedReviews = Math.max(0, Math.floor(finiteNumber(saved.completedReviews, 0)));
     run.retries = Math.max(0, Math.floor(finiteNumber(saved.retries, 0)));
@@ -307,6 +311,8 @@
     run.finishedAt = finiteNumber(saved.finishedAt, 0) || null;
     run.pausedAt = finiteNumber(saved.pausedAt, 0) || null;
     run.pausedTotalMs = Math.max(0, finiteNumber(saved.pausedTotalMs, 0));
+    run.backendPausedAt = finiteNumber(saved.backendPausedAt, 0) || null;
+    run.backendPausedTotalMs = Math.max(0, finiteNumber(saved.backendPausedTotalMs, 0));
     run.lastEventAt = finiteNumber(saved.lastEventAt, 0) || null;
     run.waitUntil = finiteNumber(saved.waitUntil, 0) || null;
     run.currentLabel = typeof saved.currentLabel === "string" ? saved.currentLabel : run.currentLabel;
@@ -319,14 +325,21 @@
       run.paused = false;
       run.pausedAt = null;
       run.pausedTotalMs = 0;
+      run.backendPaused = false;
+      run.backendPausedAt = null;
+      run.backendPausedTotalMs = 0;
     }
 
     if (run.finished) {
       run.paused = false;
+      run.backendPaused = false;
       run.pausedAt = null;
+      run.backendPausedAt = null;
       run.waitUntil = null;
     } else if (run.paused && !run.pausedAt) {
       run.pausedAt = Date.now();
+    } else if (run.backendPaused && !run.backendPausedAt) {
+      run.backendPausedAt = Date.now();
     }
     return run;
   }
@@ -1465,6 +1478,13 @@
     const resultButton = isResultsAccessible()
       ? `<a class="btn primary" href="#/results">查看已完成结果</a>`
       : `<span class="btn primary disabled" aria-disabled="true" title="逐项评审开始后才会产生结果">查看已完成结果</span>`;
+    const backendControlDisabled = !liveActive() || run.finished || LIVE.serverDone;
+    const backendControlTitle = liveActive()
+      ? (run.backendPaused ? "继续后台评审任务" : "暂停后台评审任务")
+      : "实时后端连接后可控制后台任务";
+    const scrollButton = `<button class="btn ghost" data-toggle-run title="${liveActive()
+      ? "暂停运行记录滚动展示，后台评审任务不受影响"
+      : "暂停运行记录回放"}">${run.paused ? "继续滚动" : "暂停滚动"}</button>`;
     const runSourceText = DATA.dataSource && DATA.dataSource.kind === "real"
       ? "真实评审记录"
       : "样例评审记录";
@@ -1477,11 +1497,8 @@
             <p class="page-desc">本页展示逐项评审进度、当前处理状态、重试和未评定项；分母为 ${TOTAL_REVIEWS} = ${DATA.bidders.length} 家投标人 × ${DATA.scoringTable.items.length} 个评分项。</p>
           </div>
           <div class="toolbar">
-            <button class="btn" data-toggle-run title="${liveActive()
-              ? "暂停页面滚动展示，后台评审任务将继续执行"
-              : "暂停回放"}">${liveActive()
-              ? (run.paused ? "继续滚动" : "暂停滚动（后台继续）")
-              : (run.paused ? "继续" : "暂停")}</button>
+            <button class="btn" data-toggle-backend-pause ${backendControlDisabled ? "disabled" : ""} title="${html(backendControlTitle)}">${run.backendPaused ? "继续运行" : "暂停"}</button>
+            <button class="btn danger-subtle" data-restart-live-run ${!liveActive() ? "disabled" : ""} title="${liveActive() ? "终止当前后台任务并重新开始评审" : "实时后端连接后可重新开始"}">重新开始</button>
             ${resultButton}
           </div>
         </section>
@@ -1560,7 +1577,10 @@
         <section class="panel" style="margin-top: 18px;">
           <div class="panel-header">
             <h3 class="panel-title">运行记录</h3>
-            <span class="badge neutral">最新在下</span>
+            <div class="panel-actions">
+              ${scrollButton}
+              <span class="badge neutral">最新在下</span>
+            </div>
           </div>
           <div class="panel-body">
             <div class="run-log">
@@ -2065,16 +2085,35 @@
   function runElapsedMs() {
     if (!state.run.startedAt) return 0;
     const endAt = state.run.finishedAt || runTimestampNow(state.run);
-    return Math.max(0, endAt - state.run.startedAt - state.run.pausedTotalMs);
+    return Math.max(0, endAt - state.run.startedAt - state.run.pausedTotalMs - state.run.backendPausedTotalMs);
   }
 
   function runTimestampNow(run) {
+    if (run.backendPaused && run.backendPausedAt) return run.backendPausedAt;
     return run.paused && run.pausedAt ? run.pausedAt : Date.now();
   }
 
   function reportElapsedMs() {
     const wallClock = DATA.reportData && DATA.reportData.perf ? DATA.reportData.perf.wall_clock_sec : null;
     return state.run.startedAt ? runElapsedMs() : typeof wallClock === "number" ? wallClock * 1000 : 0;
+  }
+
+  function setBackendPausedState(paused) {
+    const run = state.run;
+    if (paused) {
+      if (!run.backendPaused) {
+        run.backendPausedAt = Date.now();
+      } else if (!run.backendPausedAt) {
+        run.backendPausedAt = Date.now();
+      }
+      run.backendPaused = true;
+      return;
+    }
+    if (run.backendPaused && run.backendPausedAt) {
+      run.backendPausedTotalMs += Math.max(0, Date.now() - run.backendPausedAt);
+    }
+    run.backendPaused = false;
+    run.backendPausedAt = null;
   }
 
   function startReviewClock(run, message) {
@@ -2084,6 +2123,8 @@
       run.currentLabel = message || run.currentLabel;
       run.pausedTotalMs = 0;
       run.pausedAt = null;
+      run.backendPausedTotalMs = 0;
+      run.backendPausedAt = null;
     }
   }
 
@@ -2292,6 +2333,7 @@
         LIVE.serverDone = !!data.done;
         LIVE.failed = !!data.failed;
         LIVE.error = data.error || "";
+        setBackendPausedState(!!data.paused);
         saveState();
         if (LIVE.failed && LIVE.error && !LIVE.announced) {
           LIVE.announced = true;
@@ -2319,6 +2361,92 @@
   function liveConfirm() {
     if (!liveActive()) return;
     fetch("/api/confirm?run_id=" + LIVE.runId, { method: "POST" }).catch(() => {});
+  }
+
+  function liveSetBackendPaused(paused) {
+    if (!liveActive() || state.run.finished) return;
+    fetch("/api/pause?run_id=" + encodeURIComponent(LIVE.runId), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paused })
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data || data.error) {
+          window.alert("后台暂停控制失败：" + ((data && data.error) || "服务端无响应"));
+          return;
+        }
+        setBackendPausedState(!!data.paused);
+        state.run.currentLabel = data.paused ? "后台评审任务已暂停" : "后台评审任务已继续";
+        pushControlRunLog(data.paused ? "paused" : "resumed", state.run.currentLabel);
+        saveState();
+        render();
+      })
+      .catch((err) => {
+        window.alert("后台暂停控制失败：" + err.message);
+      });
+  }
+
+  function resetRunForLiveRestart(data) {
+    clearRunTimer();
+    state.run = createRunState();
+    state.run.started = true;
+    state.run.reviewStarted = true;
+    state.run.startedAt = Date.now();
+    state.run.lastEventAt = state.run.startedAt;
+    state.run.currentLabel = "重新开始，等待后台任务启动";
+    state.run.stages["PDF 入库"] = "进行中";
+    state.run.logs.push({
+      time: clock(),
+      kind: "system",
+      message: "已终止上一轮后台任务，重新开始评审",
+      result: "已重启"
+    });
+    state.reviewOverrides = {};
+    state.expertReviews = [];
+    state.activeSectionId = "";
+    state.activeCriteriaId = "";
+    DATA.runEvents.length = 0;
+    DATA.reportRunId = "";
+    LIVE.runId = data.run_id;
+    LIVE.cursor = 0;
+    LIVE.serverDone = false;
+    LIVE.failed = false;
+    LIVE.error = "";
+    LIVE.reportLoaded = false;
+    LIVE.reportLoading = false;
+    LIVE.announced = false;
+    LIVE.concurrency = data.concurrency;
+    if (!state.run.timer) {
+      state.run.timer = setInterval(tickRun, 750);
+    }
+    saveState();
+  }
+
+  function liveRestartRun() {
+    if (!liveActive()) return;
+    if (!window.confirm("确定终止当前后台评审任务并重新开始吗？已完成的本轮进度会保留在恢复快照中。")) {
+      return;
+    }
+    saveRecoverySnapshot("live-restart");
+    fetch("/api/restart?run_id=" + encodeURIComponent(LIVE.runId), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmed: true })
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data || data.error || !data.run_id) {
+          window.alert("重新开始失败：" + ((data && data.error) || "服务端无响应"));
+          return;
+        }
+        resetRunForLiveRestart(data);
+        setRoute("#/running");
+        render();
+      })
+      .catch((err) => {
+        window.alert("重新开始失败：" + err.message);
+      });
   }
 
   function liveLoadReport() {
@@ -2419,7 +2547,9 @@
     run.finished = true;
     run.finishedAt = Date.now();
     run.paused = false;
+    setBackendPausedState(false);
     run.pausedAt = null;
+    run.backendPausedAt = null;
     run.waitUntil = null;
     run.stages["PDF 入库"] = "已完成";
     run.stages["证据定位"] = "已完成";
@@ -2500,7 +2630,15 @@
     livePoll();
     if (!run.paused && !run.finished) {
       const now = Date.now();
-      if (run.waitUntil && now < run.waitUntil) {
+      if (run.backendPaused) {
+        const event = DATA.runEvents[run.eventIndex];
+        if (event && event.type === "control") {
+          processRunEvent(event);
+          run.eventIndex += 1;
+          changed = true;
+        }
+        updateRuntimeFields(route.path);
+      } else if (run.waitUntil && now < run.waitUntil) {
         updateRuntimeFields(route.path);
       } else {
         if (run.waitUntil) {
@@ -2517,6 +2655,7 @@
             processRunEvent(event);
             run.eventIndex += 1;
             changed = true;
+            if (run.backendPaused) break;
             if (run.waitUntil) break;
           } else {
             if (event) markWaitingForReviewGate();
@@ -2638,6 +2777,20 @@
     }
   }
 
+  function pushControlRunLog(action, message) {
+    const result = action === "paused" ? "已暂停" : action === "resumed" ? "已继续" : "已终止";
+    const last = state.run.logs[state.run.logs.length - 1];
+    if (last && last.kind === "system" && last.message === message && last.result === result) {
+      return;
+    }
+    pushRunLog({
+      time: clock(),
+      kind: "system",
+      message,
+      result
+    });
+  }
+
   function processWaitEvent(event, bidder, item) {
     const run = state.run;
     run.waitUntil = Date.now() + Math.max(0, event.duration_ms || 0);
@@ -2655,6 +2808,17 @@
   function processRunEvent(event) {
     const run = state.run;
     run.lastEventAt = Date.now();
+
+    if (event.type === "control") {
+      if (event.action === "paused") {
+        setBackendPausedState(true);
+      } else if (event.action === "resumed" || event.action === "cancelled") {
+        setBackendPausedState(false);
+      }
+      run.currentLabel = event.message || run.currentLabel;
+      pushControlRunLog(event.action, event.message || "后台运行状态已更新");
+      return;
+    }
 
     if (event.type === "stage") {
       run.stages[event.stage] = event.status === "done" ? "已完成" : "进行中";
@@ -3297,6 +3461,18 @@
       toggleRunPaused();
       saveState();
       render();
+      return;
+    }
+
+    const backendPause = event.target.closest("[data-toggle-backend-pause]");
+    if (backendPause) {
+      liveSetBackendPaused(!state.run.backendPaused);
+      return;
+    }
+
+    const liveRestart = event.target.closest("[data-restart-live-run]");
+    if (liveRestart) {
+      liveRestartRun();
       return;
     }
 

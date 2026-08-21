@@ -106,6 +106,36 @@ def test_run_rejects_second_run_while_active(httpd):
     assert third["run_id"] != first["run_id"]
 
 
+def test_pause_and_resume_run(httpd):
+    srv, _ = httpd
+    status, created = call(srv, "POST", "/api/run", {})
+    assert status == 200
+
+    status, paused = call(srv, "POST", f"/api/pause?run_id={created['run_id']}", {"paused": True})
+    assert status == 200
+    assert paused["paused"] is True
+
+    status, progress = call(srv, "GET", f"/api/progress?run_id={created['run_id']}&cursor=0")
+    assert status == 200
+    assert progress["paused"] is True
+
+    status, resumed = call(srv, "POST", f"/api/pause?run_id={created['run_id']}", {"paused": False})
+    assert status == 200
+    assert resumed["paused"] is False
+
+
+def test_restart_cancels_old_run_and_starts_new_one(httpd):
+    srv, _ = httpd
+    status, first = call(srv, "POST", "/api/run", {})
+    assert status == 200
+
+    status, second = call(srv, "POST", f"/api/restart?run_id={first['run_id']}", {"confirmed": True})
+    assert status == 200
+    assert second["run_id"] != first["run_id"]
+    assert server.RUNS[first["run_id"]].cancel_requested is True
+    assert second["run_id"] in server.RUNS
+
+
 def test_report_disk_fallback_after_restart(httpd, tmp_path):
     """内存里没有的 run_id，磁盘上有完整报告时仍能取到（模拟服务重启）。"""
     srv, _ = httpd

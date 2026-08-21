@@ -2,6 +2,7 @@ python-docx
 pyyaml
 jieba
 pymupdf
+psutil
 
 # scripts/export_xlsx.py：把 S4 报告导成 Excel 交给甲方（README §10.4）。
 # 只有导出这一步用得上，S0~S4 主流程不依赖它。
