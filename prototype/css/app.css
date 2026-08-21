@@ -6,7 +6,7 @@
   --line-strong: #b8c4d3;
   --text: #1f2937;
   --muted: #667085;
-  --muted-2: #8a94a6;
+  --muted-2: #667085;
   --primary: #1f5f99;
   --primary-strong: #174c7a;
   --primary-soft: #e8f2fb;
@@ -122,13 +122,17 @@ button:disabled {
 }
 
 .page {
-  max-width: 1320px;
+  max-width: 1520px;
   margin: 0 auto;
   padding: 24px 28px 40px;
 }
 
 .page-wide {
   max-width: 1480px;
+}
+
+.page-confirm {
+  max-width: 1560px;
 }
 
 .page-header {
@@ -149,7 +153,8 @@ button:disabled {
 .page-desc {
   max-width: 760px;
   margin: 8px 0 0;
-  color: var(--muted);
+  color: #475467;
+  font-size: 14px;
 }
 
 .toolbar {
@@ -173,7 +178,23 @@ button:disabled {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
+.page-confirm .layout-grid {
+  grid-template-columns: minmax(0, 1fr) 340px;
+  align-items: start;
+}
+
+.page-confirm .layout-grid > aside.panel {
+  position: sticky;
+  top: 82px;
+}
+
+.layout-grid > *,
+.summary-strip > * {
+  min-width: 0;
+}
+
 .panel {
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -201,8 +222,8 @@ button:disabled {
 
 .panel-note {
   margin: 0 0 10px;
-  color: var(--muted);
-  font-size: 12px;
+  color: #475467;
+  font-size: 13px;
 }
 
 .field-grid {
@@ -304,20 +325,51 @@ button:disabled {
 
 .metric-label {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .metric-value {
   margin-top: 4px;
   color: #121a2a;
   font-size: 20px;
+  line-height: 1.2;
   font-weight: 700;
 }
 
 .metric-note {
   margin-top: 2px;
-  color: var(--muted-2);
-  font-size: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.status-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-value > span:empty {
+  display: none;
+}
+
+.status-value.success {
+  color: var(--success);
+}
+
+.status-value.running {
+  color: var(--primary);
+}
+
+.status-value.pending {
+  color: var(--warning);
+}
+
+.metric-inline-time {
+  display: block;
+  margin-top: 4px;
+  color: #475467;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .btn {
@@ -427,10 +479,12 @@ button:disabled {
 }
 
 .small {
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .table-wrap {
+  max-width: 100%;
+  min-width: 0;
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -470,6 +524,116 @@ tr:last-child td {
   padding: 8px 10px;
 }
 
+.confirm-table-wrap {
+  max-height: none;
+  overflow: visible;
+}
+
+.confirm-table {
+  --confirm-index-width: 54px;
+  --confirm-item-width: 228px;
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.confirm-table th,
+.confirm-table td {
+  border-right: 1px solid var(--line);
+  text-align: left;
+}
+
+.confirm-table th:last-child,
+.confirm-table td:last-child {
+  border-right: 0;
+}
+
+.confirm-table th:nth-child(1),
+.confirm-table td:nth-child(1) {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  width: var(--confirm-index-width);
+  min-width: var(--confirm-index-width);
+  max-width: var(--confirm-index-width);
+  background: #fff;
+  text-align: center;
+  box-shadow: 1px 0 0 var(--line);
+}
+
+.confirm-table th:nth-child(1) {
+  z-index: 9;
+  background: #f3f6fa;
+}
+
+.confirm-table .confirm-score-name {
+  position: sticky;
+  left: var(--confirm-index-width);
+  z-index: 4;
+  width: var(--confirm-item-width);
+  min-width: var(--confirm-item-width);
+  max-width: var(--confirm-item-width);
+  background: #fff;
+  box-shadow: 1px 0 0 var(--line);
+}
+
+.confirm-table th.confirm-score-name {
+  z-index: 9;
+  background: #f3f6fa;
+}
+
+.confirm-table .confirm-score-name strong {
+  display: block;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.confirm-table th:nth-child(3),
+.confirm-table td:nth-child(3) {
+  width: 70px;
+  min-width: 70px;
+  text-align: center;
+}
+
+.confirm-table th:nth-child(4),
+.confirm-table td:nth-child(4) {
+  width: 252px;
+  min-width: 252px;
+  text-align: left;
+}
+
+.confirm-table th:nth-child(5),
+.confirm-table td:nth-child(5) {
+  width: 150px;
+  min-width: 150px;
+  text-align: left;
+}
+
+.confirm-table th:nth-child(6),
+.confirm-table td:nth-child(6) {
+  width: 198px;
+  min-width: 198px;
+  text-align: left;
+}
+
+.confirm-table th {
+  top: 64px;
+}
+
+.confirm-table td:nth-child(6) {
+  white-space: normal;
+}
+
+.confirm-table tbody tr:hover > td {
+  background: #f3f8ff;
+}
+
+.tier-range-compact {
+  color: #253143;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .bidder-compact-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -499,8 +663,8 @@ tr:last-child td {
 
 .bidder-meta {
   margin-top: 2px;
-  color: var(--muted);
-  font-size: 12px;
+  color: #475467;
+  font-size: 13px;
 }
 
 .status-dot {
@@ -529,8 +693,8 @@ tr:last-child td {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-subtle);
-  color: var(--muted);
-  font-size: 12px;
+  color: #475467;
+  font-size: 13px;
 }
 
 .rule-list {
@@ -539,6 +703,9 @@ tr:last-child td {
   gap: 10px;
   margin: 0;
   padding: 0;
+  color: #344054;
+  font-size: 14px;
+  line-height: 1.6;
   list-style: none;
 }
 
@@ -602,10 +769,20 @@ tr:last-child td {
   border-style: dashed;
 }
 
+.confirm-table .criteria-details {
+  position: relative;
+  display: inline-block;
+}
+
+.confirm-table .criteria-details[open] {
+  z-index: 12;
+}
+
 .criteria-details summary {
   color: var(--primary-strong);
   cursor: pointer;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .criteria-card {
@@ -613,17 +790,29 @@ tr:last-child td {
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface-subtle);
+  background: #fff;
+  box-shadow: 0 16px 34px rgba(31, 41, 55, 0.16);
+}
+
+.confirm-table .criteria-card {
+  position: absolute;
+  top: 24px;
+  right: 0;
+  left: auto;
+  width: min(440px, calc(100vw - 80px));
+  max-width: min(440px, calc(100vw - 80px));
 }
 
 .criteria-card p {
   margin: 4px 0 10px;
   color: #344054;
+  font-size: 14px;
+  line-height: 1.65;
 }
 
 .criteria-label {
   color: #121a2a;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -640,8 +829,8 @@ tr:last-child td {
 }
 
 .criteria-card dt {
-  color: var(--muted);
-  font-size: 12px;
+  color: #475467;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -1189,10 +1378,15 @@ tr:last-child td {
   }
 
   .layout-grid,
+  .page-confirm .layout-grid,
   .layout-grid.equal,
   .detail-grid,
   .reference-grid {
     grid-template-columns: 1fr;
+  }
+
+  .page-confirm .layout-grid > aside.panel {
+    position: static;
   }
 
   .summary-strip {
