@@ -223,6 +223,7 @@
     state.reviewOverrides = {};
     state.expertReviews = [];
     state.activeSectionId = "";
+    state.activeCriteriaId = "";
     state.showScoringReference = false;
     saveState();
   }
@@ -234,6 +235,7 @@
       reviewOverrides: {},
       expertReviews: [],
       activeSectionId: "",
+      activeCriteriaId: "",
       showScoringReference: false
     };
 
@@ -248,6 +250,7 @@
         reviewOverrides: saved.reviewOverrides && typeof saved.reviewOverrides === "object" ? saved.reviewOverrides : {},
         expertReviews: Array.isArray(saved.expertReviews) ? saved.expertReviews : [],
         activeSectionId: "",
+        activeCriteriaId: "",
         showScoringReference: false
       };
     } catch (error) {
@@ -456,6 +459,23 @@
         return min + "-" + max + " 分";
       })
       .join(" / ");
+  }
+
+  function compactScore(value) {
+    const score = Number(value);
+    if (!Number.isFinite(score)) return "-";
+    return score.toFixed(1).replace(/\.0$/, "");
+  }
+
+  function compactTierSummary(item) {
+    if (!item || !Array.isArray(item.tiers) || !item.tiers.length) return "未配置";
+    return item.tiers
+      .slice()
+      .sort((a, b) => Number(a.min) - Number(b.min))
+      .map((tier) => {
+        return (tier.tier || "档位") + " " + compactScore(tier.min) + "–" + compactScore(tier.max);
+      })
+      .join("｜");
   }
 
   function renderReadonlyValue(value) {
@@ -1114,8 +1134,11 @@
     const bindingNote = mismatch
       ? mismatchItem.id + " " + mismatchItem.bound_count + "/" + mismatchItem.expected_bidders + " · " + mismatchItem.binding_note
       : confirmItems.length + " 项均为 " + DATA.bidders.length + "/" + DATA.bidders.length;
+    const confirmStatusText = state.run.reviewStarted ? "评审进行中" : mismatch ? "待确认" : "校验通过";
+    const confirmStatusClass = state.run.reviewStarted ? "running" : mismatch ? "pending" : "success";
+    const elapsedText = state.run.startedAt ? formatDuration(elapsed) : "未开始";
     return `
-      <main class="page">
+      <main class="page page-confirm">
         <section class="page-header">
           <div>
             <h2 class="page-title">确认评分标准与投标文件</h2>
@@ -1123,8 +1146,7 @@
           </div>
           <div class="toolbar">
             <a class="btn" href="#/create">上一步</a>
-            <button class="btn" data-toggle-reference>${state.showScoringReference ? "收起开发诊断" : "开发诊断"}</button>
-            ${state.run.started ? `<a class="btn" href="#/running">查看运行监视</a>` : ""}
+            <button class="btn" data-toggle-reference>${state.showScoringReference ? "收起校验详情" : "校验详情"}</button>
             ${DEMO_MODE ? `<a class="btn" href="${bindingIssueDemo ? "#/confirm" : "#/confirm?binding=issue"}">${bindingIssueDemo ? "恢复正常绑定" : "演示绑定异常"}</a>` : ""}
             <button class="btn primary" data-start-run ${mismatch ? "disabled" : ""}>开始评审</button>
           </div>
@@ -1133,9 +1155,8 @@
         <section class="summary-strip">
           ${metric("评分项", confirmItems.length + " 项", "技术标评分项")}
           ${metric("总分", scoringTotal.toFixed(1) + " 分", scoringTotalNote)}
-          ${metric("投标文件绑定", bindingStatusText, bindingNote)}
-          ${metric("评审计时", `<span data-run-elapsed>${state.run.startedAt ? formatDuration(elapsed) : "未开始"}</span>`, "页面①下一步：解析起算")}
-          ${metric("确认状态", state.run.reviewStarted ? "已开始" : "待确认", "确认后开始逐项评审")}
+          ${metric("文件绑定", bindingStatusText, bindingNote)}
+          ${metric("当前状态", `<span class="status-value ${confirmStatusClass}"><span aria-hidden="true">${confirmStatusClass === "success" ? "✓" : ""}</span>${html(confirmStatusText)}</span><span class="metric-inline-time">核验耗时 <span data-run-elapsed>${html(elapsedText)}</span></span>`, "")}
         </section>
 
         ${state.showScoringReference ? renderScoringReference(confirmItems) : ""}
@@ -1147,12 +1168,12 @@
               <span class="badge ${mismatch ? "danger" : "success"}">${mismatch ? "存在缺项" : "可开始"}</span>
             </div>
             <div class="panel-body">
-              <div class="table-wrap">
-                <table class="table-compact">
+              <div class="table-wrap confirm-table-wrap">
+                <table class="table-compact confirm-table">
                   <thead>
                     <tr>
                       <th>序</th>
-                      <th>评分项</th>
+                      <th class="confirm-score-name">评分项</th>
                       <th>分值</th>
                       <th>三档区间</th>
                       <th>招标原文</th>
@@ -1168,16 +1189,16 @@
                       return `
                         <tr>
                           <td>${index + 1}</td>
-                          <td>
+                          <td class="confirm-score-name">
                             <strong>${html(item.name)}</strong>
                           </td>
                           <td>
                             ${item.max_score.toFixed(1)}
                           </td>
-                          <td>${html(tierSummary(item))}</td>
+                          <td class="tier-range-compact" title="${html(tierSummary(item))}">${html(compactTierSummary(item))}</td>
                           <td>
-                            <details class="criteria-details">
-                              <summary>查看招标原文</summary>
+                            <details class="criteria-details" ${state.activeCriteriaId === item.id ? "open" : ""}>
+                              <summary data-criteria-toggle="${html(item.id)}">查看招标原文</summary>
                               <div class="criteria-card">
                                 <div class="criteria-label">招标文件原文</div>
                                 <p>${criteriaText ? html(criteriaText) : "评审标准原文缺失，需回招标文件补充。"}</p>
@@ -1240,10 +1261,10 @@
       ? SCORING_REFERENCE.summary.pdf_vs_xlsx_tiers_match + " / " + SCORING_REFERENCE.summary.items
       : "未加载";
     return `
-      <section class="panel reference-panel diagnostic-panel" aria-label="开发诊断：评分表来源对照">
+      <section class="panel reference-panel diagnostic-panel" aria-label="校验详情：评分表来源对照">
         <div class="panel-header">
-          <h3 class="panel-title">开发诊断：评分表来源对照</h3>
-          <span class="badge neutral">非评标主视图</span>
+          <h3 class="panel-title">校验详情：评分表来源对照</h3>
+          <span class="badge neutral">辅助核验</span>
         </div>
         <div class="panel-body reference-grid">
           <aside class="reference-page">
@@ -1881,7 +1902,7 @@
       <div class="metric">
         <div class="metric-label">${html(label)}</div>
         <div class="metric-value">${value}</div>
-        <div class="metric-note">${html(note)}</div>
+        ${note ? `<div class="metric-note">${html(note)}</div>` : ""}
       </div>
     `;
   }
@@ -2875,6 +2896,15 @@
       return;
     }
 
+    const criteriaToggle = event.target.closest("[data-criteria-toggle]");
+    if (criteriaToggle) {
+      event.preventDefault();
+      const itemId = criteriaToggle.getAttribute("data-criteria-toggle") || "";
+      state.activeCriteriaId = state.activeCriteriaId === itemId ? "" : itemId;
+      render();
+      return;
+    }
+
     const exportXlsx = event.target.closest("[data-export-xlsx]");
     if (exportXlsx) {
       if (!state.run.finished) {
@@ -3032,6 +3062,7 @@
 
   window.addEventListener("hashchange", () => {
     state.activeSectionId = "";
+    state.activeCriteriaId = "";
     render();
     if (getRoute().path === "/running") {
       setTimeout(scrollRunLogToBottom, 0);
