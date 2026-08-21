@@ -30,6 +30,9 @@ PROMPT = "请只回复两个字：正常"
 
 
 def main() -> int:
+    # Windows 中文终端默认 GBK，✓/✗ 打不出来会让脚本崩在最后一行——
+    # 请求明明成功了却显示成失败。强制 UTF-8，错误兜底替换。
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     try:
         client = AgentFactoryClient.from_env(timeout=60.0)
     except ValueError as exc:
